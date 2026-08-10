@@ -21,7 +21,7 @@ patterns=(
 
 failed=0
 for pattern in "${patterns[@]}"; do
-    matches="$(git grep -IlE "$pattern" -- . ':(exclude)scripts/secret_scan.sh' 2>/dev/null || true)"
+    matches="$(git grep -IlE "$pattern" -- . ':(exclude)scripts/secret_scan.sh' ':(exclude)scripts/binary_privacy_scan.sh' 2>/dev/null || true)"
     if [[ -n "$matches" ]]; then
         echo "Potential sensitive pattern found in:"
         echo "$matches"
