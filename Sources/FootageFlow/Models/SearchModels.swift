@@ -12,6 +12,9 @@ struct SearchRequest: Sendable {
   var orientation: AssetOrientation = .all
   var resolution: ResolutionFilter = .all
   var duration: DurationFilter = .all
+  var yearFrom: Int? = nil
+  var yearTo: Int? = nil
+  var downloadableOnly = false
   var pageSize: Int = 16
 }
 
@@ -33,14 +36,18 @@ enum ProviderAccessMethod: String, Codable, Hashable, Sendable {
 
 enum ProviderMode: String, Codable, Sendable {
   case officialAPI
+  case publicAPI
   case publicInterface
+  case limited
   case directSearch
   case ytDLP
 
   var label: String {
     switch self {
     case .officialAPI: tr("provider.mode.officialAPI")
+    case .publicAPI: tr("provider.mode.publicAPI")
     case .publicInterface: tr("provider.mode.publicInterface")
+    case .limited: tr("provider.mode.limited")
     case .directSearch: tr("provider.mode.directSearch")
     case .ytDLP: tr("provider.mode.ytDLP")
     }
@@ -55,6 +62,7 @@ struct ProviderCapabilities: Codable, Sendable {
   let download: ProviderCapabilityLevel
   let supportsVideo: Bool
   let supportsImage: Bool
+  var supportsAudio: Bool = false
   let accessMethods: Set<ProviderAccessMethod>
 }
 
@@ -101,6 +109,9 @@ enum ProviderAvailability: String, Codable, Sendable {
   case unavailable
   case bestEffort
   case apiConnected
+  case publicAPI
+  case noKeyRequired
+  case limitedMode
   case authenticationRequired
   case rateLimited
   case temporarilyBlocked
@@ -112,6 +123,9 @@ enum ProviderAvailability: String, Codable, Sendable {
     case .unavailable: tr("provider.unavailable")
     case .bestEffort: tr("provider.bestEffort")
     case .apiConnected: tr("provider.apiConnected")
+    case .publicAPI: tr("provider.publicAPI")
+    case .noKeyRequired: tr("provider.noKeyRequired")
+    case .limitedMode: tr("provider.limitedMode")
     case .authenticationRequired: tr("provider.authenticationRequired")
     case .rateLimited: tr("provider.rateLimited")
     case .temporarilyBlocked: tr("provider.temporarilyBlocked")
@@ -132,6 +146,7 @@ struct ProviderRuntimeState: Codable, Equatable, Sendable {
     let availability: ProviderAvailability =
       switch providerError {
       case .missingAPIKey, .invalidAPIKey: .authenticationRequired
+      case .limitedMode: .limitedMode
       case .rateLimited: .rateLimited
       case .temporarilyBlocked: .temporarilyBlocked
       case .cancelled: .unavailable
@@ -186,6 +201,7 @@ enum ProviderError: LocalizedError, Sendable {
   case videoUnavailable
   case regionalRestriction
   case unsupported
+  case limitedMode(ProviderID, URL)
   case cancelled
   case message(String)
 
@@ -204,6 +220,7 @@ enum ProviderError: LocalizedError, Sendable {
     case .videoUnavailable: tr("error.videoUnavailable")
     case .regionalRestriction: tr("error.regionalRestriction")
     case .unsupported: tr("error.unsupported")
+    case .limitedMode(let provider, _): tr("provider.limitedSearchMessage", provider.displayName)
     case .cancelled: tr("error.cancelled")
     case .message(let text): text
     }
@@ -223,27 +240,53 @@ enum SearchSort: String, CaseIterable, Identifiable {
   }
 }
 
-enum LicenseFilter: String, CaseIterable, Identifiable {
-  case all, knownOnly, safe, attribution, publicDomain, unknown
+enum LicenseFilter: String, CaseIterable, Identifiable, Sendable {
+  case all, knownOnly, openlyLicensed, publicDomain
   var id: String { rawValue }
   var label: String {
     switch self {
     case .all: tr("common.all")
     case .knownOnly: tr("license.knownOnly")
-    case .safe: tr("license.safe")
-    case .attribution: tr("license.attribution")
+    case .openlyLicensed: tr("license.openlyLicensed")
     case .publicDomain: tr("license.publicDomain")
-    case .unknown: tr("license.unknown")
     }
   }
-  func matches(_ status: LicenseStatus) -> Bool {
-    switch self {
+  func matches(_ asset: MediaAsset) -> Bool {
+    let rights = asset.effectiveRightsInfo
+    return switch self {
     case .all: true
-    case .knownOnly: status != .unknown
-    case .safe: status == .safe
-    case .attribution: status == .attributionRequired
-    case .publicDomain: status == .publicDomain
-    case .unknown: status == .unknown
+    case .knownOnly: rights.known
+    case .openlyLicensed: rights.known && rights.openLicense
+    case .publicDomain: rights.known && rights.publicDomain
     }
+  }
+}
+
+struct AdvancedSearchFilter: Sendable {
+  var mediaType: MediaType = .video
+  var orientation: AssetOrientation = .all
+  var resolution: ResolutionFilter = .all
+  var duration: DurationFilter = .all
+  var license: LicenseFilter = .all
+  var selectedProviders = Set(ProviderID.allCases)
+  var yearFrom: Int? = nil
+  var yearTo: Int? = nil
+  var downloadableOnly = false
+
+  func matches(_ asset: MediaAsset, calendar: Calendar = Calendar(identifier: .gregorian)) -> Bool {
+    guard mediaType == .all || asset.mediaType == mediaType,
+      orientation == .all || asset.orientation == orientation,
+      resolution.minimumHeight == nil || (asset.height ?? 0) >= resolution.minimumHeight!,
+      duration.matches(asset.duration), license.matches(asset),
+      selectedProviders.contains(asset.provider),
+      !downloadableOnly || asset.isDirectlyDownloadable
+    else { return false }
+    if yearFrom != nil || yearTo != nil {
+      guard let date = asset.publishedDate else { return false }
+      let year = calendar.component(.year, from: date)
+      if let yearFrom, year < yearFrom { return false }
+      if let yearTo, year > yearTo { return false }
+    }
+    return true
   }
 }

@@ -1,6 +1,8 @@
 "common.all" = "All";
 "common.video" = "Video";
 "common.image" = "Image";
+"common.audio" = "Audio";
+"common.notProvided" = "Not provided";
 "common.unknown" = "Unknown";
 "common.unavailable" = "Unavailable";
 "common.cancel" = "Cancel";
@@ -56,6 +58,7 @@
 "license.unknown" = "License unknown";
 "license.restricted" = "Restricted";
 "license.knownOnly" = "License known only";
+"license.openlyLicensed" = "Openly licensed";
 
 "filter.type" = "Type";
 "filter.orientation" = "Orientation";
@@ -71,6 +74,14 @@
 "filter.tenTo30" = "10–30 sec";
 "filter.thirtyTo60" = "30–60 sec";
 "filter.over60" = "≥60 sec";
+"filter.underMinute" = "< 1 min";
+"filter.oneToFive" = "1–5 min";
+"filter.fiveToTwenty" = "5–20 min";
+"filter.overTwenty" = "20+ min";
+"filter.advanced" = "Advanced Filters";
+"filter.yearFrom" = "Year From";
+"filter.yearTo" = "Year To";
+"filter.downloadableOnly" = "Downloadable Only";
 "sort.relevance" = "Relevance";
 "sort.newest" = "Newest";
 "sort.resolution" = "Resolution";
@@ -100,16 +111,23 @@
 "provider.unavailable" = "Unavailable";
 "provider.bestEffort" = "Best-effort";
 "provider.apiConnected" = "API connected";
+"provider.publicAPI" = "Public API";
+"provider.noKeyRequired" = "No key required";
+"provider.limitedMode" = "Limited mode";
 "provider.authenticationRequired" = "API key required";
 "provider.rateLimited" = "Rate limited";
 "provider.temporarilyBlocked" = "Temporarily blocked";
 "provider.disabled" = "Disabled";
 "provider.missingKey" = "%@ — API key not configured";
 "provider.mode.officialAPI" = "Official API";
+"provider.mode.publicAPI" = "Official public API";
 "provider.mode.publicInterface" = "Public interface";
+"provider.mode.limited" = "Limited mode";
 "provider.mode.directSearch" = "Direct Search";
 "provider.mode.ytDLP" = "yt-dlp Best-effort";
 "provider.tryDirectSearch" = "Try Direct Search";
+"provider.limitedSearchMessage" = "%@ is in limited mode. Add an API key for full in-app search or open the official search page.";
+"provider.openOfficialSearch" = "Open Official Search";
 
 "error.invalidAPIKey" = "The API key is invalid";
 "error.noNetwork" = "Network connection failed. Please check your internet connection and try again.";
@@ -163,6 +181,7 @@
 "settings.openLogs" = "Open Logs";
 "settings.logHelp" = "Logs contain source, request type, HTTP status, and error type only. API keys are never logged. Pixabay search results are cached for 24 hours.";
 "settings.privacy" = "Privacy";
+"settings.legal" = "Legal";
 "settings.privacyBody" = "FootageFlow contains no analytics, tracking, advertising, or telemetry SDKs. Projects, scripts, favorites, and download history stay on this device. Only necessary requests are sent to enabled sources. API keys are stored in the operating system's secure credential store.";
 "settings.apiKey" = "API Key";
 "settings.testConnection" = "Test Connection";
@@ -174,10 +193,40 @@
 "settings.saveFailed" = "Save failed";
 "settings.savedKeychain" = "Saved to secure credential storage";
 "settings.enabled" = "Enabled";
+"settings.capabilities" = "Capabilities: %@";
+"capability.search" = "Search";
+"capability.preview" = "Preview";
+"capability.metadata" = "Metadata";
+"capability.rights" = "Rights";
+"capability.download" = "Download";
 "settings.chooseDownloadFolder" = "Choose Download Folder";
 "settings.clearHistory" = "Clear Search History";
 "settings.wikimediaDetail" = "Official Wikimedia Commons MediaWiki API";
 "settings.archiveDetail" = "Internet Archive Advanced Search and Metadata API";
+"settings.nasaDetail" = "Official NASA Image and Video Library API · no API key required";
+"settings.locDetail" = "Official Library of Congress JSON API · no API key required";
+"settings.naraLimitedDetail" = "No API key configured. Limited mode opens the official Catalog search. Add your own API key for full in-app search.";
+"settings.europeanaLimitedDetail" = "No API key configured. Add your own API key for more complete in-app search, or open Europeana search in your browser.";
+
+"selection.select" = "Select item";
+"selection.selectAllVisible" = "Select All Visible";
+"selection.count" = "%d items selected";
+"selection.downloadSelected" = "Download Selected";
+"selection.addToProject" = "Add to Project";
+"selection.copySourceInfo" = "Copy Source Info";
+"selection.clear" = "Clear Selection";
+
+"media.copySource" = "Copy Source";
+"media.copyAttribution" = "Copy Attribution";
+"attribution.title" = "Title";
+"attribution.provider" = "Provider";
+"attribution.creator" = "Creator";
+"attribution.date" = "Date";
+"attribution.source" = "Source";
+"attribution.originalURL" = "Original URL";
+"attribution.rights" = "Rights / License";
+"attribution.rightsURL" = "Rights URL";
+"attribution.rightsUnknown" = "Not provided — verify with the original source before reuse.";
 
 "project.title" = "Project Library";
 "project.all" = "All Projects";
@@ -230,6 +279,7 @@
 "download.saveFailed" = "Could not save the downloaded file";
 "download.retrying" = "Download interrupted; retrying (%d of 2)";
 "download.failed" = "Download failed. Try again later.";
+"download.retryFailed" = "Retry Failed";
 "download.rateLimited" = "Too many requests. Please try again later.";
 "download.videoUnavailable" = "This YouTube video is unavailable.";
 "download.regionalRestriction" = "This video is unavailable in your region.";
@@ -275,6 +325,7 @@
 "sidecar.licenseName" = "License Name";
 "sidecar.licenseURL" = "License URL";
 "sidecar.licenseStatus" = "License Status";
+"sidecar.rightsSource" = "Rights Metadata Source";
 "sidecar.searchKeyword" = "Search Keyword";
 "sidecar.downloadDate" = "Download Date and Time";
 "sidecar.projectName" = "Project Name";

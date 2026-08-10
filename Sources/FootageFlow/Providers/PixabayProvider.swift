@@ -15,6 +15,7 @@ struct PixabayProvider: MediaProvider {
 
   func search(_ request: SearchRequest) async throws -> [MediaAsset] {
     guard !apiKey.isEmpty else { throw ProviderError.missingAPIKey(.pixabay) }
+    guard request.mediaType != .audio else { return [] }
     var results: [MediaAsset] = []
     if request.mediaType != .image { results += try await videos(request) }
     if request.mediaType != .video { results += try await images(request) }

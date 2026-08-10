@@ -15,6 +15,7 @@ struct PexelsProvider: MediaProvider {
 
   func search(_ request: SearchRequest) async throws -> [MediaAsset] {
     guard !apiKey.isEmpty else { throw ProviderError.missingAPIKey(.pexels) }
+    guard request.mediaType != .audio else { return [] }
     var results: [MediaAsset] = []
     if request.mediaType != .image { results += try await searchVideos(request) }
     if request.mediaType != .video { results += try await searchPhotos(request) }

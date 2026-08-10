@@ -13,6 +13,7 @@ void Check(bool condition, string name)
 }
 
 Check(new AppSettingsModel().Language == "en", "English is the first-launch default");
+Check(new AppSettingsModel().EnabledProviders.Count == 9, "Nine providers enabled by default");
 var settingsDirectory = Path.Combine(Path.GetTempPath(), "FootageFlowSettingsTest", Guid.NewGuid().ToString("N"));
 var settingsPath = Path.Combine(settingsDirectory, "settings.json");
 try
@@ -40,9 +41,18 @@ var media = new MediaAsset
     Id = "fixture", Provider = "wikimedia", Title = "Fixture", SourcePageURL = "https://example.com/source",
     DownloadURL = "https://example.com/fixture.mp4", License = "CC BY", LicenseStatus = "ATTRIBUTION_REQUIRED",
     MediaType = "video", Downloadable = true, SearchKeyword = "fixture"
+    , DownloadAvailability = "direct",
+    RightsInfo = new RightsInfo { Statement = "CC BY", Known = true, OpenLicense = true, AttributionRequired = true }
 };
 var roundTrip = JsonSerializer.Deserialize<MediaAsset>(JsonSerializer.Serialize(media));
 Check(roundTrip?.StableId == "wikimedia:fixture", "MediaAsset JSON round trip");
+Check(roundTrip?.IsDirectlyDownloadable == true, "Direct-download availability model");
+Check(roundTrip?.RightsKnown == true && roundTrip.OpenLicense, "RightsInfo JSON round trip");
+if (roundTrip is not null)
+{
+    roundTrip.IsSelected = true;
+    Check(roundTrip.IsSelected, "Windows multi-select model");
+}
 
 if (OperatingSystem.IsWindows())
 {
@@ -61,10 +71,14 @@ if (OperatingSystem.IsWindows())
     if (!string.IsNullOrWhiteSpace(corePath) && File.Exists(corePath))
     {
         var core = new CoreHostClient(corePath);
-        var health = await core.SendAsync(new CoreRequest { Action = "health", ProviderIDs = ["wikimedia"] });
+        var health = await core.SendAsync(new CoreRequest { Action = "health" });
         Check(health.Success && health.Platform == "windows", "Windows core health");
+        Check(health.Providers?.Count == 9, "Windows core exposes nine shared providers");
         var keywords = await core.SendAsync(new CoreRequest { Action = "keywords", Query = "2001年阿根廷银行挤兑" });
         Check((keywords.Keywords?.Count ?? 0) >= 3, "Shared keyword engine");
+        var attribution = await core.SendAsync(new CoreRequest { Action = "formatAttribution", Asset = media });
+        Check(attribution.Text?.Contains("CC BY", StringComparison.Ordinal) == true,
+            "Shared attribution formatter");
 
         var projectName = "Windows Self Test " + Guid.NewGuid().ToString("N");
         var added = await core.SendAsync(new CoreRequest { Action = "addProject", ProjectName = projectName });

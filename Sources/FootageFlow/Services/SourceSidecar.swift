@@ -4,6 +4,7 @@ private struct Sidecar: Codable {
   let title, assetID, provider, creator, sourcePage, originalFileURL: String
   let licenseName, licenseURL, licenseStatus, searchKeyword, downloadDate, projectName,
     segment: String
+  let rightsSource: String
 }
 
 enum SourceSidecar {
@@ -11,19 +12,20 @@ enum SourceSidecar {
     throws
   {
     let formatter = ISO8601DateFormatter()
-    let status =
-      asset.licenseStatus == .unknown
-      ? tr("sidecar.authorizationUnknown") : asset.licenseStatus.label
+    let rights = asset.effectiveRightsInfo
+    let status = rights.known ? asset.licenseStatus.label : tr("sidecar.authorizationUnknown")
     let sidecar = Sidecar(
       title: asset.title, assetID: asset.id, provider: asset.provider.displayName,
       creator: asset.creator ?? tr("common.unknown"),
       sourcePage: asset.sourcePageURL.absoluteString,
       originalFileURL: asset.downloadURL?.absoluteString ?? tr("common.unknown"),
-      licenseName: asset.license ?? tr("common.unknown"),
-      licenseURL: asset.licenseURL?.absoluteString ?? tr("common.unknown"), licenseStatus: status,
+      licenseName: rights.statement ?? asset.license ?? tr("common.unknown"),
+      licenseURL: rights.uri?.absoluteString ?? asset.licenseURL?.absoluteString
+        ?? tr("common.unknown"), licenseStatus: status,
       searchKeyword: asset.searchKeyword, downloadDate: formatter.string(from: .now),
       projectName: projectName ?? tr("common.uncategorized"),
-      segment: segmentIndex.map(String.init) ?? tr("common.notSpecified"))
+      segment: segmentIndex.map(String.init) ?? tr("common.notSpecified"),
+      rightsSource: rights.source ?? asset.provider.displayName)
     let base = mediaURL.deletingPathExtension()
     let jsonURL = base.appendingPathExtension("source.json")
     let textURL = base.appendingPathExtension("source.txt")
@@ -41,6 +43,7 @@ enum SourceSidecar {
       \(tr("sidecar.licenseName")): \(sidecar.licenseName)
       \(tr("sidecar.licenseURL")): \(sidecar.licenseURL)
       \(tr("sidecar.licenseStatus")): \(sidecar.licenseStatus)
+      \(tr("sidecar.rightsSource")): \(sidecar.rightsSource)
       \(tr("sidecar.searchKeyword")): \(sidecar.searchKeyword)
       \(tr("sidecar.downloadDate")): \(sidecar.downloadDate)
       \(tr("sidecar.projectName")): \(sidecar.projectName)

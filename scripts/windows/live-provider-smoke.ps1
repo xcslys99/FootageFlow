@@ -75,11 +75,36 @@ function Test-YouTube([string]$Key) {
     throw "yt-dlp search failed with an unclassified error."
 }
 
+function Test-LimitedProvider([string]$Provider, [string]$Query, [string]$MediaType, [string]$Key) {
+    $request = @{
+        action = "search"; query = $Query; mediaType = $MediaType; orientation = "all"
+        resolution = "all"; duration = "all"; pageSize = 4; providerIDs = @($Provider); language = "en"
+    }
+    if (-not [string]::IsNullOrWhiteSpace($Key)) { $request.apiKeys = @{ $Provider = $Key } }
+    $response = Invoke-Core $request
+    $batch = $response.providerBatches | Select-Object -First 1
+    if (-not $batch) { throw "$Provider did not return an isolated provider result." }
+    if ([string]::IsNullOrWhiteSpace($Key)) {
+        if ($batch.mode -ne "limited" -or $batch.state.availability -ne "limitedMode") {
+            throw "$Provider did not use compliant Limited mode without an API key."
+        }
+        return @{ status = "passed-limited"; mode = $batch.mode; count = 0 }
+    }
+    if ($batch.mode -ne "officialAPI" -or $batch.assets.Count -lt 1) {
+        throw "$Provider official API did not return a result."
+    }
+    return @{ status = "passed"; mode = $batch.mode; count = $batch.assets.Count }
+}
+
 $report = [ordered]@{
     generatedAt = [DateTimeOffset]::UtcNow.ToString("O")
     platform = "windows-x64"
     wikimedia = Test-PublicProvider "wikimedia" "bank" "image"
     internetArchive = Test-PublicProvider "internetArchive" "Argentina financial crisis 2001" "video"
+    nasa = Test-PublicProvider "nasa" "Apollo 11" "video"
+    libraryOfCongress = Test-PublicProvider "libraryOfCongress" "Apollo 11" "video"
+    nationalArchives = Test-LimitedProvider "nationalArchives" "Apollo 11" "video" $env:NARA_API_KEY
+    europeana = Test-LimitedProvider "europeana" "historic city" "image" $env:EUROPEANA_API_KEY
     pexels = Test-OptionalProvider "pexels" "bank" "image" $env:PEXELS_API_KEY
     pixabay = Test-OptionalProvider "pixabay" "bank" "image" $env:PIXABAY_API_KEY
     youtube = Test-YouTube $env:YOUTUBE_API_KEY

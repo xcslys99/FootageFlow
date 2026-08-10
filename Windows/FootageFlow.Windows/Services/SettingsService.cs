@@ -25,6 +25,13 @@ public sealed class SettingsService
         _settingsFile = settingsFile ?? AppPaths.SettingsFile;
         Directory.CreateDirectory(AppPaths.DataRoot);
         Load();
+        if (!Current.DiscoveryProvidersV3Added)
+        {
+            Current.EnabledProviders.UnionWith(
+                ["nasa", "libraryOfCongress", "nationalArchives", "europeana"]);
+            Current.DiscoveryProvidersV3Added = true;
+            Save();
+        }
         if (string.IsNullOrWhiteSpace(Current.DownloadRoot)) Current.DownloadRoot = AppPaths.DefaultDownloadRoot;
     }
 

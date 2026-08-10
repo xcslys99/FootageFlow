@@ -6,6 +6,8 @@ struct SettingsView: View {
   @State private var pexelsKey = ""
   @State private var pixabayKey = ""
   @State private var youtubeKey = ""
+  @State private var nationalArchivesKey = ""
+  @State private var europeanaKey = ""
   @State private var enabled = AppSettings.enabledProviders
   @State private var statuses: [ProviderID: String] = [:]
   @State private var messages: [ProviderID: String] = [:]
@@ -46,6 +48,22 @@ struct SettingsView: View {
               applyURL: "https://console.cloud.google.com/apis/library/youtube.googleapis.com",
               noKeyDetail: tr("settings.youtubeBestEffortDetail"))
             Divider()
+            noKeyRow(.nasa, detail: tr("settings.nasaDetail"))
+            Divider()
+            noKeyRow(.libraryOfCongress, detail: tr("settings.locDetail"))
+            Divider()
+            providerCard(
+              .nationalArchives, key: $nationalArchivesKey,
+              applyURL: ProviderPolicy.apiKeyHelpURL(for: .nationalArchives)!.absoluteString,
+              noKeyDetail: tr("settings.naraLimitedDetail"))
+            Text(ProviderPolicy.nationalArchivesNotice)
+              .font(.caption2).foregroundStyle(.secondary).padding(.horizontal, 10)
+            Divider()
+            providerCard(
+              .europeana, key: $europeanaKey,
+              applyURL: ProviderPolicy.apiKeyHelpURL(for: .europeana)!.absoluteString,
+              noKeyDetail: tr("settings.europeanaLimitedDetail"))
+            Divider()
             noKeyRow(.wikimedia, detail: tr("settings.wikimediaDetail"))
             Divider()
             noKeyRow(.internetArchive, detail: tr("settings.archiveDetail"))
@@ -81,12 +99,18 @@ struct SettingsView: View {
         GroupBox(tr("settings.privacy")) {
           Text(tr("settings.privacyBody")).font(.callout).padding(8)
         }
+        GroupBox(tr("settings.legal")) {
+          Text(ProviderPolicy.nationalArchivesNotice)
+            .font(.callout).foregroundStyle(.secondary).padding(8)
+        }
       }.padding(24).frame(maxWidth: 900, alignment: .leading)
     }
     .onAppear {
       pexelsKey = KeychainService.read(.pexels)
       pixabayKey = KeychainService.read(.pixabay)
       youtubeKey = KeychainService.read(.youtube)
+      nationalArchivesKey = KeychainService.read(.nationalArchives)
+      europeanaKey = KeychainService.read(.europeana)
     }
     .alert(tr("history.clearConfirmTitle"), isPresented: $confirmClearHistory) {
       Button(tr("common.cancel"), role: .cancel) {}
@@ -142,7 +166,11 @@ struct SettingsView: View {
               editingKeys.remove(provider)
             }
           }
-          Button(tr("settings.testDirectSearch")) { test(provider, key: "") }
+          if provider == .nationalArchives || provider == .europeana {
+            Button(tr("provider.openOfficialSearch")) { openOfficialSearch(provider) }
+          } else {
+            Button(tr("settings.testDirectSearch")) { test(provider, key: "") }
+          }
           Link(tr("welcome.howToApply"), destination: URL(string: applyURL)!)
         }
       }
@@ -152,18 +180,24 @@ struct SettingsView: View {
           if let message = messages[provider] { Text(message).foregroundStyle(.secondary) }
         }.font(.caption)
       }
+      Text(capabilitySummary(provider, key: key.wrappedValue))
+        .font(.caption2).foregroundStyle(.secondary)
     }.padding(.vertical, 10)
   }
 
   private func noKeyRow(_ provider: ProviderID, detail: String) -> some View {
-    HStack {
+    HStack(spacing: 10) {
       Toggle("", isOn: enabledBinding(provider)).labelsHidden()
       VStack(alignment: .leading) {
         Text(provider.displayName).font(.headline)
         Text(detail).font(.caption).foregroundStyle(.secondary)
+        Text(capabilitySummary(provider, key: ""))
+          .font(.caption2).foregroundStyle(.secondary)
       }
       Spacer()
-      Text(statuses[provider] ?? tr("settings.enabled")).foregroundStyle(
+      Text(ProviderFactory.make(provider, apiKey: "").info.mode.label)
+        .font(.caption.bold()).foregroundStyle(.teal)
+      Text(statuses[provider] ?? tr("provider.noKeyRequired")).foregroundStyle(
         statuses[provider] == tr("settings.connectionFailed") ? .red : .green)
       Button(tr("settings.testConnection")) { test(provider, key: "") }
     }.padding(.vertical, 10)
@@ -195,7 +229,9 @@ struct SettingsView: View {
       key.wrappedValue = ""
       editingKeys.remove(provider)
       statuses[provider] = tr("settings.notConfigured")
-      messages[provider] = tr("settings.directSearchEnabled")
+      messages[provider] =
+        provider == .nationalArchives || provider == .europeana
+        ? tr("provider.limitedMode") : tr("settings.directSearchEnabled")
     } catch {
       statuses[provider] = tr("settings.saveFailed")
       messages[provider] = error.localizedDescription
@@ -225,6 +261,12 @@ struct SettingsView: View {
       AppSettings.downloadRootURL = url
     }
   }
+  private func openOfficialSearch(_ provider: ProviderID) {
+    guard let url = ProviderPolicy.officialSearchURL(for: provider, query: "history") else {
+      return
+    }
+    DesktopPlatform.shared.open(url)
+  }
   private func statusColor(_ status: String?) -> Color {
     status == tr("settings.connectionSuccess")
       ? .green
@@ -234,8 +276,24 @@ struct SettingsView: View {
   private func modeColor(_ mode: ProviderMode) -> Color {
     switch mode {
     case .officialAPI: .green
-    case .publicInterface: .teal
+    case .publicAPI, .publicInterface: .teal
     case .directSearch, .ytDLP: .blue
+    case .limited: .orange
     }
+  }
+
+  private func capabilitySummary(_ provider: ProviderID, key: String) -> String {
+    let info = ProviderFactory.make(provider, apiKey: key).info
+    if info.mode == .limited {
+      return tr("settings.capabilities", tr("provider.openOfficialSearch"))
+    }
+    let capabilities = info.capabilities
+    var values: [String] = []
+    if capabilities.search.isAvailable { values.append(tr("capability.search")) }
+    if capabilities.preview.isAvailable { values.append(tr("capability.preview")) }
+    if capabilities.metadata.isAvailable { values.append(tr("capability.metadata")) }
+    if capabilities.license.isAvailable { values.append(tr("capability.rights")) }
+    if capabilities.download.isAvailable { values.append(tr("capability.download")) }
+    return tr("settings.capabilities", values.joined(separator: " · "))
   }
 }

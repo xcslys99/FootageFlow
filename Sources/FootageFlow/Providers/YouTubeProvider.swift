@@ -15,7 +15,7 @@ struct YouTubeProvider: MediaProvider {
 
   func search(_ request: SearchRequest) async throws -> [MediaAsset] {
     guard !apiKey.isEmpty else { throw ProviderError.missingAPIKey(.youtube) }
-    guard request.mediaType != .image else { return [] }
+    guard request.mediaType != .image && request.mediaType != .audio else { return [] }
     let url = try URL.endpoint(
       "https://www.googleapis.com/youtube/v3/search",
       queryItems: [
@@ -43,7 +43,8 @@ struct YouTubeProvider: MediaProvider {
         height: thumb?.height, duration: nil, fileType: "YouTube", mediaType: .video,
         publishedDate: ProviderUtilities.parseDate(item.snippet.publishedAt), downloadable: true,
         originalMetadata: ["channelID": item.snippet.channelId], searchKeyword: request.query,
-        relevanceScore: 1 - Double(index) * 0.01, downloadStrategy: .ytDLP)
+        relevanceScore: 1 - Double(index) * 0.01, downloadStrategy: .ytDLP,
+        downloadAvailability: .conditional)
     }
   }
 }

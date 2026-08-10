@@ -28,7 +28,7 @@ public sealed class DownloadQueueService
         _ytDlp = ytDlp;
         _localization = localization;
         _http = httpClient ?? new HttpClient { Timeout = Timeout.InfiniteTimeSpan };
-        _http.DefaultRequestHeaders.UserAgent.ParseAdd("FootageFlow/0.2.0");
+        _http.DefaultRequestHeaders.UserAgent.ParseAdd("FootageFlow/0.3.0");
     }
 
     public DownloadTaskItem Enqueue(MediaAsset asset, Guid? projectId, string projectName)
@@ -56,6 +56,11 @@ public sealed class DownloadQueueService
         item.Progress = 0;
         SetState(item, "waiting");
         _ = RunAsync(item);
+    }
+
+    public void RetryFailed()
+    {
+        foreach (var item in Items.Where(value => value.CanRetry).ToArray()) Retry(item);
     }
 
     public void RefreshLocalizedStatus()

@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using FootageFlow.Windows.Infrastructure;
 
 namespace FootageFlow.Windows.Models;
 
@@ -11,6 +12,9 @@ public sealed class CoreRequest
     public string? Orientation { get; init; }
     public string? Resolution { get; init; }
     public string? Duration { get; init; }
+    public int? YearFrom { get; init; }
+    public int? YearTo { get; init; }
+    public bool? DownloadableOnly { get; init; }
     public int? PageSize { get; init; }
     public IReadOnlyList<string>? ProviderIDs { get; init; }
     public IReadOnlyDictionary<string, string>? ApiKeys { get; init; }
@@ -44,6 +48,7 @@ public sealed class CoreResponse
     public string? FileName { get; init; }
     public string? ErrorCode { get; init; }
     public string? ErrorMessage { get; init; }
+    public string? Text { get; init; }
 }
 
 public sealed class PersistentDatabase
@@ -133,6 +138,7 @@ public sealed class ProviderCapabilities
     public string Download { get; init; } = "unavailable";
     public bool SupportsVideo { get; init; }
     public bool SupportsImage { get; init; }
+    public bool SupportsAudio { get; init; }
     public IReadOnlyList<string> AccessMethods { get; init; } = [];
 }
 
@@ -160,8 +166,9 @@ public sealed class SearchKeyword
     public bool IsEnabled { get; init; }
 }
 
-public sealed class MediaAsset
+public sealed class MediaAsset : ObservableObject
 {
+    private bool _isSelected;
     public string Id { get; init; } = "";
     public string Provider { get; init; } = "";
     public string Title { get; init; } = "";
@@ -185,6 +192,9 @@ public sealed class MediaAsset
     public string SearchKeyword { get; init; } = "";
     public double RelevanceScore { get; init; }
     public string? DownloadStrategy { get; init; }
+    public RightsInfo? RightsInfo { get; init; }
+    public string? DownloadAvailability { get; init; }
+    [JsonIgnore] public bool IsSelected { get => _isSelected; set => Set(ref _isSelected, value); }
 
     [JsonIgnore] public string StableId => $"{Provider}:{Id}";
     [JsonIgnore] public string Resolution => Width is > 0 && Height is > 0 ? $"{Width}×{Height}" : "—";
@@ -194,4 +204,22 @@ public sealed class MediaAsset
     [JsonIgnore] public long PixelCount => (long)(Width ?? 0) * (Height ?? 0);
     [JsonIgnore] public DateTimeOffset SortPublishedDate => PublishedDate ?? DateTimeOffset.MinValue;
     [JsonIgnore] public double SortDuration => Duration ?? -1;
+    [JsonIgnore] public bool IsDirectlyDownloadable => DownloadAvailability == "direct" ||
+        (DownloadAvailability is null && Downloadable && !string.IsNullOrWhiteSpace(DownloadURL));
+    [JsonIgnore] public bool RightsKnown => RightsInfo?.Known ?? LicenseStatus != "UNKNOWN";
+    [JsonIgnore] public bool OpenLicense => RightsInfo?.OpenLicense ??
+        LicenseStatus is "SAFE" or "ATTRIBUTION_REQUIRED" or "PUBLIC_DOMAIN";
+    [JsonIgnore] public bool PublicDomain => RightsInfo?.PublicDomain ?? LicenseStatus == "PUBLIC_DOMAIN";
+}
+
+public sealed class RightsInfo
+{
+    public string? Statement { get; init; }
+    public string? Uri { get; init; }
+    public string? Source { get; init; }
+    public bool Known { get; init; }
+    public bool PublicDomain { get; init; }
+    public bool OpenLicense { get; init; }
+    public bool AttributionRequired { get; init; }
+    public bool? CommercialUseKnown { get; init; }
 }

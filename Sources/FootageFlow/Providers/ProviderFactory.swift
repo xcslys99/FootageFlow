@@ -18,6 +18,12 @@ enum ProviderFactory {
     case .youtube:
       return key.isEmpty
         ? YouTubeYTDLPProvider(service: ytDLPService) : YouTubeProvider(apiKey: key)
+    case .nasa: return NASAProvider()
+    case .libraryOfCongress: return LibraryOfCongressProvider()
+    case .nationalArchives:
+      return key.isEmpty ? LimitedDiscoveryProvider(id: id) : NationalArchivesProvider(apiKey: key)
+    case .europeana:
+      return key.isEmpty ? LimitedDiscoveryProvider(id: id) : EuropeanaProvider(apiKey: key)
     }
   }
 

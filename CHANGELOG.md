@@ -4,6 +4,38 @@ All notable FootageFlow changes are documented here.
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-08-10
+
+### Added
+
+- NASA Image and Video Library through the official public search and asset APIs
+- Library of Congress film/video, photo, and audio discovery through the official public JSON API
+- National Archives Catalog API integration with secure user-key storage and a non-scraping limited mode
+- Europeana Search API integration with secure user-key storage and a non-scraping limited mode
+- Advanced source, media type, year, duration, resolution, rights, and downloadability filters
+- Prominent Downloadable Only filter based on direct download availability
+- Multi-select, Select All Visible, batch download, add to existing/new project, copy source information, and clear selection
+- Per-result Copy Source and Copy Attribution actions
+- Structured `RightsInfo`, explicit direct/conditional/unavailable download state, and backward-compatible v0.2 metadata decoding
+- Retry Failed action for batch download recovery
+
+### Improved
+
+- Provider capability and mode presentation across macOS and Windows
+- Progressive nine-provider result handling and provider-specific rate limiting
+- Rights metadata normalization without inferring Public Domain from provider identity
+- API/keyless selection, secure NARA/Europeana credentials, and public/limited-mode messaging
+- Search-cache policy enforcement for National Archives
+- Cross-platform feature parity and localization coverage
+
+### Known limitations
+
+- Full in-app National Archives and Europeana search requires the user's own API key; without one, FootageFlow opens the official search site.
+- The Windows installer is not code-signed and the macOS app is Ad Hoc signed but not notarized.
+- Windows 11 x64 is supported; Windows 10 has not completed release validation.
+- YouTube, Pexels, and Pixabay best-effort modes can be limited by upstream provider changes.
+- Provider-supplied rights metadata may be incomplete; unknown information must be checked on the original source page.
+
 ## [0.2.0] - 2026-08-10
 
 ### Added

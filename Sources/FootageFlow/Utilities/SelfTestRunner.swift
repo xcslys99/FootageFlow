@@ -70,6 +70,17 @@ enum SelfTestRunner {
     check(
       ProviderFactory.make(.pixabay, apiKey: "").info.mode == .directSearch,
       "Pixabay direct mode")
+    check(ProviderID.allCases.count == 9, "Nine provider catalog")
+    check(ProviderFactory.make(.nasa, apiKey: "").info.mode == .publicAPI, "NASA public API")
+    check(
+      ProviderFactory.make(.libraryOfCongress, apiKey: "").info.mode == .publicAPI,
+      "Library of Congress public API")
+    check(
+      ProviderFactory.make(.nationalArchives, apiKey: "").info.mode == .limited,
+      "National Archives limited mode")
+    check(
+      ProviderFactory.make(.europeana, apiKey: "").info.mode == .limited,
+      "Europeana limited mode")
     if case .rateLimited = YTDLPService.mapFailure("HTTP Error 429: Too Many Requests") {
       passed += 1
     } else {
@@ -109,6 +120,17 @@ enum SelfTestRunner {
       originalMetadata: [:], searchKeyword: "test", relevanceScore: 1)
     let duplicate = sample
     check(SearchDeduplicator.apply([sample, duplicate]).count == 1, "Search deduplication")
+    let discoveryFilter = AdvancedSearchFilter(
+      mediaType: .video, orientation: .landscape, resolution: .fullHD,
+      duration: .underMinute, license: .knownOnly, selectedProviders: [.wikimedia],
+      downloadableOnly: true)
+    check(discoveryFilter.matches(sample), "Discovery filters")
+    var selection = AssetSelection()
+    selection.selectVisible([sample])
+    check(selection.count == 1, "Batch selection")
+    check(
+      AttributionFormatter.attribution(for: sample).contains(sample.sourcePageURL.absoluteString),
+      "Attribution formatter")
     check(
       (try? JSONDecoder().decode(MediaAsset.self, from: JSONEncoder().encode(sample))) == sample,
       "Unified model Codable")

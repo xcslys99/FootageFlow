@@ -5,6 +5,7 @@ protocol DesktopPlatformServing {
   func open(_ url: URL)
   func reveal(_ url: URL)
   func chooseDirectory(prompt: String) -> URL?
+  func copy(_ text: String)
 }
 
 enum DesktopPlatform {
@@ -27,11 +28,17 @@ enum DesktopPlatform {
       panel.prompt = prompt
       return panel.runModal() == .OK ? panel.url : nil
     }
+
+    func copy(_ text: String) {
+      NSPasteboard.general.clearContents()
+      NSPasteboard.general.setString(text, forType: .string)
+    }
   }
 #else
   private struct SystemDesktopPlatform: DesktopPlatformServing {
     func open(_ url: URL) {}
     func reveal(_ url: URL) {}
     func chooseDirectory(prompt: String) -> URL? { nil }
+    func copy(_ text: String) {}
   }
 #endif
