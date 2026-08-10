@@ -1,0 +1,30 @@
+name: Provider request
+description: Propose a new real-media source
+title: "[Provider]: "
+labels: [provider]
+body:
+  - type: input
+    id: provider
+    attributes:
+      label: Provider name and official site
+    validations:
+      required: true
+  - type: input
+    id: api
+    attributes:
+      label: Official API documentation
+    validations:
+      required: true
+  - type: textarea
+    id: value
+    attributes:
+      label: What footage does it add?
+    validations:
+      required: true
+  - type: textarea
+    id: terms
+    attributes:
+      label: Quota, attribution, download, and caching rules
+      description: Link official terms. Do not rely on a blog post.
+    validations:
+      required: true

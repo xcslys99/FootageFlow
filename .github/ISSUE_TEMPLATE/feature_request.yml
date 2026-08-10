@@ -1,0 +1,32 @@
+name: Feature request
+description: Suggest a focused improvement
+title: "[Feature]: "
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Creator problem
+      description: What workflow is difficult today?
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Desired outcome
+      description: Describe the result rather than a required implementation.
+    validations:
+      required: true
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Platform scope
+      options:
+        - Core / all platforms
+        - macOS
+        - Windows (future release)
+  - type: textarea
+    id: privacy
+    attributes:
+      label: Privacy, license, or provider impact
+      description: Note any new network service, API, media-rights, or credential requirement.

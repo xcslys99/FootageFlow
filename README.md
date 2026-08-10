@@ -1,31 +1,90 @@
-# 素材猎手 FootageFinder
+# FootageFlow
 
-这是一个可直接运行的 macOS 原生素材搜索与管理软件，不依赖 Codex，也不使用收费大语言模型 API。
+[English](README.md) · [简体中文](README.zh-CN.md)
 
-## 第一次使用
+Search. Discover. Download. Organize.
 
-1. 双击 `FootageFinder.app`。
-2. 首次欢迎页可以先点“稍后设置”；Wikimedia Commons 和 Internet Archive 不需要 Key。
-3. 如需 Pexels、Pixabay 或 YouTube，打开左侧“设置”，填写对应 API Key，点“保存”后再点“测试连接”。Key 只保存在 macOS Keychain。
-4. 回到“快速搜索”，输入中文或英文题材，查看/修改自动生成的搜索词，再点“搜索素材”。
+FootageFlow is a privacy-friendly desktop app for finding real video and image assets across several media libraries at once. It is designed for documentary, history, country profile, finance, science, and social-video research.
 
-## 日常操作
+The current release is a native **macOS 15+ Apple Silicon** app. Windows support is planned after the macOS v0.1.0 release is stable; it is not included in this release.
 
-- 搜索结果可按视频/图片、方向、清晰度、时长、来源和授权状态筛选。
-- 可预览来源提供的直链视频或图片；不支持内嵌预览时请点“打开来源”。
-- 在搜索栏右侧选择项目后，收藏和下载会归入该项目。
-- 下载默认保存到 `Movies/FootageFinder/项目名/`。可在设置中更换根目录。
-- 每个下载文件旁会自动生成同名 `.source.txt` 与 `.source.json`，记录作者、来源页、原始文件、License、搜索词、项目与镜头编号。
-- License 缺失时一定显示“授权未知”，发布前应打开来源页检查。
-- “下载记录”可打开文件、在 Finder 中显示或打开来源；仅删除记录不会删除本地文件。
-- “文稿搜素材”可粘贴全文、自动拆镜头，并最多同时搜索 3 个镜头。
+## What works
 
-## 出问题时
+- Concurrent search across Pexels, Pixabay, Wikimedia Commons, Internet Archive, and YouTube
+- Video and image results with source, creator, resolution, duration, and license metadata when supplied by the provider
+- Filters, relevance sorting, deduplication, progressive provider results, and friendly partial-failure states
+- Video/image preview, favorites, project library, script segmentation, and search history
+- Download queue with progress, speed, cancel, retry, and a maximum of three concurrent downloads
+- A matching `.source.txt` and `.source.json` beside each downloaded file
+- English and Simplified Chinese with English on first launch and a visible language switcher
+- API keys stored in the operating system's secure credential store
+- No analytics, advertising, tracking, cloud account, paid LLM, OpenAI API, or Codex dependency
 
-- 显示“尚未配置 API Key”：到设置填写该平台 Key，或关闭该平台。
-- 显示“请求次数过多”：稍后再试；应用不会绕过平台限额。
-- 某个平台失败不会影响其他平台；顶部可单独重试。
-- 设置中可清理搜索缓存或打开内部日志。日志不会记录 API Key。
-- 如果 macOS 提示无法验证开发者：这是本机 Ad Hoc 签名版本，可在“系统设置 → 隐私与安全性”确认打开。
+YouTube is used only for official Data API search, thumbnails, metadata, and opening the source page. FootageFlow does not download YouTube videos.
 
-YouTube 第一版只用于官方 Data API 搜索、缩略图和打开来源，不提供下载。
+## Screenshots
+
+![FootageFlow search](docs/images/search.png)
+
+![FootageFlow projects](docs/images/projects.png)
+
+## Install on macOS
+
+1. Download `FootageFlow-0.1.0-macOS-arm64.dmg` from Releases.
+2. Open the DMG and drag FootageFlow to Applications.
+3. Open FootageFlow. The v0.1.0 build is Ad Hoc signed, not notarized; if macOS blocks the first launch, use **System Settings → Privacy & Security → Open Anyway**.
+
+No terminal command is required for normal use.
+
+## Quick start
+
+1. Open FootageFlow. Choose **Set Up Later** if you want to start without API keys.
+2. Wikimedia Commons and Internet Archive work without keys.
+3. For more sources, open **Settings**, enter a Pexels, Pixabay, or YouTube Data API key, select **Save**, then **Test Connection**.
+4. Return to **Quick Search**, enter a topic, review the generated keywords, and select **Search Footage**.
+5. Select a project before favoriting or downloading if you want the asset organized into that project.
+6. Check every asset's license and original source page before publishing.
+
+Default downloads are stored under `~/Movies/FootageFlow/<Project>/`. You can change the root folder in Settings. Removing a database record never deletes the media file unless you explicitly choose **Delete Local File** and confirm.
+
+## Provider setup
+
+| Provider | API key | Main use |
+|---|---:|---|
+| [Pexels](https://www.pexels.com/api/) | Required | Modern B-roll video and photos |
+| [Pixabay](https://pixabay.com/api/docs/) | Required | Video and images |
+| [Wikimedia Commons](https://commons.wikimedia.org/wiki/Commons:API) | No | Historical images, maps, people, places, and some video |
+| [Internet Archive](https://archive.org/developers/) | No | Archival films, newsreels, recordings, and public collections |
+| [YouTube Data API](https://developers.google.com/youtube/v3/getting-started) | Required | Research leads and source-page discovery |
+
+API keys are credentials, not platform logins. Availability, quotas, and provider terms remain controlled by each provider.
+
+## License and source safety
+
+FootageFlow never guesses a license. Missing metadata is shown as **License unknown**. Internet Archive items are not assumed to be Public Domain. Always verify the provider's source page and current terms before reuse.
+
+This project is not affiliated with or endorsed by Pexels, Pixabay, Wikimedia Foundation, Internet Archive, Google, or YouTube. See [PRIVACY.md](PRIVACY.md) and the [YouTube API Services Terms](https://developers.google.com/youtube/terms/api-services-terms-of-service).
+
+FootageFlow source code is released under the [MIT License](LICENSE). Media found through the app keeps its own provider-specific copyright and license.
+
+## Build from source
+
+Requirements: macOS 15+, Swift 6, and Xcode for XCTest.
+
+```bash
+swift build -c release
+swift test
+scripts/build_app.sh
+scripts/verify_app.sh
+```
+
+Architecture and provider extension instructions are in [DEVELOPMENT.md](DEVELOPMENT.md). Contributions are welcome through [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Troubleshooting
+
+- **API key required**: add the key in Settings or disable that provider.
+- **Too many requests**: wait and retry; FootageFlow does not bypass provider limits.
+- **One provider failed**: other successful provider results remain available.
+- **No preview**: use **Open Source Page** when the provider does not expose a compatible stream.
+- **Unexpected license**: trust the original provider page, not cached metadata; refresh the search.
+- **Logs**: use **Settings → Open Logs**. Logs do not include API keys.

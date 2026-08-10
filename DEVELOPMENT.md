@@ -1,41 +1,86 @@
-# FootageFinder 开发说明
+# FootageFlow development guide
 
-## 架构
+## Toolchain
 
-- `Models/`：统一 `MediaAsset`、搜索筛选、五态 License 模型。
-- `Providers/`：`MediaProvider` 协议及 Pexels、Pixabay、Wikimedia、Internet Archive、YouTube 独立实现。
-- `Networking/`：URLSession、超时、HTTP 错误中文映射、429/5xx 有限指数退避和取消。
-- `Services/`：Keychain、平台缓存、最多 3 并发下载、两次下载重试、日志和 source sidecar。
-- `Persistence/`：项目、镜头、收藏、搜索历史、下载记录的 Codable 原子本地数据库。
-- `ViewModels/`：Provider 并发搜索、去重、综合排序和平台独立失败。
-- `Views/`：SwiftUI Sidebar、网格、AVKit 预览、项目、收藏、下载历史、设置、文稿批量搜索。
+- Swift 6 / Swift Package Manager
+- SwiftUI application shell for macOS 15+
+- Foundation, URLSession, Codable, async/await
+- AppKit and AVKit only inside macOS integration points
+- Security.framework-backed credential store on macOS
+- Apple Translation where available, with a rule-based fallback
+- No third-party runtime dependencies
 
-当前机器只有 Command Line Tools，缺少 `SwiftDataMacros` 和 XCTest/Swift Testing 模块，因此 SwiftData `@Model` 无法编译。持久化接口已隔离，并使用原生 Codable 原子文件保证交付 App 可以实际构建和跨重启保存；完整 Xcode 环境可将 `DataStore` 替换为 SwiftData，而无需修改 Provider 或主要 View。
+The current release target is Apple Silicon macOS. Swift itself supports Windows, but SwiftUI, AppKit, AVKit, Apple Translation, and Security.framework do not. The future Windows app will share the core package and provide a Windows-specific UI and platform adapters.
 
-## 当前官方 API
+## Source layout
 
-- Pexels：`GET /v1/videos/search`、`GET /v1/search`，`Authorization` Header。
-- Pixabay：`GET /api/videos/`、`GET /api/`；按官方要求结果缓存 24 小时。
-- Wikimedia Commons：MediaWiki Action API，`generator=search` + `imageinfo` + `extmetadata`。
-- Internet Archive：Advanced Search `advancedsearch.php` + Item Metadata `/metadata/{identifier}`。
-- YouTube Data API v3：`search.list`，`part=snippet&type=video`。为节省额度，每次总搜索最多使用前 2 个启用关键词。
+- `Models/`: `MediaAsset`, filters, provider IDs, and the five-state license model.
+- `Providers/`: independent implementations of the `MediaProvider` protocol.
+- `Networking/`: validated HTTPS requests, readable error mapping, cancellation, bounded retries, and rate-limit handling.
+- `Persistence/`: projects, script segments, favorites, history, and download metadata in an atomic Codable database.
+- `Services/`: downloads, cache, localization, logging, credential storage, settings, preview, and source sidecars.
+- `Platform/`: replaceable system paths, file/folder opening, file reveal, and directory selection.
+- `ViewModels/`: provider orchestration, progressive results, deduplication, filtering, and sorting.
+- `Views/`: macOS SwiftUI presentation only.
+- `Utilities/`: keyword rules, file naming, URL safety, acceptance tests, and offline self-tests.
+- `Tests/`: XCTest cases and fixed provider fixtures.
 
-所有 Key 均通过 Security.framework 存入 Keychain，源码、UserDefaults、日志和数据库均不保存 Key。
+Business logic must not import AppKit, SwiftUI, AVKit, Security, or Translation. New platform-specific behavior belongs behind a protocol in `Platform/` or in a clearly named platform implementation.
 
-## 新增 Provider
+## Provider contract
 
-1. 新建实现 `MediaProvider` 的类型，声明 `ProviderInfo`。
-2. 将平台 JSON 严格映射到 `MediaAsset`；缺失字段保留 `nil`，不得猜 License。
-3. 在 `SearchViewModel.makeProviders()`、`BatchSearchService` 和设置页加入 Provider。
-4. 添加固定 JSON fixture 与解析测试，并加入 `SelfTestRunner`。
+`MediaProvider` exposes provider metadata, search, connection testing, detail lookup, and download resolution. Every provider maps its response into `MediaAsset`; unknown fields remain `nil`, and an absent license is always `UNKNOWN`.
 
-## 构建与验证
+Current official interfaces:
 
-```text
+- Pexels: `GET /v1/videos/search` and `GET /v1/search`, with the API key in the `Authorization` header.
+- Pixabay: `GET /api/videos/` and `GET /api/`; Pixabay search responses are cached for 24 hours.
+- Wikimedia Commons: MediaWiki Action API using `generator=search`, `imageinfo`, and `extmetadata`.
+- Internet Archive: Advanced Search plus `/metadata/{identifier}` for item files and rights fields.
+- YouTube Data API v3: `search.list`, `part=snippet`, `type=video`. YouTube is source discovery only and is never marked downloadable.
+
+To add a provider:
+
+1. Add a type conforming to `MediaProvider` under `Providers/`.
+2. Validate every remote URL with `URLValidator`.
+3. Map only provider-supplied metadata; do not infer licenses.
+4. Register the provider in `SearchViewModel`, script batch search, Settings, and localization resources.
+5. Add fixed JSON fixtures, XCTest parsing coverage, and an offline self-test where practical.
+6. Document quota, attribution, caching, and download restrictions.
+
+## Persistence and privacy
+
+The Codable database stores metadata and local file paths, never video/image binaries or API keys. Writes are atomic. API keys are accessed through `CredentialStoring`; the macOS implementation uses Keychain and the future Windows implementation must use Windows Credential Manager or an equivalent secure OS facility.
+
+Downloads are restricted to the configured root for app-initiated deletion. A successful media download is not recorded until matching `.source.txt` and `.source.json` files are written.
+
+## Localization
+
+English is the fixed first-launch default. `en.lproj` is the fallback for missing translations. Simplified Chinese is in `zh-Hans.lproj`; SwiftPM may normalize that directory to lowercase in the built resource bundle.
+
+Run `scripts/check_localizations.sh` after changing UI copy. `localization.fallbackProbe` intentionally exists only in English to exercise fallback behavior.
+
+## Build and test
+
+```bash
+scripts/lint.sh
+scripts/secret_scan.sh
+swift build -c release
+swift test
 scripts/build_app.sh
 scripts/verify_app.sh
+dist/FootageFlow.app/Contents/MacOS/FootageFlow --self-test
+dist/FootageFlow.app/Contents/MacOS/FootageFlow --live-smoke
 ```
 
-发布构建使用 SwiftPM Release，随后生成标准 `.app` bundle、图标并做本机 Ad Hoc codesign。`FootageFinder --self-test` 当前覆盖 16 项离线单元检查；`--live-smoke` 验证 Wikimedia、Internet Archive 和缺 Key 降级；`--acceptance-test <目录>` 还会下载一个明确 Public Domain 的 Wikimedia 测试视频、生成 sidecar 并验证项目/收藏重开。
+`--self-test` is fully offline. `--live-smoke` searches Wikimedia Commons and Internet Archive and verifies missing-key behavior. `--acceptance-test <directory>` additionally downloads a small Public Domain fixture, creates both sidecars, checks persistence, and simulates a friendly network error.
 
-测试 fixtures 位于 `Tests/FootageFinderTests/Fixtures/`。完整 Xcode 安装后可直接启用 XCTest 文件；当前 CLT 环境运行 `swift test` 会报告缺少 `XCTest` 模块，这是工具链边界，不是应用构建失败。
+This Mac currently has Command Line Tools rather than full Xcode. Release builds and offline self-tests work locally, while `swift test` reports that XCTest is unavailable. GitHub Actions runs XCTest on a full Xcode image.
+
+## Packaging
+
+`scripts/build_app.sh` builds a Release executable, creates the `.app`, copies the SwiftPM resource bundle, generates the original FootageFlow icon, and performs Ad Hoc signing. `scripts/build_dmg.sh` creates the drag-to-Applications DMG and SHA-256 checksum. No Developer ID certificate or notarization is claimed for v0.1.0.
+
+## Windows direction
+
+The Windows release is intentionally deferred until macOS v0.1.0 stabilizes. It should live in this repository and share models, provider parsers, search orchestration, fixtures, license rules, sidecar schema, and most download logic. Windows-specific work includes UI, credential storage, file dialogs, external opening/reveal, media preview, translation fallback, installer generation, and system paths.
