@@ -1,6 +1,6 @@
 # Windows architecture audit
 
-Status: Windows 11 x64 in development for FootageFlow v0.2.0. This document does not claim that the Windows release is complete or supported.
+Status: Windows 11 x64 supported in FootageFlow v0.2.0. The Windows setup package, portable package, checksums, clean install, native GUI startup, uninstall, provider smoke tests, and macOS regression suite passed release-candidate validation.
 
 ## Current shared code
 
@@ -60,5 +60,18 @@ Only narrow shared-core extraction, conditional SwiftPM source selection, and cr
 ## Version plan
 
 - v0.1.0 remains unchanged and macOS-only.
-- v0.2.0 is the first planned feature release with Windows 11 x64 support.
-- README will continue to say “Windows — In development” until the setup executable, checksums, clean install/uninstall, provider tests, and final cross-platform regression tests pass.
+- v0.2.0 is the first feature release with Windows 11 x64 support.
+- Windows 10 x64 is not declared supported because it has not completed the same release validation.
+
+## Release validation
+
+The final Windows CI candidate completed all of the following on a clean Windows runner:
+
+- Shared Swift Release build, Core Host health check, and 22 XCTest cases.
+- Native WPF Release build and 25 Windows platform acceptance checks.
+- Self-contained .NET publish, Swift runtime collection, pinned yt-dlp checksum verification, and Inno Setup compilation.
+- Clean per-user installation, installed Core Host health check, native WPF startup-liveness check, and clean uninstall.
+- Real no-key provider smoke tests for Wikimedia Commons, Internet Archive, Pexels direct mode, Pixabay direct mode, and YouTube yt-dlp mode. A Provider block remains an isolated, user-friendly result rather than failing the aggregate search.
+- Portable archive, installer, SHA-256 files, runtime/license inventory, tracked-secret scan, and Windows package artifact upload.
+
+Official API-key paths are covered by fixed provider fixtures and run as live smoke tests only when CI secrets are explicitly configured. No developer credential is embedded in the repository or release packages.

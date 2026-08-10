@@ -11,7 +11,7 @@
 - Apple Translation where available, with a rule-based fallback
 - A checksum-pinned yt-dlp macOS executable is bundled for local, best-effort YouTube interoperability; no FFmpeg binary is bundled
 
-The current release target is Apple Silicon macOS. Windows 11 x64 is in active development for v0.2.0. SwiftUI, AppKit, AVKit, Apple Translation, and Security.framework remain macOS-only. The Windows WPF layer calls a local Swift Core Host over JSON stdin/stdout so provider behavior, normalized models, license rules, keyword rules, sidecars, and the Codable project database remain single-source Swift implementations. Credentials never appear in command-line arguments.
+FootageFlow v0.2.0 targets Apple Silicon macOS 15+ and Windows 11 x64. SwiftUI, AppKit, AVKit, Apple Translation, and Security.framework remain macOS-only. The Windows WPF layer calls a local Swift Core Host over JSON stdin/stdout so provider behavior, normalized models, license rules, keyword rules, sidecars, and the Codable project database remain single-source Swift implementations. Credentials never appear in command-line arguments.
 
 ## Source layout
 
@@ -85,11 +85,11 @@ This Mac currently has Command Line Tools rather than full Xcode. Release builds
 
 ## Packaging
 
-`scripts/build_app.sh` builds a Release executable, downloads the fixed yt-dlp release only when it is not already cached, verifies its SHA-256, creates the `.app`, copies localized resources without embedding a developer path, generates the original FootageFlow icon, and performs Ad Hoc signing. `scripts/binary_privacy_scan.sh` scans the app executable and bundled tool for credential-like strings. `scripts/build_dmg.sh` creates the drag-to-Applications DMG and SHA-256 checksum. No Developer ID certificate or notarization is claimed for v0.1.0.
+`scripts/build_app.sh` builds a Release executable, downloads the fixed yt-dlp release only when it is not already cached, verifies its SHA-256, creates the `.app`, copies localized resources without embedding a developer path, generates the original FootageFlow icon, and performs Ad Hoc signing. `scripts/binary_privacy_scan.sh` scans the app executable and bundled tool for credential-like strings. `scripts/build_dmg.sh` creates the drag-to-Applications DMG and SHA-256 checksum. No Developer ID certificate or notarization is claimed for v0.2.0.
 
 ## Windows architecture
 
-Windows development remains in this repository on the `windows-v0.2.0` branch until release validation is complete. `Package.swift` excludes macOS presentation files when it is evaluated on Windows, then builds the same Provider and Foundation core as `FootageFlowCore.exe`. The WPF client starts one short-lived Core Host request per provider, allowing results to appear progressively and cancellation to terminate only that provider process. A failed provider returns a normalized batch and cannot fail the aggregate search.
+Windows development remains in this repository and shares the same release history as macOS. `Package.swift` excludes macOS presentation files when it is evaluated on Windows, then builds the same Provider and Foundation core as `FootageFlowCore.exe`. The WPF client starts one short-lived Core Host request per provider, allowing results to appear progressively and cancellation to terminate only that provider process. A failed provider returns a normalized batch and cannot fail the aggregate search.
 
 The platform split is deliberate:
 
@@ -97,4 +97,4 @@ The platform split is deliberate:
 - macOS: SwiftUI/AppKit/AVKit, Keychain, Apple Translation, Finder integration, and URLSession download presentation.
 - Windows: WPF/MediaElement, Credential Manager, Explorer/file dialogs, a bounded `HttpClient` download queue, and yt-dlp process execution. yt-dlp JSON is mapped back into `MediaAsset` by the shared Swift mapper.
 
-See `docs/WINDOWS_ARCHITECTURE.md` for the audit, packaging boundary, and migration risks. Windows must remain marked “In development” until installer, clean-install, uninstall, real-provider, and macOS regression checks all pass.
+The Windows CI job builds the shared Swift core, runs Swift and Windows acceptance tests, publishes a self-contained WPF runtime, bundles pinned yt-dlp and the required Swift runtime DLLs, builds the Inno Setup installer, performs a clean install, checks the installed Core Host and native WPF startup separately, uninstalls, runs real no-key Provider smoke tests, and publishes checksummed artifacts. See `docs/WINDOWS_ARCHITECTURE.md` for the audit, packaging boundary, validation evidence, and migration risks.
