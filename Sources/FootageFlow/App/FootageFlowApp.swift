@@ -7,6 +7,7 @@ struct FootageFlowApp: App {
     @StateObject private var store = DataStore.shared
     @StateObject private var search = SearchViewModel()
     @StateObject private var downloads = DownloadManager.shared
+    @StateObject private var localization = LocalizationManager.shared
     @AppStorage("didFinishWelcome") private var didFinishWelcome = false
 
     init() {
@@ -29,6 +30,8 @@ struct FootageFlowApp: App {
                 .environmentObject(store)
                 .environmentObject(search)
                 .environmentObject(downloads)
+                .environmentObject(localization)
+                .environment(\.locale, localization.locale)
                 .frame(minWidth: 1080, minHeight: 700)
                 .onAppear {
                     search.configure(store: store)

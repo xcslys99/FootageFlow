@@ -78,6 +78,19 @@ final class FootageFlowTests: XCTestCase {
         XCTAssertEqual(ProviderRuntimeState.from(error: ProviderError.serverUnavailable).availability, .unavailable)
     }
 
+    func testLocalizationDefaultSwitchPersistenceAndFallback() throws {
+        let suite = "FootageFlowTests.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let localization = LocalizationManager(defaults: defaults)
+        XCTAssertEqual(localization.language, .english)
+        XCTAssertEqual(localization.text("nav.quickSearch"), "Quick Search")
+        localization.setLanguage(.simplifiedChinese)
+        XCTAssertEqual(localization.text("nav.quickSearch"), "快速搜索")
+        XCTAssertEqual(localization.text("localization.fallbackProbe"), "English fallback")
+        XCTAssertEqual(LocalizationManager(defaults: defaults).language, .simplifiedChinese)
+    }
+
     @MainActor func testProjectCRUDAndPersistence() throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)

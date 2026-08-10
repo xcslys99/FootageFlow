@@ -11,7 +11,8 @@ let package = Package(
     targets: [
         .executableTarget(
             name: "FootageFlow",
-            path: "Sources/FootageFlow"
+            path: "Sources/FootageFlow",
+            resources: [.process("Resources")]
         ),
         .testTarget(
             name: "FootageFlowTests",

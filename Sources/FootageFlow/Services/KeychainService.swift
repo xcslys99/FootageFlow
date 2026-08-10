@@ -52,6 +52,6 @@ enum KeychainService {
 
 enum KeychainError: LocalizedError {
     case status(OSStatus)
-    var errorDescription: String? { "无法安全保存 API Key（Keychain 状态 \(code)）" }
+    var errorDescription: String? { tr("error.keychain", code) }
     private var code: OSStatus { if case .status(let code) = self { code } else { -1 } }
 }

@@ -4,7 +4,7 @@ enum AppSection: String, CaseIterable, Identifiable {
     case quickSearch, scriptSearch, projects, favorites, downloads, settings
     var id: String { rawValue }
     var label: String {
-        switch self { case .quickSearch: "快速搜索"; case .scriptSearch: "文稿搜素材"; case .projects: "我的项目"; case .favorites: "收藏"; case .downloads: "下载记录"; case .settings: "设置" }
+        switch self { case .quickSearch: tr("nav.quickSearch"); case .scriptSearch: tr("nav.scriptSearch"); case .projects: tr("nav.projects"); case .favorites: tr("nav.favorites"); case .downloads: tr("nav.downloads"); case .settings: tr("nav.settings") }
     }
     var icon: String {
         switch self { case .quickSearch: "magnifyingglass"; case .scriptSearch: "doc.text.magnifyingglass"; case .projects: "folder"; case .favorites: "heart"; case .downloads: "arrow.down.circle"; case .settings: "gearshape" }
@@ -13,6 +13,7 @@ enum AppSection: String, CaseIterable, Identifiable {
 
 struct RootView: View {
     @State private var selection: AppSection? = .quickSearch
+    @EnvironmentObject private var localization: LocalizationManager
 
     var body: some View {
         NavigationSplitView {
@@ -29,6 +30,26 @@ struct RootView: View {
             case .favorites: FavoritesView()
             case .downloads: DownloadsView()
             case .settings: SettingsView()
+            }
+        }
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Menu {
+                    ForEach(AppLanguage.allCases) { language in
+                        Button {
+                            localization.setLanguage(language)
+                        } label: {
+                            HStack {
+                                Text(language.displayName)
+                                if localization.language == language { Image(systemName: "checkmark") }
+                            }
+                        }
+                    }
+                } label: {
+                    Text("🌐 \(localization.language.displayName)")
+                        .fontWeight(.semibold)
+                }
+                .help(tr("language.menu"))
             }
         }
     }

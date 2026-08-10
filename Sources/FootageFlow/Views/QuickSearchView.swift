@@ -4,6 +4,7 @@ import Translation
 struct QuickSearchView: View {
     @EnvironmentObject private var viewModel: SearchViewModel
     @EnvironmentObject private var store: DataStore
+    @EnvironmentObject private var localization: LocalizationManager
     @State private var translationConfiguration: TranslationSession.Configuration?
     @State private var pendingTranslation = ""
     @State private var showHistory = false
@@ -11,13 +12,14 @@ struct QuickSearchView: View {
     private let columns = [GridItem(.adaptive(minimum: 250, maximum: 340), spacing: 14)]
 
     var body: some View {
+        let _ = localization.language
         VStack(spacing: 0) {
             searchHeader
             Divider()
             if viewModel.isSearching { ProgressView().progressViewStyle(.linear) }
             statusArea
             if !viewModel.isSearching && !viewModel.query.isEmpty && viewModel.filteredAssets.isEmpty {
-                ContentUnavailableView("没有找到相关素材", systemImage: "film.stack", description: Text("可以尝试更换关键词或启用更多素材来源。"))
+                ContentUnavailableView(tr("search.emptyTitle"), systemImage: "film.stack", description: Text(tr("search.emptyDescription")))
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 ScrollView {
@@ -30,11 +32,11 @@ struct QuickSearchView: View {
                 }
             }
         }
-        .navigationTitle("快速搜索")
+        .navigationTitle(tr("nav.quickSearch"))
         .toolbar {
             ToolbarItemGroup {
-                Button { showHistory = true } label: { Label("搜索历史", systemImage: "clock.arrow.circlepath") }
-                Button { viewModel.search(forceRefresh: true) } label: { Label("刷新搜索", systemImage: "arrow.clockwise") }.disabled(viewModel.isSearching || viewModel.keywords.isEmpty)
+                Button { showHistory = true } label: { Label(tr("search.history"), systemImage: "clock.arrow.circlepath") }
+                Button { viewModel.search(forceRefresh: true) } label: { Label(tr("search.refresh"), systemImage: "arrow.clockwise") }.disabled(viewModel.isSearching || viewModel.keywords.isEmpty)
             }
         }
         .sheet(isPresented: $showHistory) { SearchHistoryView(onUse: useHistory) }
@@ -53,27 +55,28 @@ struct QuickSearchView: View {
 
     private var searchHeader: some View {
         VStack(alignment: .leading, spacing: 12) {
+            Text(tr("search.tagline")).font(.callout).foregroundStyle(.secondary)
             HStack(spacing: 10) {
                 Image(systemName: "magnifyingglass").font(.title2).foregroundStyle(.secondary)
-                TextField("例如：2001年阿根廷银行挤兑", text: $viewModel.query)
+                TextField(tr("search.placeholder"), text: $viewModel.query)
                     .textFieldStyle(.plain).font(.title3)
                     .onSubmit { beginSearch() }
-                if viewModel.isSearching { Button("停止") { viewModel.stop() }.buttonStyle(.bordered) }
-                else { Button("搜索素材") { beginSearch() }.buttonStyle(.borderedProminent).keyboardShortcut(.return, modifiers: .command) }
+                if viewModel.isSearching { Button(tr("common.stop")) { viewModel.stop() }.buttonStyle(.bordered) }
+                else { Button(tr("search.button")) { beginSearch() }.buttonStyle(.borderedProminent).keyboardShortcut(.return, modifiers: .command) }
             }
             .padding(12).background(.quaternary.opacity(0.45), in: RoundedRectangle(cornerRadius: 10))
 
             HStack(alignment: .top) {
-                Text("当前搜索词：").foregroundStyle(.secondary).padding(.top, 4)
+                Text(tr("search.currentKeywords")).foregroundStyle(.secondary).padding(.top, 4)
                 VStack(alignment: .leading, spacing: 5) {
                     ForEach($viewModel.keywords) { $keyword in
                         HStack(spacing: 6) {
                             Toggle("", isOn: $keyword.isEnabled).labelsHidden()
-                            TextField("关键词", text: $keyword.text).textFieldStyle(.roundedBorder)
+                            TextField(tr("search.keywordPlaceholder"), text: $keyword.text).textFieldStyle(.roundedBorder)
                             Button { viewModel.removeKeyword(keyword.id) } label: { Image(systemName: "xmark.circle.fill") }.buttonStyle(.plain).foregroundStyle(.secondary)
                         }
                     }
-                    Button { viewModel.addKeyword() } label: { Label("添加关键词", systemImage: "plus") }.buttonStyle(.plain)
+                    Button { viewModel.addKeyword() } label: { Label(tr("search.addKeyword"), systemImage: "plus") }.buttonStyle(.plain)
                 }
             }
             filters
@@ -85,24 +88,24 @@ struct QuickSearchView: View {
     private var filters: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Picker("类型", selection: $viewModel.mediaType) { ForEach(MediaType.allCases) { Text($0.label).tag($0) } }.frame(width: 150)
-                Picker("方向", selection: $viewModel.orientation) { ForEach(AssetOrientation.allCases.filter { $0 != .unknown }) { Text($0.label).tag($0) } }.frame(width: 150)
-                Picker("清晰度", selection: $viewModel.resolution) { ForEach(ResolutionFilter.allCases) { Text($0.label).tag($0) } }.frame(width: 165)
-                Picker("时长", selection: $viewModel.duration) { ForEach(DurationFilter.allCases) { Text($0.label).tag($0) } }.frame(width: 160)
-                Picker("排序", selection: $viewModel.sort) { ForEach(SearchSort.allCases) { Text($0.label).tag($0) } }.frame(width: 150)
+                Picker(tr("filter.type"), selection: $viewModel.mediaType) { ForEach(MediaType.allCases) { Text($0.label).tag($0) } }.id(localization.language).frame(width: 150)
+                Picker(tr("filter.orientation"), selection: $viewModel.orientation) { ForEach(AssetOrientation.allCases.filter { $0 != .unknown }) { Text($0.label).tag($0) } }.id(localization.language).frame(width: 150)
+                Picker(tr("filter.resolution"), selection: $viewModel.resolution) { ForEach(ResolutionFilter.allCases) { Text($0.label).tag($0) } }.id(localization.language).frame(width: 165)
+                Picker(tr("filter.duration"), selection: $viewModel.duration) { ForEach(DurationFilter.allCases) { Text($0.label).tag($0) } }.id(localization.language).frame(width: 160)
+                Picker(tr("filter.sort"), selection: $viewModel.sort) { ForEach(SearchSort.allCases) { Text($0.label).tag($0) } }.id(localization.language).frame(width: 150)
                 Spacer()
-                Picker("项目", selection: $viewModel.currentProjectID) {
-                    Text("未分类").tag(Optional<UUID>.none)
+                Picker(tr("common.project"), selection: $viewModel.currentProjectID) {
+                    Text(tr("common.uncategorized")).tag(Optional<UUID>.none)
                     ForEach(store.projects) { Text($0.name).tag(Optional($0.id)) }
-                }.frame(width: 210)
+                }.id(localization.language).frame(width: 210)
             }
             HStack(spacing: 12) {
-                Text("来源").foregroundStyle(.secondary)
+                Text(tr("filter.source")).foregroundStyle(.secondary)
                 ForEach(ProviderID.allCases) { provider in
                     Toggle(provider.displayName, isOn: Binding(get: { viewModel.selectedProviders.contains(provider) }, set: { enabled in if enabled { viewModel.selectedProviders.insert(provider) } else { viewModel.selectedProviders.remove(provider) }; AppSettings.enabledProviders = viewModel.selectedProviders })).toggleStyle(.checkbox)
                 }
                 Divider().frame(height: 18)
-                Picker("授权", selection: $viewModel.licenseFilter) { ForEach(LicenseFilter.allCases) { Text($0.label).tag($0) } }.frame(width: 180)
+                Picker(tr("filter.license"), selection: $viewModel.licenseFilter) { ForEach(LicenseFilter.allCases) { Text($0.label).tag($0) } }.id(localization.language).frame(width: 180)
             }
         }
     }
@@ -120,6 +123,7 @@ struct QuickSearchView: View {
                     .font(.caption)
                     .padding(.horizontal, 8).padding(.vertical, 4)
                     .background(.quaternary.opacity(0.55), in: Capsule())
+                    .help(state.label)
                 }
             }
         }
@@ -142,14 +146,14 @@ struct QuickSearchView: View {
                     ForEach(viewModel.providerErrors.keys.sorted(by: { $0.rawValue < $1.rawValue }), id: \.self) { provider in
                         HStack(spacing: 6) {
                             Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)
-                            Text(viewModel.providerErrors[provider] ?? "搜索失败").lineLimit(1)
-                            Button("重试") { viewModel.search(only: provider) }.buttonStyle(.link)
+                            Text(viewModel.providerErrors[provider]?.errorDescription ?? tr("search.failed")).lineLimit(1)
+                            Button(tr("common.retry")) { viewModel.search(only: provider) }.buttonStyle(.link)
                         }.padding(.horizontal, 9).padding(.vertical, 5).background(.orange.opacity(0.1), in: Capsule())
                     }
                 }.padding(.horizontal, 16).padding(.top, 8)
             }
         }
-        HStack { Text(viewModel.statusText).foregroundStyle(.secondary); Spacer(); Text("显示 \(viewModel.filteredAssets.count) 条").foregroundStyle(.secondary) }
+        HStack { Text(viewModel.statusText).foregroundStyle(.secondary); Spacer(); Text(tr("common.showingCount", viewModel.filteredAssets.count)).foregroundStyle(.secondary) }
             .font(.caption).padding(.horizontal, 16).padding(.vertical, 8)
     }
 

@@ -19,28 +19,28 @@ enum ProviderID: String, Codable, CaseIterable, Identifiable, Sendable {
 enum MediaType: String, Codable, CaseIterable, Identifiable, Sendable {
     case all, video, image
     var id: String { rawValue }
-    var label: String { switch self { case .all: "全部"; case .video: "视频"; case .image: "图片" } }
+    var label: String { switch self { case .all: tr("common.all"); case .video: tr("common.video"); case .image: tr("common.image") } }
 }
 
 enum AssetOrientation: String, Codable, CaseIterable, Identifiable, Sendable {
     case all, landscape, portrait, square, unknown
     var id: String { rawValue }
     var label: String {
-        switch self { case .all: "全部"; case .landscape: "横屏"; case .portrait: "竖屏"; case .square: "方形"; case .unknown: "未知" }
+        switch self { case .all: tr("common.all"); case .landscape: tr("media.landscape"); case .portrait: tr("media.portrait"); case .square: tr("media.square"); case .unknown: tr("common.unknown") }
     }
 }
 
 enum ResolutionFilter: String, Codable, CaseIterable, Identifiable, Sendable {
     case all, hd720, fullHD, uhd4K
     var id: String { rawValue }
-    var label: String { switch self { case .all: "全部"; case .hd720: "≥720p"; case .fullHD: "≥1080p"; case .uhd4K: "≥4K" } }
+    var label: String { switch self { case .all: tr("common.all"); case .hd720: tr("filter.hd720"); case .fullHD: tr("filter.fullHD"); case .uhd4K: tr("filter.uhd4K") } }
     var minimumHeight: Int? { switch self { case .all: nil; case .hd720: 720; case .fullHD: 1080; case .uhd4K: 2160 } }
 }
 
 enum DurationFilter: String, Codable, CaseIterable, Identifiable, Sendable {
     case all, under10, tenTo30, thirtyTo60, over60
     var id: String { rawValue }
-    var label: String { switch self { case .all: "全部"; case .under10: "<10秒"; case .tenTo30: "10–30秒"; case .thirtyTo60: "30–60秒"; case .over60: "≥60秒" } }
+    var label: String { switch self { case .all: tr("common.all"); case .under10: tr("filter.under10"); case .tenTo30: tr("filter.tenTo30"); case .thirtyTo60: tr("filter.thirtyTo60"); case .over60: tr("filter.over60") } }
     func matches(_ duration: Double?) -> Bool {
         guard self != .all else { return true }
         guard let duration else { return false }
@@ -64,11 +64,11 @@ enum LicenseStatus: String, Codable, CaseIterable, Identifiable, Sendable {
     var id: String { rawValue }
     var label: String {
         switch self {
-        case .safe: "明确可用"
-        case .attributionRequired: "需要署名"
-        case .publicDomain: "Public Domain"
-        case .unknown: "授权未知"
-        case .restricted: "受限制"
+        case .safe: tr("license.safe")
+        case .attributionRequired: tr("license.attribution")
+        case .publicDomain: tr("license.publicDomain")
+        case .unknown: tr("license.unknown")
+        case .restricted: tr("license.restricted")
         }
     }
 }
@@ -104,11 +104,11 @@ struct MediaAsset: Identifiable, Codable, Hashable, Sendable {
         return width > height ? .landscape : .portrait
     }
     var resolutionText: String {
-        guard let width, let height else { return "未知" }
+        guard let width, let height else { return tr("common.unknown") }
         return "\(width)×\(height)"
     }
     var durationText: String {
-        guard let duration else { return "未知" }
+        guard let duration else { return tr("common.unknown") }
         let total = Int(duration.rounded())
         return String(format: "%02d:%02d", total / 60, total % 60)
     }

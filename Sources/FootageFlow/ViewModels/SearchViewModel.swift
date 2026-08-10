@@ -13,14 +13,16 @@ final class SearchViewModel: ObservableObject {
     @Published var selectedProviders = AppSettings.enabledProviders
     @Published var currentProjectID: UUID?
     @Published private(set) var assets: [MediaAsset] = []
-    @Published private(set) var providerErrors: [ProviderID: String] = [:]
+    @Published private(set) var providerErrors: [ProviderID: ProviderError] = [:]
     @Published private(set) var providerCounts: [ProviderID: Int] = [:]
     @Published private(set) var providerStates: [ProviderID: ProviderRuntimeState] = [:]
     @Published private(set) var isSearching = false
-    @Published private(set) var statusText = "输入题材后搜索真实素材库"
+    @Published private(set) var status: SearchStatus = .initial
 
     private var task: Task<Void, Never>?
     private var store: DataStore?
+
+    var statusText: String { status.text }
 
     var filteredAssets: [MediaAsset] {
         var value = assets.filter { asset in
@@ -48,10 +50,10 @@ final class SearchViewModel: ObservableObject {
 
     func search(forceRefresh: Bool = false, only providerID: ProviderID? = nil) {
         let active = keywords.filter { $0.isEnabled && !$0.text.trimmingCharacters(in: .whitespaces).isEmpty }.map(\.text)
-        guard !active.isEmpty else { prepareKeywords(); if keywords.isEmpty { statusText = "请先输入搜索内容"; return }; search(forceRefresh: forceRefresh, only: providerID); return }
+        guard !active.isEmpty else { prepareKeywords(); if keywords.isEmpty { status = .enterQuery; return }; search(forceRefresh: forceRefresh, only: providerID); return }
         task?.cancel()
         isSearching = true; providerErrors = [:]; providerCounts = [:]
-        statusText = "正在并发搜索 \(selectedProviders.count) 个素材库…"
+        status = .searchingProviders(selectedProviders.count)
         let filterSnapshot = (mediaType, orientation, resolution, duration)
         let providerSet = providerID.map { Set([$0]) } ?? selectedProviders
         let providers = makeProviders().filter { providerSet.contains($0.info.id) }
@@ -82,10 +84,11 @@ final class SearchViewModel: ObservableObject {
                                     combined += found
                                 }
                             }
-                            return ProviderSearchResult(provider: provider.info.id, assets: combined, errorMessage: nil, state: nil)
+                            return ProviderSearchResult(provider: provider.info.id, assets: combined, error: nil, state: nil)
                         } catch {
                             await AppLogger.shared.write(provider: provider.info.id, requestType: "search", error: error)
-                            return ProviderSearchResult(provider: provider.info.id, assets: combined, errorMessage: (error as? LocalizedError)?.errorDescription ?? "搜索失败", state: ProviderRuntimeState.from(error: error))
+                            let providerError = error as? ProviderError ?? ProviderError.message(error.localizedDescription)
+                            return ProviderSearchResult(provider: provider.info.id, assets: combined, error: providerError, state: ProviderRuntimeState.from(error: error))
                         }
                     }
                 }
@@ -94,14 +97,14 @@ final class SearchViewModel: ObservableObject {
                     self.apply(batch)
                 }
             }
-            if Task.isCancelled { self.isSearching = false; self.statusText = "搜索已停止"; return }
+            if Task.isCancelled { self.isSearching = false; self.status = .stopped; return }
             self.isSearching = false
-            self.statusText = self.assets.isEmpty ? "没有找到结果，可修改关键词后重试" : "已找到 \(self.assets.count) 条真实素材"
+            self.status = self.assets.isEmpty ? .noResults : .found(self.assets.count)
             self.saveHistory(active: active)
         }
     }
 
-    func stop() { task?.cancel(); task = nil; isSearching = false; statusText = "搜索已停止" }
+    func stop() { task?.cancel(); task = nil; isSearching = false; status = .stopped }
 
     private func makeProviders() -> [any MediaProvider] {
         [
@@ -114,16 +117,16 @@ final class SearchViewModel: ObservableObject {
 
     private func apply(_ batch: ProviderSearchResult) {
         providerCounts[batch.provider] = batch.assets.count
-        if let message = batch.errorMessage {
-            providerErrors[batch.provider] = message
-            providerStates[batch.provider] = batch.state ?? ProviderRuntimeState(availability: .unavailable, message: message)
+        if let error = batch.error {
+            providerErrors[batch.provider] = error
+            providerStates[batch.provider] = batch.state ?? ProviderRuntimeState(availability: .unavailable, message: error.errorDescription)
         } else {
             providerErrors[batch.provider] = nil
             providerStates[batch.provider] = ProviderRuntimeState(availability: .available, message: nil)
         }
         assets += batch.assets
         assets = SearchDeduplicator.apply(assets).prefix(300).map { $0 }
-        statusText = assets.isEmpty ? "正在搜索其他素材库…" : "已找到 \(assets.count) 条真实素材，其他来源仍在搜索…"
+        status = assets.isEmpty ? .searchingOthers : .progressiveFound(assets.count)
     }
 
     private func score(_ asset: MediaAsset) -> Double {

@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ProjectsView: View {
     @EnvironmentObject private var store: DataStore
+    @EnvironmentObject private var localization: LocalizationManager
     @State private var selectedID: UUID?
     @State private var newName = ""
     @State private var showNewProject = false
@@ -10,30 +11,31 @@ struct ProjectsView: View {
     private var selected: ProjectRecord? { selectedID.flatMap { id in store.projects.first { $0.id == id } } }
 
     var body: some View {
+        let _ = localization.language
         HSplitView {
             VStack(spacing: 0) {
-                HStack { Text("我的项目").font(.title2.bold()); Spacer(); Button { showNewProject = true } label: { Image(systemName: "plus") } }.padding()
+                HStack { Text(tr("project.title")).font(.title2.bold()); Spacer(); Button { showNewProject = true } label: { Image(systemName: "plus") }.help(tr("project.new")) }.padding()
                 List(store.projects, selection: $selectedID) { project in
-                    VStack(alignment: .leading, spacing: 3) { Text(project.name); Text("更新于 \(project.updatedAt.formatted(date: .abbreviated, time: .shortened))").font(.caption).foregroundStyle(.secondary) }.tag(project.id)
+                    VStack(alignment: .leading, spacing: 3) { Text(project.name); Text(tr("project.updated", project.updatedAt.formatted(date: .abbreviated, time: .shortened))).font(.caption).foregroundStyle(.secondary) }.tag(project.id)
                 }
             }.frame(minWidth: 250, idealWidth: 300)
             if let project = selected {
                 ProjectDetail(project: project, onDelete: { confirmDelete = true })
             } else {
-                ContentUnavailableView("选择或新建项目", systemImage: "folder", description: Text("收藏、下载和文稿会按项目归类"))
+                ContentUnavailableView(tr("project.selectOrCreate"), systemImage: "folder", description: Text(tr("project.selectDescription")))
             }
         }
         .sheet(isPresented: $showNewProject) {
             VStack(alignment: .leading, spacing: 16) {
-                Text("新建项目").font(.title2.bold())
-                TextField("项目名称", text: $newName).textFieldStyle(.roundedBorder).onSubmit { createProject() }
-                HStack { Spacer(); Button("取消") { showNewProject = false }; Button("创建") { createProject() }.buttonStyle(.borderedProminent).disabled(newName.trimmingCharacters(in: .whitespaces).isEmpty) }
+                Text(tr("project.new")).font(.title2.bold())
+                TextField(tr("project.name"), text: $newName).textFieldStyle(.roundedBorder).onSubmit { createProject() }
+                HStack { Spacer(); Button(tr("common.cancel")) { showNewProject = false }; Button(tr("common.create")) { createProject() }.buttonStyle(.borderedProminent).disabled(newName.trimmingCharacters(in: .whitespaces).isEmpty) }
             }.padding(24).frame(width: 420)
         }
-        .alert("删除项目记录？", isPresented: $confirmDelete) {
-            Button("取消", role: .cancel) { }
-            Button("删除项目", role: .destructive) { if let selectedID { store.deleteProject(id: selectedID); self.selectedID = nil } }
-        } message: { Text("不会删除已经下载到本地的素材文件。") }
+        .alert(tr("project.deleteTitle"), isPresented: $confirmDelete) {
+            Button(tr("common.cancel"), role: .cancel) { }
+            Button(tr("project.delete"), role: .destructive) { if let selectedID { store.deleteProject(id: selectedID); self.selectedID = nil } }
+        } message: { Text(tr("project.deleteHelp")) }
     }
 
     private func createProject() {
@@ -45,20 +47,22 @@ private struct ProjectDetail: View {
     let project: ProjectRecord
     let onDelete: () -> Void
     @EnvironmentObject private var store: DataStore
+    @EnvironmentObject private var localization: LocalizationManager
 
     var body: some View {
+        let _ = localization.language
         VStack(alignment: .leading, spacing: 14) {
             HStack {
-                TextField("项目名称", text: Binding(get: { project.name }, set: { value in var updated = project; updated.name = value; store.updateProject(updated) }))
+                TextField(tr("project.name"), text: Binding(get: { project.name }, set: { value in var updated = project; updated.name = value; store.updateProject(updated) }))
                     .textFieldStyle(.plain).font(.largeTitle.bold())
-                Button(role: .destructive, action: onDelete) { Label("删除项目", systemImage: "trash") }
+                Button(role: .destructive, action: onDelete) { Label(tr("project.delete"), systemImage: "trash") }
             }
             HStack(spacing: 20) {
-                Label("收藏 \(store.favorites.filter { $0.projectID == project.id }.count)", systemImage: "heart")
-                Label("下载 \(store.downloads.filter { $0.projectID == project.id }.count)", systemImage: "arrow.down.circle")
-                Label("搜索 \(store.history.filter { $0.projectID == project.id }.count)", systemImage: "magnifyingglass")
+                Label(tr("project.favoriteCount", store.favorites.filter { $0.projectID == project.id }.count), systemImage: "heart")
+                Label(tr("project.downloadCount", store.downloads.filter { $0.projectID == project.id }.count), systemImage: "arrow.down.circle")
+                Label(tr("project.searchCount", store.history.filter { $0.projectID == project.id }.count), systemImage: "magnifyingglass")
             }.foregroundStyle(.secondary)
-            Text("项目文稿").font(.headline)
+            Text(tr("project.script")).font(.headline)
             TextEditor(text: Binding(get: { project.script }, set: { value in var updated = project; updated.script = value; store.updateProject(updated) }))
                 .font(.body).padding(8).background(.quaternary.opacity(0.35), in: RoundedRectangle(cornerRadius: 8))
         }.padding(22)

@@ -30,6 +30,16 @@ enum ProviderAvailability: String, Codable, Sendable {
     case authenticationRequired
     case rateLimited
     case disabled
+
+    var label: String {
+        switch self {
+        case .available: tr("provider.available")
+        case .unavailable: tr("provider.unavailable")
+        case .authenticationRequired: tr("provider.authenticationRequired")
+        case .rateLimited: tr("provider.rateLimited")
+        case .disabled: tr("provider.disabled")
+        }
+    }
 }
 
 struct ProviderRuntimeState: Codable, Equatable, Sendable {
@@ -53,8 +63,32 @@ struct ProviderRuntimeState: Codable, Equatable, Sendable {
 struct ProviderSearchResult: Sendable {
     let provider: ProviderID
     let assets: [MediaAsset]
-    let errorMessage: String?
+    let error: ProviderError?
     let state: ProviderRuntimeState?
+}
+
+enum SearchStatus: Sendable {
+    case initial
+    case enterQuery
+    case searchingProviders(Int)
+    case stopped
+    case noResults
+    case found(Int)
+    case searchingOthers
+    case progressiveFound(Int)
+
+    var text: String {
+        switch self {
+        case .initial: tr("search.initialStatus")
+        case .enterQuery: tr("search.enterQuery")
+        case .searchingProviders(let count): tr("search.searchingProviders", count)
+        case .stopped: tr("search.stopped")
+        case .noResults: tr("search.noResults")
+        case .found(let count): tr("search.found", count)
+        case .searchingOthers: tr("search.searchingOthers")
+        case .progressiveFound(let count): tr("search.progressiveFound", count)
+        }
+    }
 }
 
 enum ProviderError: LocalizedError, Sendable {
@@ -71,15 +105,15 @@ enum ProviderError: LocalizedError, Sendable {
 
     var errorDescription: String? {
         switch self {
-        case .missingAPIKey(let provider): "\(provider.displayName)：尚未配置 API Key"
-        case .invalidAPIKey: "API Key 无效"
-        case .noNetwork: "无法连接网络"
-        case .rateLimited: "请求次数过多，请稍后再试"
-        case .notFound: "该素材已失效"
-        case .serverUnavailable: "服务器暂时不可用"
-        case .invalidResponse: "素材平台返回了无法识别的数据"
-        case .unsupported: "当前来源不支持这项操作"
-        case .cancelled: "操作已取消"
+        case .missingAPIKey(let provider): tr("provider.missingKey", provider.displayName)
+        case .invalidAPIKey: tr("error.invalidAPIKey")
+        case .noNetwork: tr("error.noNetwork")
+        case .rateLimited: tr("error.rateLimited")
+        case .notFound: tr("error.notFound")
+        case .serverUnavailable: tr("error.serverUnavailable")
+        case .invalidResponse: tr("error.invalidResponse")
+        case .unsupported: tr("error.unsupported")
+        case .cancelled: tr("error.cancelled")
         case .message(let text): text
         }
     }
@@ -88,14 +122,14 @@ enum ProviderError: LocalizedError, Sendable {
 enum SearchSort: String, CaseIterable, Identifiable {
     case relevance, newest, resolution, duration
     var id: String { rawValue }
-    var label: String { switch self { case .relevance: "相关度"; case .newest: "最新"; case .resolution: "分辨率"; case .duration: "时长" } }
+    var label: String { switch self { case .relevance: tr("sort.relevance"); case .newest: tr("sort.newest"); case .resolution: tr("sort.resolution"); case .duration: tr("sort.duration") } }
 }
 
 enum LicenseFilter: String, CaseIterable, Identifiable {
     case all, safe, attribution, publicDomain, unknown
     var id: String { rawValue }
     var label: String {
-        switch self { case .all: "全部"; case .safe: "明确可用"; case .attribution: "需要署名"; case .publicDomain: "Public Domain"; case .unknown: "授权未知" }
+        switch self { case .all: tr("common.all"); case .safe: tr("license.safe"); case .attribution: tr("license.attribution"); case .publicDomain: tr("license.publicDomain"); case .unknown: tr("license.unknown") }
     }
     func matches(_ status: LicenseStatus) -> Bool {
         switch self { case .all: true; case .safe: status == .safe; case .attribution: status == .attributionRequired; case .publicDomain: status == .publicDomain; case .unknown: status == .unknown }

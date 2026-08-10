@@ -1,5 +1,6 @@
 import AppKit
 import AVKit
+import Combine
 import Foundation
 
 @MainActor
@@ -24,6 +25,10 @@ private final class PreviewWindowController: NSWindowController, NSWindowDelegat
     private let onClose: (PreviewWindowController) -> Void
     private var player: AVPlayer?
     private var imageTask: Task<Void, Never>?
+    private var sourceButton: NSButton?
+    private var subtitleField: NSTextField?
+    private var descriptionField: NSTextField?
+    private var localizationCancellable: AnyCancellable?
 
     init(asset: MediaAsset, onClose: @escaping (PreviewWindowController) -> Void) {
         self.asset = asset; self.onClose = onClose
@@ -32,6 +37,9 @@ private final class PreviewWindowController: NSWindowController, NSWindowDelegat
         super.init(window: window)
         window.delegate = self
         window.contentView = buildContent()
+        localizationCancellable = LocalizationManager.shared.$language.sink { [weak self] _ in
+            DispatchQueue.main.async { self?.refreshLocalizedText() }
+        }
     }
 
     required init?(coder: NSCoder) { nil }
@@ -39,9 +47,9 @@ private final class PreviewWindowController: NSWindowController, NSWindowDelegat
     private func buildContent() -> NSView {
         let root = NSView(); root.translatesAutoresizingMaskIntoConstraints = false
         let title = NSTextField(labelWithString: asset.title); title.font = .systemFont(ofSize: 16, weight: .semibold); title.lineBreakMode = .byTruncatingTail
-        let subtitle = NSTextField(labelWithString: "\(asset.provider.displayName) · \(asset.resolutionText) · \(asset.durationText) · \(asset.licenseText)"); subtitle.textColor = .secondaryLabelColor; subtitle.font = .systemFont(ofSize: 12)
+        let subtitle = NSTextField(labelWithString: "\(asset.provider.displayName) · \(asset.resolutionText) · \(asset.durationText) · \(asset.licenseText)"); subtitle.textColor = .secondaryLabelColor; subtitle.font = .systemFont(ofSize: 12); subtitleField = subtitle
         let header = NSStackView(views: [title, subtitle]); header.orientation = .vertical; header.alignment = .leading; header.spacing = 4
-        let sourceButton = NSButton(title: "打开来源", target: self, action: #selector(openSource)); sourceButton.bezelStyle = .rounded
+        let sourceButton = NSButton(title: tr("media.openSource"), target: self, action: #selector(openSource)); sourceButton.bezelStyle = .rounded; self.sourceButton = sourceButton
         let top = NSStackView(views: [header, NSView(), sourceButton]); top.orientation = .horizontal; top.alignment = .centerY; top.spacing = 12
 
         let content: NSView
@@ -60,7 +68,7 @@ private final class PreviewWindowController: NSWindowController, NSWindowDelegat
             content = imageView
         }
 
-        let description = NSTextField(wrappingLabelWithString: asset.description ?? "暂无描述。请在发布前查看原始来源页确认内容与授权。")
+        let description = NSTextField(wrappingLabelWithString: asset.description ?? tr("media.noDescription")); descriptionField = description
         description.maximumNumberOfLines = 2; description.textColor = .secondaryLabelColor
         [top, content, description].forEach { $0.translatesAutoresizingMaskIntoConstraints = false; root.addSubview($0) }
         NSLayoutConstraint.activate([
@@ -75,5 +83,10 @@ private final class PreviewWindowController: NSWindowController, NSWindowDelegat
         guard let url = try? URLValidator.remote(asset.sourcePageURL) else { return }
         NSWorkspace.shared.open(url)
     }
-    func windowWillClose(_ notification: Notification) { player?.pause(); player = nil; imageTask?.cancel(); onClose(self) }
+    private func refreshLocalizedText() {
+        sourceButton?.title = tr("media.openSource")
+        subtitleField?.stringValue = "\(asset.provider.displayName) · \(asset.resolutionText) · \(asset.durationText) · \(asset.licenseText)"
+        if asset.description == nil { descriptionField?.stringValue = tr("media.noDescription") }
+    }
+    func windowWillClose(_ notification: Notification) { player?.pause(); player = nil; imageTask?.cancel(); localizationCancellable?.cancel(); onClose(self) }
 }

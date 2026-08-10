@@ -1,16 +1,23 @@
 import SwiftUI
 
 private struct DraftSegment: Identifiable {
+    enum Status {
+        case waiting, searching, found(Int)
+        var text: String {
+            switch self { case .waiting: tr("script.waiting"); case .searching: tr("script.searching"); case .found(let count): tr("script.found", count) }
+        }
+    }
     let id = UUID()
     var index: Int
     var text: String
     var keyword: String
     var results: [MediaAsset] = []
-    var status = "等待搜索"
+    var status: Status = .waiting
 }
 
 struct ScriptSearchView: View {
     @EnvironmentObject private var store: DataStore
+    @EnvironmentObject private var localization: LocalizationManager
     @State private var script = ""
     @State private var projectID: UUID?
     @State private var segments: [DraftSegment] = []
@@ -19,8 +26,9 @@ struct ScriptSearchView: View {
     @State private var progress = 0
 
     var body: some View {
+        let _ = localization.language
         VStack(spacing: 0) {
-            HStack { Text("文稿搜素材").font(.largeTitle.bold()); Spacer(); Picker("所属项目", selection: $projectID) { Text("未分类").tag(Optional<UUID>.none); ForEach(store.projects) { Text($0.name).tag(Optional($0.id)) } }.frame(width: 220) }.padding()
+            HStack { Text(tr("script.title")).font(.largeTitle.bold()); Spacer(); Picker(tr("script.project"), selection: $projectID) { Text(tr("common.uncategorized")).tag(Optional<UUID>.none); ForEach(store.projects) { Text($0.name).tag(Optional($0.id)) } }.id(localization.language).frame(width: 220) }.padding()
             Divider()
             if segments.isEmpty { editor }
             else { segmentList }
@@ -30,30 +38,30 @@ struct ScriptSearchView: View {
 
     private var editor: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text("粘贴完整文稿").font(.headline)
+            Text(tr("script.paste")).font(.headline)
             TextEditor(text: $script).font(.body).padding(10).background(.quaternary.opacity(0.35), in: RoundedRectangle(cornerRadius: 9))
-            Text("程序按段落、句号和长度拆成约 5～15 秒的镜头段，不调用任何云端 AI。").font(.caption).foregroundStyle(.secondary)
-            HStack { Spacer(); Button("分析文稿") { analyze() }.buttonStyle(.borderedProminent).disabled(script.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty) }
+            Text(tr("script.help")).font(.caption).foregroundStyle(.secondary)
+            HStack { Spacer(); Button(tr("script.analyze")) { analyze() }.buttonStyle(.borderedProminent).disabled(script.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty) }
         }.padding(24)
     }
 
     private var segmentList: some View {
         VStack(spacing: 0) {
             HStack {
-                Button("返回编辑") { batchTask?.cancel(); segments = []; isSearching = false }
-                Text("已拆分 \(segments.count) 个镜头").foregroundStyle(.secondary)
+                Button(tr("script.back")) { batchTask?.cancel(); segments = []; isSearching = false }
+                Text(tr("script.segmentCount", segments.count)).foregroundStyle(.secondary)
                 Spacer()
-                if isSearching { ProgressView(value: Double(progress), total: Double(max(segments.count, 1))).frame(width: 180); Text("正在搜索 \(progress) / \(segments.count)"); Button("停止搜索") { batchTask?.cancel(); isSearching = false } }
-                else { Button("搜索全部镜头") { searchAll() }.buttonStyle(.borderedProminent) }
+                if isSearching { ProgressView(value: Double(progress), total: Double(max(segments.count, 1))).frame(width: 180); Text(tr("script.searchingProgress", progress, segments.count)); Button(tr("common.stop")) { batchTask?.cancel(); isSearching = false } }
+                else { Button(tr("script.searchAll")) { searchAll() }.buttonStyle(.borderedProminent) }
             }.padding()
             Divider()
             ScrollView {
                 LazyVStack(spacing: 14) {
                     ForEach($segments) { $segment in
                         VStack(alignment: .leading, spacing: 10) {
-                            HStack { Text("镜头 \(String(format: "%02d", segment.index))").font(.headline); Spacer(); Text(segment.status).font(.caption).foregroundStyle(.secondary); Button("搜索素材") { searchOne(segment.id) } }
+                            HStack { Text(tr("script.shot", segment.index)).font(.headline); Spacer(); Text(segment.status.text).font(.caption).foregroundStyle(.secondary); Button(tr("script.searchFootage")) { searchOne(segment.id) } }
                             TextEditor(text: $segment.text).frame(height: 62).padding(6).background(.quaternary.opacity(0.3), in: RoundedRectangle(cornerRadius: 6))
-                            HStack { Text("搜索词：").foregroundStyle(.secondary); TextField("英文或中文关键词", text: $segment.keyword).textFieldStyle(.roundedBorder) }
+                            HStack { Text(tr("script.searchKeyword")).foregroundStyle(.secondary); TextField(tr("script.keywordPlaceholder"), text: $segment.keyword).textFieldStyle(.roundedBorder) }
                             if !segment.results.isEmpty {
                                 ScrollView(.horizontal, showsIndicators: false) {
                                     HStack(spacing: 12) { ForEach(segment.results.prefix(6)) { asset in MediaAssetCard(asset: asset, projectID: projectID, segmentIndex: segment.index) { PreviewWindowManager.shared.show($0) }.frame(width: 270) } }
@@ -80,10 +88,10 @@ struct ScriptSearchView: View {
 
     private func searchOne(_ id: UUID) {
         guard let index = segments.firstIndex(where: { $0.id == id }) else { return }
-        let keyword = segments[index].keyword; segments[index].status = "正在搜索…"
+        let keyword = segments[index].keyword; segments[index].status = .searching
         Task {
             let found = await BatchSearchService.search(keyword)
-            await MainActor.run { if let current = segments.firstIndex(where: { $0.id == id }) { segments[current].results = found; segments[current].status = "找到 \(found.count) 条" } }
+            await MainActor.run { if let current = segments.firstIndex(where: { $0.id == id }) { segments[current].results = found; segments[current].status = .found(found.count) } }
         }
     }
 
@@ -101,7 +109,7 @@ struct ScriptSearchView: View {
                 for _ in 0..<min(3, snapshots.count) { addNext() }
                 for await (_, id, assets) in group {
                     if Task.isCancelled { group.cancelAll(); break }
-                    await MainActor.run { if let current = segments.firstIndex(where: { $0.id == id }) { segments[current].results = assets; segments[current].status = "找到 \(assets.count) 条" }; progress += 1 }
+                    await MainActor.run { if let current = segments.firstIndex(where: { $0.id == id }) { segments[current].results = assets; segments[current].status = .found(assets.count) }; progress += 1 }
                     addNext()
                 }
             }

@@ -48,8 +48,8 @@ actor HTTPClient {
                 case .notConnectedToInternet, .networkConnectionLost, .cannotFindHost, .dnsLookupFailed, .cannotConnectToHost:
                     throw ProviderError.noNetwork
                 case .cancelled: throw ProviderError.cancelled
-                case .timedOut: throw ProviderError.message("网络请求超时，请重试")
-                default: throw ProviderError.message("网络请求失败，请稍后重试")
+                case .timedOut: throw ProviderError.message(tr("error.timeout"))
+                default: throw ProviderError.message(tr("error.requestFailed"))
                 }
             } catch {
                 throw ProviderError.invalidResponse
@@ -69,7 +69,7 @@ actor HTTPClient {
         case 404: .notFound
         case 429: .rateLimited(retryAfter: retryAfter)
         case 500...599: .serverUnavailable
-        default: .message("素材平台请求失败（HTTP \(status)）")
+        default: .message(tr("error.http", status))
         }
     }
 }

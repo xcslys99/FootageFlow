@@ -26,6 +26,18 @@ enum SelfTestRunner {
         try? FileManager.default.removeItem(at: migrationDirectory)
         check(ProviderRuntimeState.from(error: ProviderError.missingAPIKey(.pexels)).availability == .authenticationRequired, "Provider auth state")
         check(ProviderRuntimeState.from(error: ProviderError.rateLimited(retryAfter: nil)).availability == .rateLimited, "Provider rate-limit state")
+        let localizationSuite = "FootageFlowSelfTest.\(UUID().uuidString)"
+        if let defaults = UserDefaults(suiteName: localizationSuite) {
+            defaults.removePersistentDomain(forName: localizationSuite)
+            let localization = LocalizationManager(defaults: defaults)
+            check(localization.language == .english, "Localization default English")
+            check(localization.text("nav.quickSearch") == "Quick Search", "English localization")
+            localization.setLanguage(.simplifiedChinese)
+            check(localization.text("nav.quickSearch") == "快速搜索", "Chinese localization")
+            check(localization.text("localization.fallbackProbe") == "English fallback", "Localization English fallback")
+            check(LocalizationManager(defaults: defaults).language == .simplifiedChinese, "Localization persistence")
+            defaults.removePersistentDomain(forName: localizationSuite)
+        } else { failed.append("Localization test defaults") }
 
         let sample = MediaAsset(id: "1", provider: .wikimedia, title: "Test", description: nil, thumbnailURL: nil, previewURL: nil, downloadURL: URL(string: "https://example.com/a.mp4"), sourcePageURL: URL(string: "https://example.com/item")!, creator: "A", license: "CC BY", licenseURL: nil, licenseStatus: .attributionRequired, width: 1920, height: 1080, duration: 10, fileType: "video/mp4", mediaType: .video, publishedDate: nil, downloadable: true, originalMetadata: [:], searchKeyword: "test", relevanceScore: 1)
         let duplicate = sample

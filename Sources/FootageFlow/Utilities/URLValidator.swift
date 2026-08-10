@@ -8,10 +8,10 @@ enum URLValidationError: LocalizedError, Sendable {
 
     var errorDescription: String? {
         switch self {
-        case .missingURL: "The media URL is unavailable."
-        case .unsupportedScheme: "The media link uses an unsupported URL scheme."
-        case .missingHost: "The media link is invalid."
-        case .embeddedCredentials: "The media link contains unsafe credentials."
+        case .missingURL: tr("url.missing")
+        case .unsupportedScheme: tr("url.unsupportedScheme")
+        case .missingHost: tr("url.invalid")
+        case .embeddedCredentials: tr("url.embeddedCredentials")
         }
     }
 }
@@ -34,4 +34,3 @@ enum URLValidator {
         (try? remote(url)) != nil
     }
 }
-

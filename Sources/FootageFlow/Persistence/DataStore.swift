@@ -34,7 +34,7 @@ final class DataStore: ObservableObject {
 
     @discardableResult func addProject(name: String) -> ProjectRecord {
         let clean = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        let project = ProjectRecord(name: clean.isEmpty ? "未命名项目" : clean)
+        let project = ProjectRecord(name: clean.isEmpty ? tr("project.untitled") : clean)
         projects.append(project); save(); return project
     }
     func deleteProject(id: UUID) {

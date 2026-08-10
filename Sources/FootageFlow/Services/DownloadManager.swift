@@ -43,20 +43,20 @@ final class DownloadManager: NSObject, ObservableObject, URLSessionDownloadDeleg
     @MainActor
     func start(asset: MediaAsset, projectID: UUID?, projectName: String?, segmentIndex: Int? = nil) {
         guard asset.downloadable, let url = try? URLValidator.remote(asset.downloadURL) else {
-            states[asset.stableID] = DownloadProgress(id: asset.stableID, progress: 0, status: .failed, message: "该来源不提供直接下载", localURL: nil)
+            states[asset.stableID] = DownloadProgress(id: asset.stableID, progress: 0, status: .failed, message: tr("download.notAvailable"), localURL: nil)
             return
         }
-        let folderName = FileNameSanitizer.sanitize(projectName ?? "未分类", maxLength: 60)
+        let folderName = FileNameSanitizer.sanitize(projectName ?? tr("common.uncategorized"), maxLength: 60)
         let directory = AppSettings.downloadRootURL.appendingPathComponent(folderName, isDirectory: true)
         do { try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true) }
         catch {
-            states[asset.stableID] = DownloadProgress(id: asset.stableID, progress: 0, status: .failed, message: "无法创建下载目录", localURL: nil)
+            states[asset.stableID] = DownloadProgress(id: asset.stableID, progress: 0, status: .failed, message: tr("download.createFolderFailed"), localURL: nil)
             return
         }
         let preferred = FileNameSanitizer.fileName(asset: asset, index: segmentIndex)
         let existing = directory.appendingPathComponent(preferred)
         if FileManager.default.fileExists(atPath: existing.path) {
-            states[asset.stableID] = DownloadProgress(id: asset.stableID, progress: 1, status: .completed, message: "文件已存在，未重复下载", localURL: existing)
+            states[asset.stableID] = DownloadProgress(id: asset.stableID, progress: 1, status: .completed, message: tr("download.duplicate"), localURL: existing)
             return
         }
         let destination = FileNameSanitizer.uniqueURL(in: directory, preferredName: preferred)
@@ -66,17 +66,17 @@ final class DownloadManager: NSObject, ObservableObject, URLSessionDownloadDeleg
             activeCount += 1
             let task = session.downloadTask(with: url); contexts[task.taskIdentifier] = context
             lock.unlock()
-            states[asset.stableID] = DownloadProgress(id: asset.stableID, progress: 0, status: .downloading, message: "正在下载 0%", localURL: nil)
+            states[asset.stableID] = DownloadProgress(id: asset.stableID, progress: 0, status: .downloading, message: tr("download.downloadingPercent", 0), localURL: nil)
             task.resume()
         } else {
             pending.append(context); lock.unlock()
-            states[asset.stableID] = DownloadProgress(id: asset.stableID, progress: 0, status: .waiting, message: "等待下载（最多同时 3 个）", localURL: nil)
+            states[asset.stableID] = DownloadProgress(id: asset.stableID, progress: 0, status: .waiting, message: tr("download.waiting"), localURL: nil)
         }
     }
 
     func cancel(stableID: String) {
         lock.lock(); pending.removeAll { $0.asset.stableID == stableID }; lock.unlock()
-        DispatchQueue.main.async { [weak self] in self?.states[stableID] = DownloadProgress(id: stableID, progress: 0, status: .cancelled, message: "下载已取消", localURL: nil) }
+        DispatchQueue.main.async { [weak self] in self?.states[stableID] = DownloadProgress(id: stableID, progress: 0, status: .cancelled, message: tr("download.cancelled"), localURL: nil) }
         session.getAllTasks { [weak self] tasks in
             guard let self else { return }
             self.lock.lock(); let ids = self.contexts.filter { $0.value.asset.stableID == stableID }.map(\.key); self.lock.unlock()
@@ -89,7 +89,7 @@ final class DownloadManager: NSObject, ObservableObject, URLSessionDownloadDeleg
         guard let context else { return }
         let progress = totalBytesExpectedToWrite > 0 ? min(Double(totalBytesWritten) / Double(totalBytesExpectedToWrite), 1) : 0
         DispatchQueue.main.async { [weak self] in
-            self?.states[context.asset.stableID] = DownloadProgress(id: context.asset.stableID, progress: progress, status: .downloading, message: totalBytesExpectedToWrite > 0 ? "正在下载 \(Int(progress * 100))%" : "正在下载…", localURL: nil)
+            self?.states[context.asset.stableID] = DownloadProgress(id: context.asset.stableID, progress: progress, status: .downloading, message: totalBytesExpectedToWrite > 0 ? tr("download.downloadingPercent", Int(progress * 100)) : tr("download.downloading"), localURL: nil)
         }
     }
 
@@ -102,14 +102,14 @@ final class DownloadManager: NSObject, ObservableObject, URLSessionDownloadDeleg
             lock.lock(); finishedTasks.insert(downloadTask.taskIdentifier); lock.unlock()
             DispatchQueue.main.async { [weak self] in
                 guard let self else { return }
-                self.states[context.asset.stableID] = DownloadProgress(id: context.asset.stableID, progress: 1, status: .completed, message: "下载完成", localURL: context.destination)
+                self.states[context.asset.stableID] = DownloadProgress(id: context.asset.stableID, progress: 1, status: .completed, message: tr("download.completed"), localURL: context.destination)
                 if let store = self.store {
                     let record = DownloadRecord(asset: context.asset, fileURL: context.destination, projectID: context.projectID)
                     store.addDownload(record)
                 }
             }
         } catch {
-            DispatchQueue.main.async { [weak self] in self?.states[context.asset.stableID] = DownloadProgress(id: context.asset.stableID, progress: 0, status: .failed, message: "保存文件失败", localURL: nil) }
+            DispatchQueue.main.async { [weak self] in self?.states[context.asset.stableID] = DownloadProgress(id: context.asset.stableID, progress: 0, status: .failed, message: tr("download.saveFailed"), localURL: nil) }
         }
     }
 
@@ -124,7 +124,7 @@ final class DownloadManager: NSObject, ObservableObject, URLSessionDownloadDeleg
         }
         guard let error else { startNextAfterTerminalTask(); return }
         if (error as? URLError)?.code == .cancelled {
-            DispatchQueue.main.async { [weak self] in self?.states[context.asset.stableID] = DownloadProgress(id: context.asset.stableID, progress: 0, status: .cancelled, message: "下载已取消", localURL: nil) }
+            DispatchQueue.main.async { [weak self] in self?.states[context.asset.stableID] = DownloadProgress(id: context.asset.stableID, progress: 0, status: .cancelled, message: tr("download.cancelled"), localURL: nil) }
             startNextAfterTerminalTask()
             return
         }
@@ -132,10 +132,10 @@ final class DownloadManager: NSObject, ObservableObject, URLSessionDownloadDeleg
             context.retryCount += 1
             let retry = session.downloadTask(with: url)
             lock.lock(); contexts[retry.taskIdentifier] = context; lock.unlock()
-            DispatchQueue.main.async { [weak self] in self?.states[context.asset.stableID] = DownloadProgress(id: context.asset.stableID, progress: 0, status: .downloading, message: "下载中断，正在第 \(context.retryCount) 次重试", localURL: nil) }
+            DispatchQueue.main.async { [weak self] in self?.states[context.asset.stableID] = DownloadProgress(id: context.asset.stableID, progress: 0, status: .downloading, message: tr("download.retrying", context.retryCount), localURL: nil) }
             retry.resume()
         } else {
-            DispatchQueue.main.async { [weak self] in self?.states[context.asset.stableID] = DownloadProgress(id: context.asset.stableID, progress: 0, status: .failed, message: "下载失败，请稍后重试", localURL: nil) }
+            DispatchQueue.main.async { [weak self] in self?.states[context.asset.stableID] = DownloadProgress(id: context.asset.stableID, progress: 0, status: .failed, message: tr("download.failed"), localURL: nil) }
             startNextAfterTerminalTask()
         }
     }
@@ -149,7 +149,7 @@ final class DownloadManager: NSObject, ObservableObject, URLSessionDownloadDeleg
         let task = session.downloadTask(with: url)
         contexts[task.taskIdentifier] = next; activeCount += 1
         lock.unlock()
-        DispatchQueue.main.async { [weak self] in self?.states[next.asset.stableID] = DownloadProgress(id: next.asset.stableID, progress: 0, status: .downloading, message: "正在下载 0%", localURL: nil) }
+        DispatchQueue.main.async { [weak self] in self?.states[next.asset.stableID] = DownloadProgress(id: next.asset.stableID, progress: 0, status: .downloading, message: tr("download.downloadingPercent", 0), localURL: nil) }
         task.resume()
     }
 }
@@ -162,8 +162,8 @@ private struct Sidecar: Codable {
 enum SourceSidecar {
     static func write(asset: MediaAsset, mediaURL: URL, projectName: String?, segmentIndex: Int?) throws {
         let formatter = ISO8601DateFormatter()
-        let status = asset.licenseStatus == .unknown ? "未知，请在发布前检查原始来源页面" : asset.licenseStatus.label
-        let sidecar = Sidecar(title: asset.title, assetID: asset.id, provider: asset.provider.displayName, creator: asset.creator ?? "未知", sourcePage: asset.sourcePageURL.absoluteString, originalFileURL: asset.downloadURL?.absoluteString ?? "未知", licenseName: asset.license ?? "未知", licenseURL: asset.licenseURL?.absoluteString ?? "未知", licenseStatus: status, searchKeyword: asset.searchKeyword, downloadDate: formatter.string(from: .now), projectName: projectName ?? "未分类", segment: segmentIndex.map(String.init) ?? "未指定")
+        let status = asset.licenseStatus == .unknown ? tr("sidecar.authorizationUnknown") : asset.licenseStatus.label
+        let sidecar = Sidecar(title: asset.title, assetID: asset.id, provider: asset.provider.displayName, creator: asset.creator ?? tr("common.unknown"), sourcePage: asset.sourcePageURL.absoluteString, originalFileURL: asset.downloadURL?.absoluteString ?? tr("common.unknown"), licenseName: asset.license ?? tr("common.unknown"), licenseURL: asset.licenseURL?.absoluteString ?? tr("common.unknown"), licenseStatus: status, searchKeyword: asset.searchKeyword, downloadDate: formatter.string(from: .now), projectName: projectName ?? tr("common.uncategorized"), segment: segmentIndex.map(String.init) ?? tr("common.notSpecified"))
         let base = mediaURL.deletingPathExtension()
         let jsonURL = base.appendingPathExtension("source.json")
         let textURL = base.appendingPathExtension("source.txt")
@@ -171,19 +171,19 @@ enum SourceSidecar {
         encoder.dateEncodingStrategy = .iso8601
         try encoder.encode(sidecar).write(to: jsonURL, options: .atomic)
         let text = """
-        标题：\(sidecar.title)
-        素材ID：\(sidecar.assetID)
-        来源平台：\(sidecar.provider)
-        作者/上传者：\(sidecar.creator)
-        原始素材页面：\(sidecar.sourcePage)
-        原始文件地址：\(sidecar.originalFileURL)
-        License名称：\(sidecar.licenseName)
-        License链接：\(sidecar.licenseURL)
-        授权状态：\(sidecar.licenseStatus)
-        搜索关键词：\(sidecar.searchKeyword)
-        下载日期时间：\(sidecar.downloadDate)
-        项目名称：\(sidecar.projectName)
-        对应镜头编号：\(sidecar.segment)
+        \(tr("sidecar.title")): \(sidecar.title)
+        \(tr("sidecar.assetID")): \(sidecar.assetID)
+        \(tr("sidecar.provider")): \(sidecar.provider)
+        \(tr("sidecar.creator")): \(sidecar.creator)
+        \(tr("sidecar.sourcePage")): \(sidecar.sourcePage)
+        \(tr("sidecar.originalFile")): \(sidecar.originalFileURL)
+        \(tr("sidecar.licenseName")): \(sidecar.licenseName)
+        \(tr("sidecar.licenseURL")): \(sidecar.licenseURL)
+        \(tr("sidecar.licenseStatus")): \(sidecar.licenseStatus)
+        \(tr("sidecar.searchKeyword")): \(sidecar.searchKeyword)
+        \(tr("sidecar.downloadDate")): \(sidecar.downloadDate)
+        \(tr("sidecar.projectName")): \(sidecar.projectName)
+        \(tr("sidecar.segment")): \(sidecar.segment)
         """
         try Data(text.utf8).write(to: textURL, options: .atomic)
     }
