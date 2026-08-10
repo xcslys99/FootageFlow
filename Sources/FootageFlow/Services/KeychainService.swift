@@ -1,18 +1,34 @@
 import Foundation
+
+#if os(macOS)
 import Security
+#endif
+
+protocol CredentialStoring: Sendable {
+    func read(_ provider: ProviderID) -> String
+    func save(_ value: String, provider: ProviderID) throws
+}
 
 enum KeychainService {
-    private static let service = "app.footageflow.api-keys"
-    private static let legacyService = "com.footagefinder.api-keys"
+    private static let store: any CredentialStoring = SystemCredentialStore()
 
-    static func read(_ provider: ProviderID) -> String {
+    static func read(_ provider: ProviderID) -> String { store.read(provider) }
+    static func save(_ value: String, provider: ProviderID) throws { try store.save(value, provider: provider) }
+}
+
+#if os(macOS)
+private struct SystemCredentialStore: CredentialStoring {
+    private let service = "app.footageflow.api-keys"
+    private let legacyService = "com.footagefinder.api-keys"
+
+    func read(_ provider: ProviderID) -> String {
         if let value = read(provider, service: service) { return value }
         guard let legacy = read(provider, service: legacyService) else { return "" }
         try? save(legacy, provider: provider)
         return legacy
     }
 
-    private static func read(_ provider: ProviderID, service: String) -> String? {
+    private func read(_ provider: ProviderID, service: String) -> String? {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
@@ -27,7 +43,7 @@ enum KeychainService {
         return value
     }
 
-    static func save(_ value: String, provider: ProviderID) throws {
+    func save(_ value: String, provider: ProviderID) throws {
         let base: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
@@ -43,15 +59,29 @@ enum KeychainService {
             var add = base
             add[kSecValueData as String] = data
             let addStatus = SecItemAdd(add as CFDictionary, nil)
-            guard addStatus == errSecSuccess else { throw KeychainError.status(addStatus) }
+            guard addStatus == errSecSuccess else { throw CredentialStoreError.status(Int32(addStatus)) }
         } else if status != errSecSuccess {
-            throw KeychainError.status(status)
+            throw CredentialStoreError.status(Int32(status))
         }
     }
 }
+#else
+private struct SystemCredentialStore: CredentialStoring {
+    func read(_ provider: ProviderID) -> String { "" }
+    func save(_ value: String, provider: ProviderID) throws {
+        guard value.isEmpty else { throw CredentialStoreError.unavailable }
+    }
+}
+#endif
 
-enum KeychainError: LocalizedError {
-    case status(OSStatus)
-    var errorDescription: String? { tr("error.keychain", code) }
-    private var code: OSStatus { if case .status(let code) = self { code } else { -1 } }
+enum CredentialStoreError: LocalizedError {
+    case status(Int32)
+    case unavailable
+
+    var errorDescription: String? {
+        switch self {
+        case .status(let code): tr("error.keychain", code)
+        case .unavailable: tr("error.credentialStoreUnavailable")
+        }
+    }
 }

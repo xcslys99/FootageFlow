@@ -1,8 +1,8 @@
-import AppKit
 import SwiftUI
 
 struct SettingsView: View {
     @EnvironmentObject private var localization: LocalizationManager
+    @EnvironmentObject private var store: DataStore
     @State private var pexelsKey = ""
     @State private var pixabayKey = ""
     @State private var youtubeKey = ""
@@ -11,6 +11,7 @@ struct SettingsView: View {
     @State private var messages: [ProviderID: String] = [:]
     @State private var cacheMessage = ""
     @State private var downloadRoot = AppSettings.downloadRootURL
+    @State private var confirmClearHistory = false
 
     var body: some View {
         ScrollView {
@@ -40,7 +41,8 @@ struct SettingsView: View {
                     VStack(alignment: .leading, spacing: 12) {
                         LabeledContent(tr("settings.downloadRoot")) { HStack { Text(downloadRoot.path).lineLimit(1).foregroundStyle(.secondary); Button(tr("settings.choose")) { chooseFolder() } } }
                         HStack { Button(tr("settings.clearCache")) { Task { do { try await SearchCache.shared.clear(); await MainActor.run { cacheMessage = tr("settings.cacheCleared") } } catch { await MainActor.run { cacheMessage = tr("settings.cacheFailed") } } } }; Text(cacheMessage).foregroundStyle(.secondary) }
-                        Button(tr("settings.openLogs")) { _ = NSWorkspace.shared.open(AppLogger.shared.logURL) }
+                        Button(tr("settings.clearHistory")) { confirmClearHistory = true }.disabled(store.history.isEmpty)
+                        Button(tr("settings.openLogs")) { DesktopPlatform.shared.open(AppLogger.shared.logURL) }
                         Text(tr("settings.logHelp")).font(.caption).foregroundStyle(.secondary)
                     }.padding(8)
                 }
@@ -48,6 +50,10 @@ struct SettingsView: View {
             }.padding(24).frame(maxWidth: 900, alignment: .leading)
         }
         .onAppear { pexelsKey = KeychainService.read(.pexels); pixabayKey = KeychainService.read(.pixabay); youtubeKey = KeychainService.read(.youtube) }
+        .alert(tr("history.clearConfirmTitle"), isPresented: $confirmClearHistory) {
+            Button(tr("common.cancel"), role: .cancel) { }
+            Button(tr("history.clear"), role: .destructive) { store.clearHistory() }
+        } message: { Text(tr("history.clearConfirmBody")) }
     }
 
     private func keyRow(_ provider: ProviderID, key: Binding<String>, applyURL: String) -> some View {
@@ -90,8 +96,10 @@ struct SettingsView: View {
         }
     }
     private func chooseFolder() {
-        let panel = NSOpenPanel(); panel.canChooseDirectories = true; panel.canChooseFiles = false; panel.allowsMultipleSelection = false; panel.prompt = tr("settings.chooseDownloadFolder")
-        if panel.runModal() == .OK, let url = panel.url { downloadRoot = url; AppSettings.downloadRootURL = url }
+        if let url = DesktopPlatform.shared.chooseDirectory(prompt: tr("settings.chooseDownloadFolder")) {
+            downloadRoot = url
+            AppSettings.downloadRootURL = url
+        }
     }
     private func statusColor(_ status: String?) -> Color { status == tr("settings.connectionSuccess") ? .green : (status == tr("settings.connectionFailed") || status == tr("settings.saveFailed") ? .red : .secondary) }
 }

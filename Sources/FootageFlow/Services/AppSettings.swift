@@ -26,8 +26,7 @@ enum AppSettings {
     static var downloadRootURL: URL {
         get {
             if let path = UserDefaults.standard.string(forKey: downloadRootKey), !path.isEmpty { return URL(fileURLWithPath: path, isDirectory: true) }
-            let movies = FileManager.default.urls(for: .moviesDirectory, in: .userDomainMask).first!
-            return movies.appendingPathComponent("FootageFlow", isDirectory: true)
+            return PlatformPaths.defaultDownloadRoot
         }
         set { UserDefaults.standard.set(newValue.path, forKey: downloadRootKey) }
     }

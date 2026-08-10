@@ -18,7 +18,7 @@ struct ScriptSegmentRecord: Identifiable, Codable, Hashable {
 }
 
 struct SavedAssetRecord: Identifiable, Codable, Hashable {
-    var id: String { stableID }
+    var id: String { "\(stableID)|\(projectID?.uuidString ?? "none")" }
     var stableID: String
     var providerRaw: String
     var title: String

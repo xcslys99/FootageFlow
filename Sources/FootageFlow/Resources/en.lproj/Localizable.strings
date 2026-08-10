@@ -109,13 +109,14 @@
 "error.requestFailed" = "The network request failed. Please try again later.";
 "error.http" = "The source request failed (HTTP %d).";
 "error.keychain" = "Could not securely save the API key (Keychain status %d).";
+"error.credentialStoreUnavailable" = "Secure credential storage is unavailable on this platform.";
 
 "welcome.title" = "Welcome to FootageFlow";
 "welcome.subtitle" = "Search. Discover. Download. Organize.";
 "welcome.body" = "You can start with Wikimedia Commons and Internet Archive without API keys. Pexels, Pixabay, and YouTube keys can be added now or later in Settings.";
 "welcome.optional" = "Optional";
 "welcome.howToApply" = "How to apply";
-"welcome.security" = "API keys stay in macOS Keychain and are never written to configuration files or logs.";
+"welcome.security" = "API keys stay in the operating system's secure credential store and are never written to configuration files or logs.";
 "welcome.later" = "Set Up Later";
 "welcome.saveStart" = "Save and Start";
 
@@ -130,7 +131,7 @@
 "settings.openLogs" = "Open Logs";
 "settings.logHelp" = "Logs contain source, request type, HTTP status, and error type only. API keys are never logged. Pixabay search results are cached for 24 hours.";
 "settings.privacy" = "Privacy";
-"settings.privacyBody" = "FootageFlow contains no analytics, tracking, advertising, or telemetry SDKs. Projects, scripts, favorites, and download history stay on this Mac. Only necessary requests are sent to enabled sources. API keys are stored in macOS Keychain.";
+"settings.privacyBody" = "FootageFlow contains no analytics, tracking, advertising, or telemetry SDKs. Projects, scripts, favorites, and download history stay on this device. Only necessary requests are sent to enabled sources. API keys are stored in the operating system's secure credential store.";
 "settings.apiKey" = "API Key";
 "settings.testConnection" = "Test Connection";
 "settings.notConfigured" = "Not configured";
@@ -139,7 +140,7 @@
 "settings.connectionSuccess" = "Connection successful";
 "settings.connectionFailed" = "Connection failed";
 "settings.saveFailed" = "Save failed";
-"settings.savedKeychain" = "Securely saved to Keychain";
+"settings.savedKeychain" = "Saved to secure credential storage";
 "settings.enabled" = "Enabled";
 "settings.chooseDownloadFolder" = "Choose Download Folder";
 "settings.clearHistory" = "Clear Search History";
@@ -167,12 +168,16 @@
 "favorites.emptyDescription" = "Select the heart button on any search result to save it here.";
 
 "history.clear" = "Clear All";
+"history.clearConfirmTitle" = "Clear all search history?";
+"history.clearConfirmBody" = "This removes search history records from this Mac. Downloaded media and projects are not affected.";
 "history.research" = "Search Again";
 "history.summary" = "%@ · %d results";
 
 "download.title" = "Download Manager";
 "download.empty" = "No downloads yet";
 "download.emptyDescription" = "Media that can be downloaded will appear here.";
+"download.current" = "Current Tasks";
+"download.completedSection" = "Completed Downloads";
 "download.revealFinder" = "Show in Finder";
 "download.openFile" = "Open File";
 "download.openFolder" = "Open Folder";
@@ -180,6 +185,8 @@
 "download.deleteLocal" = "Delete Local File…";
 "download.deleteConfirmTitle" = "Delete the local media file?";
 "download.deleteConfirmBody" = "The media file and matching .source.txt/.source.json files will be deleted. This cannot be undone.";
+"download.deleteFailedTitle" = "Could not delete the file";
+"download.deleteUnsafe" = "For safety, FootageFlow only deletes files inside the configured download folder.";
 "download.notAvailable" = "This source does not provide a direct download.";
 "download.createFolderFailed" = "Could not create the download folder.";
 "download.duplicate" = "File already exists; duplicate download skipped.";
@@ -191,6 +198,8 @@
 "download.saveFailed" = "Could not save the downloaded file";
 "download.retrying" = "Download interrupted; retrying (%d of 2)";
 "download.failed" = "Download failed. Try again later.";
+"download.speed" = "%@/s";
+"download.saveLocation" = "Save location: %@";
 "download.status.waiting" = "Waiting";
 "download.status.downloading" = "Downloading";
 "download.status.completed" = "Completed";

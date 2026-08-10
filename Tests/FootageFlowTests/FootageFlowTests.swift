@@ -60,6 +60,15 @@ final class FootageFlowTests: XCTestCase {
         XCTAssertFalse(AppLogger.redact("Authorization: Bearer secret-token-value").contains("secret-token-value"))
     }
 
+    func testDownloadPathContainmentAndSanitization() {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        XCTAssertTrue(DownloadPathSafety.isContained(root.appendingPathComponent("Project/media.mp4"), in: root))
+        XCTAssertFalse(DownloadPathSafety.isContained(root.deletingLastPathComponent().appendingPathComponent("outside.mp4"), in: root))
+        let directory = DownloadPathSafety.projectDirectory(projectName: "../../escape", root: root)
+        XCTAssertTrue(DownloadPathSafety.isContained(directory, in: root))
+        XCTAssertFalse(directory.path.contains("../"))
+    }
+
     func testLegacyDatabaseMigrationPreservesSource() throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
@@ -99,12 +108,16 @@ final class FootageFlowTests: XCTestCase {
         let first = DataStore(fileURL: databaseURL)
         let project = first.addProject(name: "Test Project")
         first.toggleFavorite(asset: sampleAsset(), projectID: project.id)
+        first.addHistory(SearchHistoryRecord(originalQuery: "test", keywords: ["test"], providers: [.wikimedia], projectID: project.id, resultCount: 1))
+        first.addDownload(DownloadRecord(asset: sampleAsset(), fileURL: directory.appendingPathComponent("test.mp4"), projectID: project.id))
         let reopened = DataStore(fileURL: databaseURL)
         XCTAssertEqual(reopened.projects.first?.name, "Test Project")
         XCTAssertEqual(reopened.favorites.count, 1)
         reopened.deleteProject(id: project.id)
         XCTAssertTrue(reopened.projects.isEmpty)
         XCTAssertNil(reopened.favorites.first?.projectID)
+        XCTAssertNil(reopened.history.first?.projectID)
+        XCTAssertNil(reopened.downloads.first?.projectID)
     }
 
     func testSidecarGeneration() throws {

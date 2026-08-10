@@ -5,8 +5,7 @@ actor AppLogger {
     let logURL: URL
 
     init() {
-        let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-        let directory = support.appendingPathComponent("FootageFlow/Logs", isDirectory: true)
+        let directory = PlatformPaths.applicationData.appendingPathComponent("Logs", isDirectory: true)
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         logURL = directory.appendingPathComponent("FootageFlow.log")
     }

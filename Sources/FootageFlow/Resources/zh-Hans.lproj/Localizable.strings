@@ -108,13 +108,14 @@
 "error.requestFailed" = "网络请求失败，请稍后重试。";
 "error.http" = "素材平台请求失败（HTTP %d）。";
 "error.keychain" = "无法安全保存 API Key（Keychain 状态 %d）。";
+"error.credentialStoreUnavailable" = "此平台暂时无法使用安全凭据存储。";
 
 "welcome.title" = "欢迎使用 FootageFlow";
 "welcome.subtitle" = "搜索、发现、下载、整理。";
 "welcome.body" = "无需 API Key 即可使用 Wikimedia Commons 和 Internet Archive。Pexels、Pixabay 和 YouTube 的 Key 可以现在填写，也可以稍后在设置中添加。";
 "welcome.optional" = "可选";
 "welcome.howToApply" = "如何申请";
-"welcome.security" = "API Key 只保存在 macOS Keychain，不会写入配置文件或日志。";
+"welcome.security" = "API Key 只保存在操作系统的安全凭据存储中，不会写入配置文件或日志。";
 "welcome.later" = "稍后设置";
 "welcome.saveStart" = "保存并开始";
 
@@ -129,7 +130,7 @@
 "settings.openLogs" = "打开日志";
 "settings.logHelp" = "日志只记录来源、请求类型、HTTP 状态和错误类型，不记录 API Key。Pixabay 搜索结果按官方要求缓存 24 小时。";
 "settings.privacy" = "隐私";
-"settings.privacyBody" = "FootageFlow 不含分析、跟踪、广告或遥测 SDK。项目、文稿、收藏和下载历史只保存在本机，仅向启用的素材来源发送必要请求。API Key 保存在 macOS Keychain。";
+"settings.privacyBody" = "FootageFlow 不含分析、跟踪、广告或遥测 SDK。项目、文稿、收藏和下载历史只保存在当前设备，仅向启用的素材来源发送必要请求。API Key 保存在操作系统的安全凭据存储中。";
 "settings.apiKey" = "API Key";
 "settings.testConnection" = "测试连接";
 "settings.notConfigured" = "未配置";
@@ -138,7 +139,7 @@
 "settings.connectionSuccess" = "连接成功";
 "settings.connectionFailed" = "连接失败";
 "settings.saveFailed" = "保存失败";
-"settings.savedKeychain" = "已安全保存到 Keychain";
+"settings.savedKeychain" = "已保存到安全凭据存储";
 "settings.enabled" = "已启用";
 "settings.chooseDownloadFolder" = "选择下载目录";
 "settings.clearHistory" = "清空搜索历史";
@@ -166,12 +167,16 @@
 "favorites.emptyDescription" = "搜索素材后点击心形按钮即可收藏。";
 
 "history.clear" = "清空";
+"history.clearConfirmTitle" = "清空全部搜索历史？";
+"history.clearConfirmBody" = "只会删除本机的搜索历史记录，不会影响项目和已下载素材。";
 "history.research" = "重新搜索";
 "history.summary" = "%@ · %d 条";
 
 "download.title" = "下载管理";
 "download.empty" = "暂无下载记录";
 "download.emptyDescription" = "允许下载的素材会在这里显示。";
+"download.current" = "当前任务";
+"download.completedSection" = "已完成下载";
 "download.revealFinder" = "在 Finder 中显示";
 "download.openFile" = "打开文件";
 "download.openFolder" = "打开文件夹";
@@ -179,6 +184,8 @@
 "download.deleteLocal" = "删除本地文件…";
 "download.deleteConfirmTitle" = "确认删除本地素材？";
 "download.deleteConfirmBody" = "将删除素材文件及同名 .source.txt/.source.json，此操作不可撤销。";
+"download.deleteFailedTitle" = "无法删除文件";
+"download.deleteUnsafe" = "为保证安全，FootageFlow 只允许删除当前设置下载目录内的文件。";
 "download.notAvailable" = "该来源不提供直接下载。";
 "download.createFolderFailed" = "无法创建下载目录。";
 "download.duplicate" = "文件已存在，未重复下载。";
@@ -190,6 +197,8 @@
 "download.saveFailed" = "保存文件失败";
 "download.retrying" = "下载中断，正在第 %d 次重试";
 "download.failed" = "下载失败，请稍后重试。";
+"download.speed" = "%@/秒";
+"download.saveLocation" = "保存位置：%@";
 "download.status.waiting" = "等待中";
 "download.status.downloading" = "下载中";
 "download.status.completed" = "已完成";

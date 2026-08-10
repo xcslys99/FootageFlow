@@ -21,9 +21,21 @@ final class LocalizationManager: ObservableObject, @unchecked Sendable {
 
     @Published private(set) var language: AppLanguage
     private let defaults: UserDefaults
+    private let languageBundles: [AppLanguage: Bundle]
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
+        let resources = Self.resourceBundle()
+        var bundles: [AppLanguage: Bundle] = [:]
+        for language in AppLanguage.allCases {
+            for name in [language.rawValue, language.rawValue.lowercased()] {
+                if let path = resources.path(forResource: name, ofType: "lproj"), let bundle = Bundle(path: path) {
+                    bundles[language] = bundle
+                    break
+                }
+            }
+        }
+        languageBundles = bundles
         language = defaults.string(forKey: Self.preferenceKey).flatMap(AppLanguage.init(rawValue:)) ?? .english
     }
 
@@ -47,14 +59,17 @@ final class LocalizationManager: ObservableObject, @unchecked Sendable {
     }
 
     private func localizedValue(_ key: String, language: AppLanguage) -> String? {
-        let names = [language.rawValue, language.rawValue.lowercased()]
-        let bundle = names.lazy.compactMap { name -> Bundle? in
-            if let path = Bundle.module.path(forResource: name, ofType: "lproj"), let bundle = Bundle(path: path) { return bundle }
-            return Bundle(url: Bundle.module.bundleURL.appendingPathComponent("\(name).lproj", isDirectory: true))
-        }.first
-        guard let bundle else { return nil }
+        guard let bundle = languageBundles[language] else { return nil }
         let value = bundle.localizedString(forKey: key, value: nil, table: nil)
         return value == key ? nil : value
+    }
+
+    private static func resourceBundle() -> Bundle {
+        if let resources = Bundle.main.resourceURL,
+           let packaged = Bundle(url: resources.appendingPathComponent("FootageFlow_FootageFlow.bundle", isDirectory: true)) {
+            return packaged
+        }
+        return Bundle.module
     }
 }
 

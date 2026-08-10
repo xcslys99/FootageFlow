@@ -39,18 +39,27 @@ struct MediaAssetCard: View {
             }.font(.caption).foregroundStyle(.secondary)
             if let downloadState {
                 ProgressView(value: downloadState.progress).help(downloadState.message)
-                Text(downloadState.message).font(.caption2).foregroundStyle(downloadState.status == .failed ? .red : .secondary)
+                HStack(spacing: 5) {
+                    Text(downloadState.message)
+                    if let speed = downloadState.speedText { Text("· \(speed)") }
+                }.font(.caption2).foregroundStyle(downloadState.status == .failed ? .red : .secondary)
             }
             HStack(spacing: 7) {
                 if asset.previewURL != nil { Button(tr("media.preview")) { onPreview(asset) } }
                 Button { store.toggleFavorite(asset: asset, projectID: projectID, segmentIndex: segmentIndex) } label: { Image(systemName: store.isFavorite(asset, projectID: projectID) ? "heart.fill" : "heart") }.help(tr("media.favorite"))
                 if asset.downloadable && asset.provider != .youtube {
-                    Button(tr("media.download")) { downloads.start(asset: asset, projectID: projectID, projectName: projectName, segmentIndex: segmentIndex) }
+                    if let downloadState, downloadState.status == .downloading || downloadState.status == .waiting {
+                        Button(tr("common.cancel")) { downloads.cancel(stableID: asset.stableID) }
+                    } else if let downloadState, downloadState.status == .failed || downloadState.status == .cancelled {
+                        Button(tr("common.retry")) { downloads.retry(stableID: asset.stableID) }
+                    } else {
+                        Button(tr("media.download")) { downloads.start(asset: asset, projectID: projectID, projectName: projectName, segmentIndex: segmentIndex) }
+                    }
                 }
                 Spacer()
                 Button(tr("media.openSource")) {
                     guard let url = try? URLValidator.remote(asset.sourcePageURL) else { return }
-                    NSWorkspace.shared.open(url)
+                    DesktopPlatform.shared.open(url)
                 }
             }.controlSize(.small)
         }
