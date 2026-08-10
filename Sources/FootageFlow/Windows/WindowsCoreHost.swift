@@ -13,6 +13,7 @@
     var yearTo: Int? = nil
     var downloadableOnly: Bool? = nil
     var pageSize: Int? = nil
+    var continuation: ProviderContinuation? = nil
     var providerIDs: [String]? = nil
     var apiKeys: [String: String]? = nil
     var language: String? = nil
@@ -27,6 +28,7 @@
     var resultCount: Int? = nil
     var segmentIndex: Int? = nil
     var externalToolOutputBase64: String? = nil
+    var feedbackDestination: FeedbackDestination? = nil
   }
 
   private struct WindowsCoreResponse: Encodable {
@@ -69,6 +71,8 @@
     let mode: ProviderMode
     let state: ProviderRuntimeState
     let assets: [MediaAsset]
+    var continuation: ProviderContinuation? = nil
+    var totalResults: Int? = nil
     var errorCode: String? = nil
   }
 
@@ -79,7 +83,7 @@
         write(
           WindowsCoreResponse(
             id: "self-test", success: true,
-            providers: ProviderID.allCases.map {
+            providers: ProviderID.searchCases.map {
               WindowsProviderDescriptor(ProviderFactory.make($0, apiKey: "").info)
             }))
         return
@@ -114,6 +118,20 @@
           providers: selectedProviderIDs(request).map {
             WindowsProviderDescriptor(provider($0, request: request).info)
           })
+      case "feedbackURL":
+        guard let destination = request.feedbackDestination else {
+          return WindowsCoreResponse(
+            id: request.id, success: false, errorCode: "invalidRequest",
+            errorMessage: "A feedback destination is required.")
+        }
+        return WindowsCoreResponse(
+          id: request.id, success: true,
+          text: FeedbackURLs.url(
+            for: destination,
+            context: FeedbackContext(
+              platform: "Windows", osVersion: ProcessInfo.processInfo.operatingSystemVersionString,
+              language: request.language ?? "en")
+          ).absoluteString)
       case "search":
         return await search(request)
       case "providerTest":
@@ -240,8 +258,9 @@
           let selectedProvider = provider(id, request: request)
           group.addTask {
             do {
-              let assets = try await selectedProvider.search(searchRequest)
-              return successBatch(selectedProvider.info, assets: assets)
+              let page = try await selectedProvider.searchPage(
+                searchRequest, continuation: request.continuation)
+              return successBatch(selectedProvider.info, page: page)
             } catch {
               return failureBatch(selectedProvider.info, error: error)
             }
@@ -265,7 +284,10 @@
         try await selectedProvider.testConnection()
         return WindowsCoreResponse(
           id: request.id, success: true,
-          providerBatches: [successBatch(selectedProvider.info, assets: [])])
+          providerBatches: [
+            successBatch(
+              selectedProvider.info, page: ProviderPage(assets: [], continuation: nil))
+          ])
       } catch {
         return WindowsCoreResponse(
           id: request.id, success: false,
@@ -323,7 +345,7 @@
     }
 
     private static func selectedProviderIDs(_ request: WindowsCoreRequest) -> [ProviderID] {
-      guard let values = request.providerIDs else { return ProviderID.allCases }
+      guard let values = request.providerIDs else { return ProviderID.searchCases }
       return values.compactMap(ProviderID.init(rawValue:)).reduce(into: []) { result, value in
         if !result.contains(value) { result.append(value) }
       }
@@ -335,7 +357,7 @@
       ProviderFactory.make(id, apiKey: request.apiKeys?[id.rawValue] ?? "")
     }
 
-    private static func successBatch(_ info: ProviderInfo, assets: [MediaAsset])
+    private static func successBatch(_ info: ProviderInfo, page: ProviderPage)
       -> WindowsProviderBatch
     {
       let availability: ProviderAvailability =
@@ -350,7 +372,7 @@
         provider: info.id, displayName: info.displayName, mode: info.mode,
         state: ProviderRuntimeState(
           availability: availability, message: nil, mode: info.mode),
-        assets: assets)
+        assets: page.assets, continuation: page.continuation, totalResults: page.totalResults)
     }
 
     private static func failureBatch(_ info: ProviderInfo, error: Error) -> WindowsProviderBatch {
@@ -408,7 +430,7 @@
     }
 
     private static func providerOrder(_ id: ProviderID) -> Int {
-      ProviderID.allCases.firstIndex(of: id) ?? Int.max
+      ProviderID.searchCases.firstIndex(of: id) ?? Int.max
     }
 
     private static func configureLanguage(_ value: String?) {

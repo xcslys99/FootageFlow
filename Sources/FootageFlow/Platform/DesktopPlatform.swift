@@ -6,6 +6,7 @@ protocol DesktopPlatformServing {
   func reveal(_ url: URL)
   func chooseDirectory(prompt: String) -> URL?
   func copy(_ text: String)
+  func clipboardText() -> String?
 }
 
 enum DesktopPlatform {
@@ -33,6 +34,8 @@ enum DesktopPlatform {
       NSPasteboard.general.clearContents()
       NSPasteboard.general.setString(text, forType: .string)
     }
+
+    func clipboardText() -> String? { NSPasteboard.general.string(forType: .string) }
   }
 #else
   private struct SystemDesktopPlatform: DesktopPlatformServing {
@@ -40,5 +43,6 @@ enum DesktopPlatform {
     func reveal(_ url: URL) {}
     func chooseDirectory(prompt: String) -> URL? { nil }
     func copy(_ text: String) {}
+    func clipboardText() -> String? { nil }
   }
 #endif

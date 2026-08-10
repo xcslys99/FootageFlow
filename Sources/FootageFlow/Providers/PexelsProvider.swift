@@ -11,15 +11,38 @@ struct PexelsProvider: MediaProvider {
     capabilities: ProviderCapabilities(
       search: .supported, preview: .supported, metadata: .supported, license: .supported,
       download: .supported, supportsVideo: true, supportsImage: true,
+      pagination: .supported,
       accessMethods: [.officialAPI, .directSearch]))
 
   func search(_ request: SearchRequest) async throws -> [MediaAsset] {
+    try await searchPage(request, continuation: nil).assets
+  }
+
+  func searchPage(
+    _ request: SearchRequest, continuation: ProviderContinuation?
+  ) async throws -> ProviderPage {
     guard !apiKey.isEmpty else { throw ProviderError.missingAPIKey(.pexels) }
-    guard request.mediaType != .audio else { return [] }
+    guard request.mediaType != .audio else { return ProviderPage(assets: [], continuation: nil) }
+    let page = max(1, continuation?.page ?? 1)
     var results: [MediaAsset] = []
-    if request.mediaType != .image { results += try await searchVideos(request) }
-    if request.mediaType != .video { results += try await searchPhotos(request) }
-    return results
+    var hasMore = false
+    var totalResults = 0
+    if request.mediaType != .image {
+      let value = try await searchVideos(request, page: page)
+      results += value.assets
+      hasMore = hasMore || value.hasMore
+      totalResults += value.totalResults
+    }
+    if request.mediaType != .video {
+      let value = try await searchPhotos(request, page: page)
+      results += value.assets
+      hasMore = hasMore || value.hasMore
+      totalResults += value.totalResults
+    }
+    return ProviderPage(
+      assets: results,
+      continuation: hasMore ? .nextPage(page + 1) : nil,
+      totalResults: totalResults)
   }
 
   private func authorizedRequest(url: URL) -> URLRequest {
@@ -28,10 +51,11 @@ struct PexelsProvider: MediaProvider {
     return request
   }
 
-  private func commonItems(_ request: SearchRequest) -> [URLQueryItem] {
+  private func commonItems(_ request: SearchRequest, page: Int) -> [URLQueryItem] {
     var items = [
       URLQueryItem(name: "query", value: request.query),
       URLQueryItem(name: "per_page", value: String(min(request.pageSize, 40))),
+      URLQueryItem(name: "page", value: String(page)),
     ]
     if [.landscape, .portrait, .square].contains(request.orientation) {
       items.append(URLQueryItem(name: "orientation", value: request.orientation.rawValue))
@@ -39,8 +63,10 @@ struct PexelsProvider: MediaProvider {
     return items
   }
 
-  private func searchVideos(_ request: SearchRequest) async throws -> [MediaAsset] {
-    var items = commonItems(request)
+  private func searchVideos(_ request: SearchRequest, page: Int) async throws
+    -> (assets: [MediaAsset], hasMore: Bool, totalResults: Int)
+  {
+    var items = commonItems(request, page: page)
     if let height = request.resolution.minimumHeight {
       let size = height >= 2160 ? "large" : (height >= 1080 ? "medium" : "small")
       items.append(URLQueryItem(name: "size", value: size))
@@ -48,7 +74,7 @@ struct PexelsProvider: MediaProvider {
     let url = try URL.endpoint("https://api.pexels.com/v1/videos/search", queryItems: items)
     let response = try await HTTPClient.shared.decode(
       PexelsVideoResponse.self, request: authorizedRequest(url: url))
-    return response.videos.enumerated().compactMap { index, video -> MediaAsset? in
+    let assets = response.videos.enumerated().compactMap { index, video -> MediaAsset? in
       guard let source = URLValidator.remote(video.url) else { return nil }
       let valid = video.videoFiles.filter {
         $0.fileType?.contains("video") == true && $0.link.hasPrefix("http")
@@ -72,13 +98,17 @@ struct PexelsProvider: MediaProvider {
         originalMetadata: ["userURL": video.user.url], searchKeyword: request.query,
         relevanceScore: 1 - Double(index) * 0.01)
     }
+    return (assets, response.nextPage != nil, response.totalResults ?? assets.count)
   }
 
-  private func searchPhotos(_ request: SearchRequest) async throws -> [MediaAsset] {
-    let url = try URL.endpoint("https://api.pexels.com/v1/search", queryItems: commonItems(request))
+  private func searchPhotos(_ request: SearchRequest, page: Int) async throws
+    -> (assets: [MediaAsset], hasMore: Bool, totalResults: Int)
+  {
+    let url = try URL.endpoint(
+      "https://api.pexels.com/v1/search", queryItems: commonItems(request, page: page))
     let response = try await HTTPClient.shared.decode(
       PexelsPhotoResponse.self, request: authorizedRequest(url: url))
-    return response.photos.enumerated().compactMap { index, photo in
+    let assets: [MediaAsset] = response.photos.enumerated().compactMap { index, photo in
       guard let source = URLValidator.remote(photo.url),
         let download = URLValidator.remote(photo.src.original)
       else { return nil }
@@ -94,10 +124,20 @@ struct PexelsProvider: MediaProvider {
         originalMetadata: ["photographerURL": photo.photographerURL], searchKeyword: request.query,
         relevanceScore: 1 - Double(index) * 0.01)
     }
+    return (assets, response.nextPage != nil, response.totalResults ?? assets.count)
   }
 }
 
-struct PexelsVideoResponse: Decodable { let videos: [PexelsVideo] }
+struct PexelsVideoResponse: Decodable {
+  let videos: [PexelsVideo]
+  let totalResults: Int?
+  let nextPage: String?
+  enum CodingKeys: String, CodingKey {
+    case videos
+    case totalResults = "total_results"
+    case nextPage = "next_page"
+  }
+}
 struct PexelsVideo: Decodable {
   let id, width, height, duration: Int
   let url, image: String
@@ -118,7 +158,16 @@ struct PexelsVideoFile: Decodable {
     case fileType = "file_type"
   }
 }
-struct PexelsPhotoResponse: Decodable { let photos: [PexelsPhoto] }
+struct PexelsPhotoResponse: Decodable {
+  let photos: [PexelsPhoto]
+  let totalResults: Int?
+  let nextPage: String?
+  enum CodingKeys: String, CodingKey {
+    case photos
+    case totalResults = "total_results"
+    case nextPage = "next_page"
+  }
+}
 struct PexelsPhoto: Decodable {
   let id, width, height: Int
   let url, photographer: String

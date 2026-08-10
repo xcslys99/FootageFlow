@@ -33,7 +33,7 @@ struct MediaAssetCard: View {
       .frame(height: 150).clipped().background(.quaternary)
       .overlay(alignment: .topLeading) {
         Label(
-          asset.provider.displayName, systemImage: mediaIcon
+          asset.sourceDisplayName, systemImage: mediaIcon
         )
         .font(.caption2.bold()).padding(5)
         .background(.ultraThickMaterial, in: RoundedRectangle(cornerRadius: 5)).padding(7)

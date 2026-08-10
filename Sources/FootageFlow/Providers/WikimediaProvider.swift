@@ -12,13 +12,20 @@ struct WikimediaProvider: MediaProvider {
       search: .supported, preview: .supported, metadata: .supported, license: .supported,
       download: .supported, supportsVideo: true, supportsImage: true,
       supportsAudio: true,
+      pagination: .supported,
       accessMethods: [.publicAPI, .publicInterface]))
 
   func search(_ request: SearchRequest) async throws -> [MediaAsset] {
+    try await searchPage(request, continuation: nil).assets
+  }
+
+  func searchPage(
+    _ request: SearchRequest, continuation: ProviderContinuation?
+  ) async throws -> ProviderPage {
     let effectiveQuery =
       request.mediaType == .video && !request.query.contains("filetype:")
       ? "\(request.query) filetype:video" : request.query
-    let items = [
+    var items = [
       URLQueryItem(name: "action", value: "query"),
       URLQueryItem(name: "format", value: "json"),
       URLQueryItem(name: "formatversion", value: "2"),
@@ -37,10 +44,17 @@ struct WikimediaProvider: MediaProvider {
           "ImageDescription|ObjectName|Artist|Credit|LicenseShortName|LicenseUrl|UsageTerms|DateTimeOriginal"
       ),
     ]
+    if let offset = continuation?.offset {
+      items.append(URLQueryItem(name: "gsroffset", value: String(offset)))
+    }
+    if let value = continuation?.token {
+      items.append(URLQueryItem(name: "continue", value: value))
+    }
     let url = try URL.endpoint("https://commons.wikimedia.org/w/api.php", queryItems: items)
     let response = try await HTTPClient.shared.decode(
       WikimediaResponse.self, request: URLRequest(url: url))
-    return (response.query?.pages ?? []).enumerated().compactMap { index, page in
+    let assets: [MediaAsset] = (response.query?.pages ?? []).enumerated().compactMap {
+      index, page in
       guard let image = page.imageinfo?.first, let original = URLValidator.remote(image.url),
         let source = URLValidator.remote(image.descriptionurl)
       else { return nil }
@@ -85,10 +99,30 @@ struct WikimediaProvider: MediaProvider {
           "uploader": image.user ?? "",
         ], searchKeyword: request.query, relevanceScore: 1 - Double(index) * 0.01)
     }
+    let next = response.continuation.flatMap { value -> ProviderContinuation? in
+      guard let offset = value.gsrOffset else { return nil }
+      return ProviderContinuation(offset: offset, token: value.continueValue)
+    }
+    return ProviderPage(assets: assets, continuation: next)
   }
 }
 
-struct WikimediaResponse: Decodable { let query: WikimediaQuery? }
+struct WikimediaResponse: Decodable {
+  let query: WikimediaQuery?
+  let continuation: WikimediaContinuation?
+  enum CodingKeys: String, CodingKey {
+    case query
+    case continuation = "continue"
+  }
+}
+struct WikimediaContinuation: Decodable {
+  let gsrOffset: Int?
+  let continueValue: String?
+  enum CodingKeys: String, CodingKey {
+    case gsrOffset = "gsroffset"
+    case continueValue = "continue"
+  }
+}
 struct WikimediaQuery: Decodable { let pages: [WikimediaPage] }
 struct WikimediaPage: Decodable {
   let pageid: Int

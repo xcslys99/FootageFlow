@@ -11,13 +11,20 @@ struct LibraryOfCongressProvider: MediaProvider {
     capabilities: ProviderCapabilities(
       search: .supported, preview: .supported, metadata: .supported, license: .bestEffort,
       download: .bestEffort, supportsVideo: true, supportsImage: true, supportsAudio: true,
+      pagination: .supported,
       accessMethods: [.officialAPI, .publicAPI]))
 
   func search(_ request: SearchRequest) async throws -> [MediaAsset] {
-    // LOC documents a 20 JSON requests/minute limit. A shared three-second spacing keeps
-    // concurrent script searches within that published limit.
+    try await searchPage(request, continuation: nil).assets
+  }
+
+  func searchPage(
+    _ request: SearchRequest, continuation: ProviderContinuation?
+  ) async throws -> ProviderPage {
+    // LOC currently documents 150 requests/minute. Keep a conservative shared interval.
     try await ProviderRequestLimiter.shared.wait(
-      for: .libraryOfCongress, minimumInterval: .seconds(3))
+      for: .libraryOfCongress, minimumInterval: .milliseconds(500))
+    let page = max(1, continuation?.page ?? 1)
     let collection =
       switch request.mediaType {
       case .video: "film-and-videos"
@@ -27,9 +34,10 @@ struct LibraryOfCongressProvider: MediaProvider {
       }
     var items = [
       URLQueryItem(name: "fo", value: "json"),
-      URLQueryItem(name: "at", value: "results"),
+      URLQueryItem(name: "at", value: "results,pagination"),
       URLQueryItem(name: "c", value: String(min(request.pageSize, 20))),
       URLQueryItem(name: "q", value: request.query),
+      URLQueryItem(name: "sp", value: String(page)),
     ]
     if let from = request.yearFrom, let to = request.yearTo {
       items.append(URLQueryItem(name: "dates", value: "\(from)/\(to)"))
@@ -40,7 +48,16 @@ struct LibraryOfCongressProvider: MediaProvider {
     }
     let url = try URL.endpoint("https://www.loc.gov/\(collection)/", queryItems: items)
     let (data, _) = try await HTTPClient.shared.data(for: URLRequest(url: url))
-    return try Self.assets(from: data, request: request)
+    let assets = try Self.assets(from: data, request: request)
+    guard let root = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+      throw ProviderError.invalidResponse
+    }
+    let pagination = root["pagination"] as? [String: Any]
+    let total = locInt(pagination?["of"])
+    let hasMore = locString(pagination?["next"]) != nil
+    return ProviderPage(
+      assets: assets, continuation: hasMore ? .nextPage(page + 1) : nil,
+      totalResults: total)
   }
 
   static func assets(from data: Data, request: SearchRequest) throws -> [MediaAsset] {

@@ -18,6 +18,33 @@ struct SearchRequest: Sendable {
   var pageSize: Int = 16
 }
 
+/// Opaque provider-owned continuation state. UI layers persist and return this value without
+/// interpreting it, so page numbers, offsets, search-after values and cursors can coexist.
+struct ProviderContinuation: Codable, Hashable, Sendable {
+  var page: Int? = nil
+  var offset: Int? = nil
+  var token: String? = nil
+  var cursor: String? = nil
+  var nextURL: URL? = nil
+
+  static func nextPage(_ page: Int) -> ProviderContinuation {
+    ProviderContinuation(page: max(1, page))
+  }
+}
+
+struct ProviderPage: Codable, Sendable {
+  var assets: [MediaAsset]
+  var continuation: ProviderContinuation?
+  var totalResults: Int? = nil
+
+  var hasMore: Bool { continuation != nil }
+}
+
+struct ProviderQueryPageState: Sendable {
+  var request: SearchRequest
+  var continuation: ProviderContinuation
+}
+
 enum ProviderCapabilityLevel: String, Codable, Sendable {
   case unavailable
   case supported
@@ -63,6 +90,7 @@ struct ProviderCapabilities: Codable, Sendable {
   let supportsVideo: Bool
   let supportsImage: Bool
   var supportsAudio: Bool = false
+  var pagination: ProviderCapabilityLevel = .unavailable
   let accessMethods: Set<ProviderAccessMethod>
 }
 
@@ -76,6 +104,7 @@ struct ProviderInfo: Sendable {
   var supportsVideo: Bool { capabilities.supportsVideo }
   var supportsImage: Bool { capabilities.supportsImage }
   var supportsDownload: Bool { capabilities.download.isAvailable }
+  var supportsPagination: Bool { capabilities.pagination.isAvailable }
 
   init(
     id: ProviderID, displayName: String, mode: ProviderMode, requiresAPIKey: Bool,
@@ -162,6 +191,8 @@ struct ProviderSearchResult: Sendable {
   let error: ProviderError?
   let state: ProviderRuntimeState?
   let mode: ProviderMode
+  var pagination: [ProviderQueryPageState] = []
+  var totalResults: Int? = nil
 }
 
 enum SearchStatus: Sendable {
@@ -268,7 +299,7 @@ struct AdvancedSearchFilter: Sendable {
   var resolution: ResolutionFilter = .all
   var duration: DurationFilter = .all
   var license: LicenseFilter = .all
-  var selectedProviders = Set(ProviderID.allCases)
+  var selectedProviders = Set(ProviderID.searchCases)
   var yearFrom: Int? = nil
   var yearTo: Int? = nil
   var downloadableOnly = false

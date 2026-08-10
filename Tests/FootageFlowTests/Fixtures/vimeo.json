@@ -1,0 +1,24 @@
+{
+  "total": 2,
+  "paging": {
+    "next": "/videos?page=2",
+    "previous": null,
+    "first": "/videos?page=1",
+    "last": "/videos?page=2"
+  },
+  "data": [{
+    "uri": "/videos/12345",
+    "name": "Documentary Fixture",
+    "link": "https://vimeo.com/12345",
+    "description": "A discovery-only Vimeo fixture",
+    "license": "by",
+    "created_time": "2026-01-01T00:00:00Z",
+    "release_time": "2026-01-02T00:00:00Z",
+    "duration": 75,
+    "width": 1920,
+    "height": 1080,
+    "user": { "name": "Fixture Creator" },
+    "pictures": { "sizes": [{ "width": 640, "height": 360, "link": "https://i.vimeocdn.com/fixture.jpg" }] },
+    "privacy": { "download": true }
+  }]
+}

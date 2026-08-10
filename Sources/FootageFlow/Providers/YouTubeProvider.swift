@@ -11,24 +11,36 @@ struct YouTubeProvider: MediaProvider {
     capabilities: ProviderCapabilities(
       search: .supported, preview: .bestEffort, metadata: .supported, license: .bestEffort,
       download: .bestEffort, supportsVideo: true, supportsImage: false,
+      pagination: .supported,
       accessMethods: [.officialAPI, .externalTool]))
 
   func search(_ request: SearchRequest) async throws -> [MediaAsset] {
+    try await searchPage(request, continuation: nil).assets
+  }
+
+  func searchPage(
+    _ request: SearchRequest, continuation: ProviderContinuation?
+  ) async throws -> ProviderPage {
     guard !apiKey.isEmpty else { throw ProviderError.missingAPIKey(.youtube) }
-    guard request.mediaType != .image && request.mediaType != .audio else { return [] }
+    guard request.mediaType != .image && request.mediaType != .audio else {
+      return ProviderPage(assets: [], continuation: nil)
+    }
+    var items = [
+      URLQueryItem(name: "part", value: "snippet"),
+      URLQueryItem(name: "type", value: "video"),
+      URLQueryItem(name: "q", value: request.query),
+      URLQueryItem(name: "maxResults", value: String(min(request.pageSize, 50))),
+      URLQueryItem(name: "safeSearch", value: "moderate"),
+      URLQueryItem(name: "key", value: apiKey),
+    ]
+    if let token = continuation?.token {
+      items.append(URLQueryItem(name: "pageToken", value: token))
+    }
     let url = try URL.endpoint(
-      "https://www.googleapis.com/youtube/v3/search",
-      queryItems: [
-        URLQueryItem(name: "part", value: "snippet"),
-        URLQueryItem(name: "type", value: "video"),
-        URLQueryItem(name: "q", value: request.query),
-        URLQueryItem(name: "maxResults", value: String(min(request.pageSize, 25))),
-        URLQueryItem(name: "safeSearch", value: "moderate"),
-        URLQueryItem(name: "key", value: apiKey),
-      ])
+      "https://www.googleapis.com/youtube/v3/search", queryItems: items)
     let response = try await HTTPClient.shared.decode(
       YouTubeSearchResponse.self, request: URLRequest(url: url), maxRetries: 1)
-    return response.items.enumerated().compactMap { index, item in
+    let assets: [MediaAsset] = response.items.enumerated().compactMap { index, item in
       guard let videoID = item.id.videoId,
         let page = URLValidator.remote("https://www.youtube.com/watch?v=\(videoID)")
       else { return nil }
@@ -46,10 +58,19 @@ struct YouTubeProvider: MediaProvider {
         relevanceScore: 1 - Double(index) * 0.01, downloadStrategy: .ytDLP,
         downloadAvailability: .conditional)
     }
+    return ProviderPage(
+      assets: assets,
+      continuation: response.nextPageToken.map { ProviderContinuation(token: $0) },
+      totalResults: response.pageInfo?.totalResults)
   }
 }
 
-struct YouTubeSearchResponse: Decodable { let items: [YouTubeItem] }
+struct YouTubeSearchResponse: Decodable {
+  let items: [YouTubeItem]
+  let nextPageToken: String?
+  let pageInfo: YouTubePageInfo?
+}
+struct YouTubePageInfo: Decodable { let totalResults, resultsPerPage: Int? }
 struct YouTubeItem: Decodable {
   let id: YouTubeID
   let snippet: YouTubeSnippet

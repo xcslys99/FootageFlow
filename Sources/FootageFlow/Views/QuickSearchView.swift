@@ -43,6 +43,18 @@ struct QuickSearchView: View {
             }
           }
           .padding(16)
+          if viewModel.isLoadingMore {
+            ProgressView(tr("search.loadingMore")).padding(.bottom, 20)
+          } else if viewModel.canLoadMore {
+            Button {
+              viewModel.loadMore()
+            } label: {
+              Label(tr("search.loadMore"), systemImage: "arrow.down.circle")
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+            .padding(.bottom, 20)
+          }
         }
       }
     }
@@ -205,7 +217,7 @@ struct QuickSearchView: View {
       ScrollView(.horizontal, showsIndicators: false) {
         HStack(spacing: 12) {
           Text(tr("filter.source")).foregroundStyle(.secondary)
-          ForEach(ProviderID.allCases) { provider in
+          ForEach(ProviderID.searchCases) { provider in
             Toggle(
               provider.displayName,
               isOn: Binding(
@@ -232,7 +244,7 @@ struct QuickSearchView: View {
   private var providerStatusRow: some View {
     ScrollView(.horizontal, showsIndicators: false) {
       HStack(spacing: 8) {
-        ForEach(ProviderID.allCases.filter { viewModel.selectedProviders.contains($0) }) {
+        ForEach(ProviderID.searchCases.filter { viewModel.selectedProviders.contains($0) }) {
           provider in
           let state = viewModel.providerStates[provider]?.availability ?? .available
           HStack(spacing: 5) {
@@ -240,6 +252,9 @@ struct QuickSearchView: View {
             Text(provider.displayName)
             if let count = viewModel.providerCounts[provider] {
               Text("\(count)").foregroundStyle(.secondary)
+            }
+            if viewModel.providersWithMoreResults.contains(provider) {
+              Image(systemName: "arrow.down.circle").foregroundStyle(.secondary)
             }
           }
           .font(.caption)
@@ -275,7 +290,13 @@ struct QuickSearchView: View {
               Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)
               Text(viewModel.providerErrors[provider]?.errorDescription ?? tr("search.failed"))
                 .lineLimit(1)
-              Button(tr("common.retry")) { viewModel.search(only: provider) }.buttonStyle(.link)
+              Button(tr("common.retry")) {
+                if viewModel.loadMoreFailedProviders.contains(provider) {
+                  viewModel.loadMore(only: provider)
+                } else {
+                  viewModel.search(only: provider)
+                }
+              }.buttonStyle(.link)
               if shouldOfferDirectSearch(provider) {
                 Button(tr("provider.tryDirectSearch")) { viewModel.tryDirectSearch(provider) }
                   .buttonStyle(.link)

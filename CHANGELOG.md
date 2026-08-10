@@ -4,6 +4,26 @@ All notable FootageFlow changes are documented here.
 
 ## [Unreleased]
 
+### Added
+
+- Provider-owned pagination and cross-platform Load More with retry-safe continuation state
+- PeerTube/SepiaSearch public discovery, Coverr official API mode, and Vimeo official discovery mode
+- Non-scraping official-search discovery entries for Videvo, Videezy, and Mixkit
+- Cross-platform Link Downloader for public media URLs with batch analysis, actual format/subtitle choices, and the existing Download Manager
+- Feedback & Community shortcuts for GitHub bug reports, feature ideas, Q&A, repository, and releases
+
+### Improved
+
+- Search result volume, cumulative provider counts, de-duplication, and isolation of failed next-page requests
+- yt-dlp progress and speed reporting, friendly unsupported/login/region/rate-limit failures, and safe cancellation/retry
+- Provider capability and settings parity across macOS and Windows
+
+### Security
+
+- Link analysis ignores user configuration, does not import browser cookies, rejects embedded URL credentials and sensitive query parameters, blocks local/private-network addresses, and does not bypass DRM, sign-in, private, paid, or regional access controls
+- DRM-marked formats are excluded from format choices, and source sidecars redact sensitive URL query values
+- Feedback links exclude credentials, private paths, search/download history, filenames, and project content
+
 ## [0.4.0] - 2026-08-10
 
 ### Added

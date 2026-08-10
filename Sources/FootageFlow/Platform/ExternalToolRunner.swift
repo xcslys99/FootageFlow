@@ -12,6 +12,19 @@ struct ExternalToolResult: Sendable {
 protocol ExternalToolRunning: Sendable {
   func run(executable: URL, arguments: [String], timeout: TimeInterval) async throws
     -> ExternalToolResult
+  func run(
+    executable: URL, arguments: [String], timeout: TimeInterval,
+    onOutputLine: @escaping @Sendable (String) -> Void
+  ) async throws -> ExternalToolResult
+}
+
+extension ExternalToolRunning {
+  func run(
+    executable: URL, arguments: [String], timeout: TimeInterval,
+    onOutputLine: @escaping @Sendable (String) -> Void
+  ) async throws -> ExternalToolResult {
+    try await run(executable: executable, arguments: arguments, timeout: timeout)
+  }
 }
 
 #if os(macOS)
@@ -26,6 +39,20 @@ protocol ExternalToolRunning: Sendable {
         operation.cancel()
       }
     }
+
+    func run(
+      executable: URL, arguments: [String], timeout: TimeInterval,
+      onOutputLine: @escaping @Sendable (String) -> Void
+    ) async throws -> ExternalToolResult {
+      let operation = ProcessOperation()
+      return try await withTaskCancellationHandler {
+        try await operation.start(
+          executable: executable, arguments: arguments, timeout: timeout,
+          onOutputLine: onOutputLine)
+      } onCancel: {
+        operation.cancel()
+      }
+    }
   }
 
   private final class ProcessOperation: @unchecked Sendable {
@@ -36,8 +63,13 @@ protocol ExternalToolRunning: Sendable {
     private var output = Data()
     private var errorOutput = Data()
     private var timeoutWorkItem: DispatchWorkItem?
+    private var lineRemainder = ""
+    private var onOutputLine: (@Sendable (String) -> Void)?
 
-    func start(executable: URL, arguments: [String], timeout: TimeInterval) async throws
+    func start(
+      executable: URL, arguments: [String], timeout: TimeInterval,
+      onOutputLine: (@Sendable (String) -> Void)? = nil
+    ) async throws
       -> ExternalToolResult
     {
       try await withCheckedThrowingContinuation { continuation in
@@ -48,6 +80,7 @@ protocol ExternalToolRunning: Sendable {
         process.arguments = arguments
         process.standardOutput = outputPipe
         process.standardError = errorPipe
+        self.onOutputLine = onOutputLine
         try? FileManager.default.createDirectory(
           at: PlatformPaths.cache, withIntermediateDirectories: true)
         process.environment = [
@@ -124,9 +157,22 @@ protocol ExternalToolRunning: Sendable {
 
     private func append(_ data: Data, isError: Bool) {
       guard !data.isEmpty else { return }
+      let text = String(decoding: data, as: UTF8.self)
+      var completedLines: [String] = []
+      var callback: (@Sendable (String) -> Void)?
       lock.lock()
       if isError { errorOutput.append(data) } else { output.append(data) }
+      lineRemainder += text
+      let components = lineRemainder.components(separatedBy: .newlines)
+      if components.count > 1 {
+        completedLines = Array(components.dropLast())
+        lineRemainder = components.last ?? ""
+      }
+      callback = onOutputLine
       lock.unlock()
+      if let callback {
+        for line in completedLines where !line.isEmpty { callback(line) }
+      }
     }
   }
 #else

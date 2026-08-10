@@ -115,6 +115,100 @@ import Foundation
       XCTAssertTrue(NASAProvider().info.capabilities.supportsAudio)
     }
 
+    func testSearchExpansionFixturesAndDiscoveryBoundaries() throws {
+      let peer = try JSONDecoder().decode(PeerTubeSearchResponse.self, from: fixture("peertube"))
+      let peerAsset = try XCTUnwrap(
+        peer.data.first.flatMap { PeerTubeProvider.asset($0, query: "history", index: 0) })
+      XCTAssertEqual(peerAsset.provider, .peertube)
+      XCTAssertFalse(peerAsset.downloadable)
+
+      let coverr = try JSONDecoder().decode(CoverrSearchResponse.self, from: fixture("coverr"))
+      let coverrAsset = try XCTUnwrap(
+        coverr.hits.first.flatMap { CoverrProvider.asset($0, query: "factory", index: 0) })
+      XCTAssertEqual(coverrAsset.provider, .coverr)
+      XCTAssertTrue(coverrAsset.isDirectlyDownloadable)
+      XCTAssertEqual(coverrAsset.licenseStatus, .attributionRequired)
+
+      let vimeo = try JSONDecoder().decode(VimeoSearchResponse.self, from: fixture("vimeo"))
+      let vimeoAsset = try XCTUnwrap(
+        vimeo.data.first.flatMap { VimeoProvider.asset($0, query: "documentary", index: 0) })
+      XCTAssertEqual(vimeoAsset.provider, .vimeo)
+      XCTAssertFalse(vimeoAsset.downloadable)
+      XCTAssertNil(vimeoAsset.downloadURL)
+      XCTAssertEqual(vimeoAsset.originalMetadata["privacyDownload"], "true")
+    }
+
+    func testPaginationContinuationRoundTripAndCapabilities() throws {
+      let continuation = ProviderContinuation(
+        page: 3, offset: 40, token: "next-token", cursor: "next-cursor",
+        nextURL: URL(string: "https://example.com/page/3"))
+      let decoded = try JSONDecoder().decode(
+        ProviderContinuation.self, from: JSONEncoder().encode(continuation))
+      XCTAssertEqual(decoded, continuation)
+      XCTAssertTrue(PeerTubeProvider().info.supportsPagination)
+      XCTAssertTrue(CoverrProvider(apiKey: "fixture").info.supportsPagination)
+      XCTAssertTrue(VimeoProvider(accessToken: "fixture").info.supportsPagination)
+      XCTAssertFalse(ProviderFactory.make(.videvo, apiKey: "").info.supportsPagination)
+    }
+
+    func testLinkDownloaderParsingAnalysisAndFormatSelection() async throws {
+      let raw = try String(decoding: fixture("link-analysis"), as: UTF8.self)
+      let service = YTDLPService(
+        runner: StubExternalRunner(result: .success(output: raw)),
+        executableURL: try executableFixture())
+      let analysis = try await service.analyze(
+        sourceURL: URL(string: "https://www.youtube.com/watch?v=link-fixture")!)
+      XCTAssertEqual(analysis.sourceName, "YouTube")
+      XCTAssertTrue(analysis.availableQualities.contains(.p720))
+      XCTAssertFalse(analysis.availableQualities.contains(.p1080))
+      XCTAssertTrue(analysis.availableQualities.contains(.audioOnly))
+      XCTAssertEqual(analysis.subtitleLanguages, ["en", "zh-Hans"])
+      let asset = analysis.mediaAsset(
+        quality: .audioOnly, downloadSubtitles: true, subtitleLanguage: "en")
+      XCTAssertEqual(asset.provider, .linkDownloader)
+      XCTAssertTrue(asset.id.hasSuffix(":audioOnly:subs:en"))
+      XCTAssertEqual(asset.effectiveDownloadStrategy, .ytDLP)
+      XCTAssertEqual(asset.originalMetadata["linkFormatSelector"], "bestaudio[acodec!=none]/best")
+      XCTAssertEqual(asset.originalMetadata["linkDownloadSubtitles"], "true")
+      let record = DownloadRecord(
+        asset: asset, fileURL: URL(fileURLWithPath: "/tmp/fixture.webm"), projectID: nil)
+      XCTAssertEqual(record.sourceName, "YouTube")
+    }
+
+    func testLinkURLBatchValidationAndFriendlyFailures() {
+      let urls = LinkURLParser.urls(
+        from: "https://youtu.be/example\ninvalid\nhttps://vimeo.com/123\nhttps://youtu.be/example")
+      XCTAssertEqual(urls.count, 2)
+      XCTAssertTrue(urls.contains { $0.host == "vimeo.com" })
+      if case .unsupported = YTDLPService.mapFailure("ERROR: Unsupported URL") {
+      } else {
+        XCTFail("Unsupported links must be classified")
+      }
+      if case .rateLimited = YTDLPService.mapFailure("HTTP 429 Too Many Requests") {
+      } else {
+        XCTFail("HTTP 429 must be classified as rate limited")
+      }
+      XCTAssertTrue(LinkURLParser.urls(from: "http://127.0.0.1/private").isEmpty)
+      XCTAssertTrue(LinkURLParser.urls(from: "https://example.com/watch?token=secret").isEmpty)
+      XCTAssertTrue(LinkURLParser.urls(from: "https://user:pass@example.com/watch").isEmpty)
+      XCTAssertEqual(
+        LinkURLSecurity.redactedString(URL(string: "https://example.com/watch?token=secret&id=1")),
+        "https://example.com/watch?token=%5BREDACTED%5D&id=1")
+    }
+
+    func testFeedbackURLsContainOnlySafeContext() {
+      let context = FeedbackContext(
+        platform: "macOS", osVersion: "15.0", language: "zh-Hans")
+      let bug = FeedbackURLs.url(for: .bug, context: context).absoluteString
+      XCTAssertTrue(bug.contains("bug_report.yml"))
+      XCTAssertTrue(bug.contains(FootageFlowVersion.current))
+      XCTAssertFalse(bug.localizedCaseInsensitiveContains("api_key"))
+      XCTAssertFalse(bug.contains("/" + "Users" + "/"))
+      XCTAssertEqual(
+        FeedbackURLs.url(for: .releases, context: context).absoluteString,
+        "https://github.com/xcslys99/FootageFlow/releases")
+    }
+
     func testMalformedDiscoveryResponsesFailWithoutCrashing() {
       let malformed = Data(#"{"unexpected":true}"#.utf8)
       XCTAssertThrowsError(
@@ -340,6 +434,9 @@ import Foundation
       } else {
         XCTFail("Login-gated video should be access restricted")
       }
+      let progress = YTDLPService.progressUpdate(from: "FFPROGRESS: 52.5%|1048576")
+      XCTAssertEqual(progress?.fraction, 0.525)
+      XCTAssertEqual(progress?.bytesPerSecond, 1_048_576)
     }
 
     func testYTDLPNeverLoadsUserConfigurationOrBrowserCookies() {
@@ -427,6 +524,24 @@ import Foundation
       XCTAssertTrue(
         FileManager.default.fileExists(
           atPath: directory.appendingPathComponent("test.source.json").path))
+    }
+
+    func testSidecarRedactsSensitiveURLParameters() throws {
+      let directory = FileManager.default.temporaryDirectory.appendingPathComponent(
+        UUID().uuidString, isDirectory: true)
+      try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+      defer { try? FileManager.default.removeItem(at: directory) }
+      let mediaURL = directory.appendingPathComponent("redacted.mp4")
+      var asset = sampleAsset()
+      asset.sourcePageURL = URL(string: "https://example.com/watch?token=secret&id=1")!
+      asset.downloadURL = URL(string: "https://example.com/file.mp4?api_key=private")!
+      asset.searchKeyword = asset.sourcePageURL.absoluteString
+      try SourceSidecar.write(asset: asset, mediaURL: mediaURL, projectName: nil, segmentIndex: nil)
+      let data = try Data(contentsOf: directory.appendingPathComponent("redacted.source.json"))
+      let value = String(decoding: data, as: UTF8.self)
+      XCTAssertFalse(value.contains("secret"))
+      XCTAssertFalse(value.contains("private"))
+      XCTAssertTrue(value.contains("REDACTED"))
     }
 
     private func sampleAsset() -> MediaAsset {

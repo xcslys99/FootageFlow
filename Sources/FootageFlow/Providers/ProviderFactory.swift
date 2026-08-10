@@ -24,6 +24,13 @@ enum ProviderFactory {
       return key.isEmpty ? LimitedDiscoveryProvider(id: id) : NationalArchivesProvider(apiKey: key)
     case .europeana:
       return key.isEmpty ? LimitedDiscoveryProvider(id: id) : EuropeanaProvider(apiKey: key)
+    case .peertube: return PeerTubeProvider()
+    case .videvo, .videezy, .mixkit: return LimitedDiscoveryProvider(id: id)
+    case .coverr:
+      return key.isEmpty ? LimitedDiscoveryProvider(id: id) : CoverrProvider(apiKey: key)
+    case .vimeo:
+      return key.isEmpty ? LimitedDiscoveryProvider(id: id) : VimeoProvider(accessToken: key)
+    case .linkDownloader: return LimitedDiscoveryProvider(id: id)
     }
   }
 
@@ -32,6 +39,6 @@ enum ProviderFactory {
   }
 
   static func currentProviders() -> [any MediaProvider] {
-    ProviderID.allCases.map(current)
+    ProviderID.searchCases.map(current)
   }
 }

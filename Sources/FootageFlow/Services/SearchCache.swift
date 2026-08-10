@@ -11,6 +11,10 @@ actor SearchCache {
   }
 
   func assets(provider: ProviderID, request: SearchRequest) -> [MediaAsset]? {
+    page(provider: provider, request: request)?.assets
+  }
+
+  func page(provider: ProviderID, request: SearchRequest) -> ProviderPage? {
     guard case .allowed(let ttl) = ProviderPolicy.cachePolicy(for: provider) else { return nil }
     let url = fileURL(provider: provider, request: request)
     guard let attributes = try? FileManager.default.attributesOfItem(atPath: url.path),
@@ -19,12 +23,16 @@ actor SearchCache {
     guard Date().timeIntervalSince(modified) < ttl, let data = try? Data(contentsOf: url) else {
       return nil
     }
-    return try? JSONDecoder().decode([MediaAsset].self, from: data)
+    return try? JSONDecoder().decode(ProviderPage.self, from: data)
   }
 
   func store(_ assets: [MediaAsset], provider: ProviderID, request: SearchRequest) {
+    store(ProviderPage(assets: assets, continuation: nil), provider: provider, request: request)
+  }
+
+  func store(_ page: ProviderPage, provider: ProviderID, request: SearchRequest) {
     guard case .allowed = ProviderPolicy.cachePolicy(for: provider) else { return }
-    guard let data = try? JSONEncoder().encode(assets) else { return }
+    guard let data = try? JSONEncoder().encode(page) else { return }
     try? data.write(to: fileURL(provider: provider, request: request), options: .atomic)
   }
 

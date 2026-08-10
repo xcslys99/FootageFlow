@@ -7,14 +7,30 @@ struct YouTubeYTDLPProvider: MediaProvider {
     capabilities: ProviderCapabilities(
       search: .bestEffort, preview: .bestEffort, metadata: .bestEffort,
       license: .bestEffort, download: .bestEffort, supportsVideo: true,
-      supportsImage: false, accessMethods: [.externalTool]))
+      supportsImage: false, pagination: .bestEffort, accessMethods: [.externalTool]))
 
   init(service: YTDLPService = YTDLPService()) { self.service = service }
 
   func search(_ request: SearchRequest) async throws -> [MediaAsset] {
-    guard request.mediaType != .image && request.mediaType != .audio else { return [] }
-    let values = try await service.search(query: request.query, limit: min(request.pageSize, 12))
-    return Self.assets(from: values, query: request.query)
+    try await searchPage(request, continuation: nil).assets
+  }
+
+  func searchPage(
+    _ request: SearchRequest, continuation: ProviderContinuation?
+  ) async throws -> ProviderPage {
+    guard request.mediaType != .image && request.mediaType != .audio else {
+      return ProviderPage(assets: [], continuation: nil)
+    }
+    let page = max(1, continuation?.page ?? 1)
+    let pageSize = max(1, min(request.pageSize, 12))
+    let requested = min(page * pageSize, 60)
+    let values = try await service.search(query: request.query, limit: requested)
+    let start = min((page - 1) * pageSize, values.count)
+    let end = min(start + pageSize, values.count)
+    let pageValues = start < end ? Array(values[start..<end]) : []
+    return ProviderPage(
+      assets: Self.assets(from: pageValues, query: request.query),
+      continuation: values.count >= requested && requested < 60 ? .nextPage(page + 1) : nil)
   }
 
   static func assets(from values: [YTDLPSearchItem], query: String) -> [MediaAsset] {

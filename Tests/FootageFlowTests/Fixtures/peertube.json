@@ -1,0 +1,15 @@
+{
+  "total": 3,
+  "data": [{
+    "uuid": "peer-fixture",
+    "name": "Historic City Film",
+    "url": "https://video.example.org/w/peer-fixture",
+    "description": "A public PeerTube fixture",
+    "thumbnailUrl": "https://video.example.org/lazy-static/thumbnails/peer.jpg",
+    "publishedAt": "2001-01-02T03:04:05Z",
+    "duration": 42,
+    "views": 100,
+    "licence": { "id": 1, "label": "Attribution" },
+    "channel": { "name": "history", "displayName": "History Channel", "url": null, "host": "video.example.org" }
+  }]
+}

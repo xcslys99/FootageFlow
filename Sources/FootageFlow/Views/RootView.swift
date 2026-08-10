@@ -1,25 +1,29 @@
 import SwiftUI
 
 enum AppSection: String, CaseIterable, Identifiable {
-  case quickSearch, scriptSearch, projects, favorites, downloads, settings
+  case quickSearch, linkDownloader, scriptSearch, projects, favorites, downloads, feedback, settings
   var id: String { rawValue }
   var label: String {
     switch self {
     case .quickSearch: tr("nav.quickSearch")
+    case .linkDownloader: tr("nav.linkDownloader")
     case .scriptSearch: tr("nav.scriptSearch")
     case .projects: tr("nav.projects")
     case .favorites: tr("nav.favorites")
     case .downloads: tr("nav.downloads")
+    case .feedback: tr("nav.feedback")
     case .settings: tr("nav.settings")
     }
   }
   var icon: String {
     switch self {
     case .quickSearch: "magnifyingglass"
+    case .linkDownloader: "link"
     case .scriptSearch: "doc.text.magnifyingglass"
     case .projects: "folder"
     case .favorites: "heart"
     case .downloads: "arrow.down.circle"
+    case .feedback: "bubble.left.and.bubble.right"
     case .settings: "gearshape"
     }
   }
@@ -39,10 +43,12 @@ struct RootView: View {
     } detail: {
       switch selection ?? .quickSearch {
       case .quickSearch: QuickSearchView { selection = .settings }
+      case .linkDownloader: LinkDownloaderView { selection = .downloads }
       case .scriptSearch: ScriptSearchView()
       case .projects: ProjectsView()
       case .favorites: FavoritesView()
       case .downloads: DownloadsView()
+      case .feedback: FeedbackView()
       case .settings: SettingsView()
       }
     }

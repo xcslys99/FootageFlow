@@ -1,0 +1,23 @@
+{
+  "page": 0,
+  "pages": 2,
+  "page_size": 20,
+  "total": 21,
+  "hits": [{
+    "id": "coverr-fixture",
+    "title": "Factory Worker",
+    "description": "Factory footage",
+    "thumbnail": "https://cdn.coverr.co/factory.jpg",
+    "published_at": "2026-01-01",
+    "aspect_ratio": "16:9",
+    "tags": ["factory", "worker"],
+    "duration": 18,
+    "max_height": 1080,
+    "max_width": 1920,
+    "urls": {
+      "mp4": "https://cdn.coverr.co/factory.mp4",
+      "mp4_preview": "https://cdn.coverr.co/factory-preview.mp4",
+      "mp4_download": "https://cdn.coverr.co/factory-download.mp4"
+    }
+  }]
+}

@@ -28,7 +28,7 @@ public sealed class DownloadQueueService
         _ytDlp = ytDlp;
         _localization = localization;
         _http = httpClient ?? new HttpClient { Timeout = Timeout.InfiniteTimeSpan };
-        _http.DefaultRequestHeaders.UserAgent.ParseAdd("FootageFlow/0.4.0");
+        _http.DefaultRequestHeaders.UserAgent.ParseAdd("FootageFlow/0.5.0");
     }
 
     public DownloadTaskItem Enqueue(MediaAsset asset, Guid? projectId, string projectName)
@@ -90,7 +90,13 @@ public sealed class DownloadQueueService
                 {
                     saved = await _ytDlp.DownloadAsync(
                         item.Asset.SourcePageURL, directory, Path.GetFileNameWithoutExtension(preferredName),
-                        item.Cancellation.Token);
+                        item.Asset.OriginalMetadata,
+                        new Progress<YtDlpProgress>(value =>
+                        {
+                            item.Progress = value.Percent;
+                            if (value.BytesPerSecond > 0)
+                                item.Speed = $"{value.BytesPerSecond / 1_048_576:0.0} MB/s";
+                        }), item.Cancellation.Token);
                     item.Progress = 100;
                 }
                 else

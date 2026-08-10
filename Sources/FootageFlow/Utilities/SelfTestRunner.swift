@@ -70,7 +70,42 @@ enum SelfTestRunner {
     check(
       ProviderFactory.make(.pixabay, apiKey: "").info.mode == .directSearch,
       "Pixabay direct mode")
-    check(ProviderID.allCases.count == 9, "Nine provider catalog")
+    check(ProviderID.searchCases.count == 15, "Fifteen search provider catalog")
+    check(
+      ProviderFactory.make(.peertube, apiKey: "").info.mode == .publicAPI,
+      "PeerTube public API")
+    check(
+      ProviderFactory.make(.coverr, apiKey: "").info.mode == .limited,
+      "Coverr no-key limited mode")
+    check(
+      ProviderFactory.make(.coverr, apiKey: "configured").info.mode == .officialAPI,
+      "Coverr official API mode")
+    check(
+      ProviderFactory.make(.vimeo, apiKey: "").info.mode == .limited,
+      "Vimeo no-key discovery mode")
+    check(
+      LinkURLParser.urls(from: "https://youtu.be/example\ninvalid\nhttps://vimeo.com/1").count
+        == 2,
+      "Link batch parser")
+    check(
+      LinkURLParser.urls(from: "http://127.0.0.1/private").isEmpty,
+      "Link private-address rejection")
+    check(
+      LinkURLParser.urls(from: "https://example.com/watch?access_token=secret").isEmpty,
+      "Link sensitive-query rejection")
+    check(
+      LinkURLParser.urls(from: "https://user:password@example.com/watch").isEmpty,
+      "Link embedded-credential rejection")
+    check(
+      LinkDownloadQuality.audioOnly.formatSelector == "bestaudio[acodec!=none]/best",
+      "Audio-only format selector")
+    let feedbackURL = FeedbackURLs.url(
+      for: .bug,
+      context: FeedbackContext(platform: "macOS", osVersion: "test", language: "en"))
+    check(
+      feedbackURL.host == "github.com"
+        && !feedbackURL.absoluteString.contains("/" + "Users" + "/"),
+      "Safe feedback URL")
     check(ProviderFactory.make(.nasa, apiKey: "").info.mode == .publicAPI, "NASA public API")
     check(
       ProviderFactory.make(.libraryOfCongress, apiKey: "").info.mode == .publicAPI,
@@ -128,6 +163,15 @@ enum SelfTestRunner {
       duration: 10,
       fileType: "video/mp4", mediaType: .video, publishedDate: nil, downloadable: true,
       originalMetadata: [:], searchKeyword: "test", relevanceScore: 1)
+    var linkFilenameSample = sample
+    linkFilenameSample.originalMetadata["sourceName"] = "X / Twitter"
+    check(
+      !FileNameSanitizer.fileName(asset: linkFilenameSample).contains("/"),
+      "Link source filename sanitization")
+    let linkDownloadRecord = DownloadRecord(
+      asset: linkFilenameSample,
+      fileURL: safetyRoot.appendingPathComponent("Project/link.mp4"), projectID: nil)
+    check(linkDownloadRecord.sourceName == "X / Twitter", "Link download source persistence")
     let duplicate = sample
     check(SearchDeduplicator.apply([sample, duplicate]).count == 1, "Search deduplication")
     let discoveryFilter = AdvancedSearchFilter(

@@ -22,6 +22,9 @@ enum ProviderPolicy {
       case .youtube: "https://console.cloud.google.com/apis/library/youtube.googleapis.com"
       case .nationalArchives: "https://catalog.archives.gov/api-keys/register"
       case .europeana: "https://pro.europeana.eu/page/get-api"
+      case .coverr: "https://coverr.co/developers"
+      case .vimeo: "https://developer.vimeo.com/apps"
+      case .videvo: "https://www.videvo.net/api/"
       default: nil
       }
     return URLValidator.remote(value)
@@ -35,6 +38,12 @@ enum ProviderPolicy {
       case .libraryOfCongress: "https://www.loc.gov/film-and-videos/?q=\(escaped)"
       case .nationalArchives: "https://catalog.archives.gov/search?q=\(escaped)"
       case .europeana: "https://www.europeana.eu/en/search?query=\(escaped)"
+      case .peertube: "https://sepiasearch.org/search?search=\(escaped)"
+      case .videvo: "https://www.videvo.net/stock-video-footage/\(escaped)/"
+      case .videezy: "https://www.videezy.com/free-video/\(escaped)"
+      case .mixkit: "https://mixkit.co/free-stock-video/?q=\(escaped)"
+      case .coverr: "https://coverr.co/stock-video-footage?query=\(escaped)"
+      case .vimeo: "https://vimeo.com/search?q=\(escaped)"
       default: nil
       }
     return URLValidator.remote(value)
@@ -53,7 +62,7 @@ struct LimitedDiscoveryProvider: MediaProvider {
       capabilities: ProviderCapabilities(
         search: .bestEffort, preview: .unavailable, metadata: .unavailable,
         license: .unavailable, download: .unavailable, supportsVideo: true,
-        supportsImage: true, supportsAudio: id == .europeana,
+        supportsImage: id == .europeana, supportsAudio: id == .europeana,
         accessMethods: [.publicInterface]))
   }
 

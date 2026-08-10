@@ -2,15 +2,17 @@
 
 [English](README.md) · [简体中文](README.zh-CN.md)
 
-**Search footage across 9 sources. macOS + Windows. Free and open source.**
+**Search footage across 15 sources, or paste a public media link. macOS + Windows. Free and open source.**
 
 FootageFlow is a privacy-friendly desktop app for discovering, downloading, and organizing real video, image, and audio assets. It is built for documentary, history, country profile, finance, science, and social-video research.
 
-FootageFlow v0.4.0 supports **macOS 15+ on Apple Silicon** and **Windows 11 x64**. Both editions share provider behavior, normalized metadata and rights, filters, attribution formatting, keyword rules, source sidecars, and project persistence.
+FootageFlow v0.5.0 supports **macOS 15+ on Apple Silicon** and **Windows 11 x64**. Both editions share provider behavior, pagination, normalized metadata and rights, filters, attribution formatting, keyword rules, source sidecars, and project persistence.
 
 ## What works
 
-- Concurrent, progressive search across Pexels, Pixabay, Wikimedia Commons, Internet Archive, YouTube, NASA, Library of Congress, National Archives, and Europeana
+- Concurrent, progressive search across 15 sources, including Pexels, Pixabay, Wikimedia Commons, Internet Archive, YouTube, NASA, Library of Congress, National Archives, Europeana, PeerTube/SepiaSearch, Coverr, and Vimeo
+- Provider-aware pagination and **Load More** append results without clearing the current search; a failed next page does not discard earlier results
+- **Link Downloader** analyzes one or more public media URLs, shows available quality/subtitle choices, and sends selected items into the existing Download Manager
 - Advanced filters for source, media type, year, duration, resolution, rights, and direct-download availability
 - Multi-select, Select All Visible, batch download through the existing three-slot queue, add to project, retry failed, and copy source information
 - Copy Source and Copy Attribution text generated only from provider-supplied metadata
@@ -18,6 +20,7 @@ FootageFlow v0.4.0 supports **macOS 15+ on Apple Silicon** and **Windows 11 x64*
 - A matching `.source.txt` and `.source.json` beside every successful download
 - English, Simplified Chinese, Traditional Chinese, Spanish, Brazilian Portuguese, Japanese, Korean, German, French, and Russian; English remains the first-launch default
 - A concise recommendation below the search field explains that free official APIs improve National Archives, Europeana, and YouTube search, with a direct link to provider settings
+- A visible **Feedback & Community** page links to safe GitHub bug reports, ideas, Q&A, the repository, and releases
 - Optional API keys stored only in macOS Keychain or Windows Credential Manager
 - No analytics, advertising, tracking, cloud account, paid LLM, OpenAI API, or Codex dependency
 
@@ -25,27 +28,25 @@ YouTube search can use the official Data API when configured. FootageFlow also i
 
 ## Screenshots
 
-These screenshots are from FootageFlow v0.4.0 on macOS and show the current nine-source search, optional-API guidance, advanced filters, batch actions, provider modes, and ten-language interface. The Windows edition follows the same product structure with platform-native controls.
+These screenshots are from FootageFlow on macOS. The Windows edition follows the same product structure with platform-native controls.
 
-![FootageFlow v0.4.0 nine-source search with optional API guidance](docs/images/main-search.png)
+![FootageFlow v0.5.0 real 15-source search, provider status, and Load More](docs/images/main-search.png)
 
-![FootageFlow v0.4.0 advanced filters](docs/images/advanced-filters.png)
+![FootageFlow v0.5.0 Link Downloader analyzing public YouTube and X links](docs/images/link-downloader.png)
 
-![FootageFlow v0.4.0 multi-select and batch download](docs/images/multi-select-batch-download.png)
-
-![FootageFlow v0.4.0 provider modes and ten-language settings](docs/images/provider-settings.png)
+![FootageFlow v0.5.0 provider modes and ten-language settings](docs/images/provider-settings.png)
 
 ## Install on macOS
 
-1. Download `FootageFlow-0.4.0-macOS-arm64.dmg` from Releases.
+1. Download `FootageFlow-0.5.0-macOS-arm64.dmg` from Releases.
 2. Open the DMG and drag FootageFlow to Applications.
-3. Open FootageFlow. The v0.4.0 build is Ad Hoc signed, not notarized; if macOS blocks the first launch, use **System Settings → Privacy & Security → Open Anyway**.
+3. Open FootageFlow. The v0.5.0 build is Ad Hoc signed, not notarized; if macOS blocks the first launch, use **System Settings → Privacy & Security → Open Anyway**.
 
 No terminal command is required for normal use.
 
 ## Install on Windows
 
-1. On a Windows 11 x64 PC, download `FootageFlow-Setup-0.4.0-Windows-x64.exe` from Releases.
+1. On a Windows 11 x64 PC, download `FootageFlow-Setup-0.5.0-Windows-x64.exe` from Releases.
 2. Verify it against the attached `.sha256` file, then double-click the installer.
 3. Complete the setup wizard and open FootageFlow from the Start menu.
 
@@ -58,6 +59,7 @@ The installer is self-contained: ordinary users do not need Python, Node.js, Swi
 3. Select result cards to batch download, add them to an existing or new project, or copy source information.
 4. Use **Copy Attribution** or inspect the original page before publishing.
 5. National Archives, Europeana, and YouTube work better with their free official APIs. Add an optional key under **Settings → Sources / Providers** when you want the improved experience.
+6. To download from a public media page, open **Link Downloader**, paste one or more URLs, choose an available format, and select **Download Selected**.
 
 Default downloads are stored under `~/Movies/FootageFlow/<Project>/` on macOS and `%USERPROFILE%\Videos\FootageFlow\<Project>\` on Windows. You can change the root folder in Settings. Removing a database record does not delete the downloaded media file.
 
@@ -76,8 +78,31 @@ FootageFlow does not require every provider to use the same access method. Some 
 | [Library of Congress](https://www.loc.gov/apis/) | Official public JSON API | No key required | Official unrestricted resource when supplied | Rights advisory/access fields when supplied |
 | [National Archives](https://www.archives.gov/research/catalog/help/api) | Catalog API with user key | Limited: open official search | Digital object when supplied | Restriction/rights fields when supplied |
 | [Europeana](https://europeana.atlassian.net/wiki/spaces/EF/pages/2462351393/Accessing+the+APIs) | Search API with user key | Limited: open official search | Direct media URL when supplied | `edmRights`/rights when supplied |
+| [PeerTube / SepiaSearch](https://docs.joinpeertube.org/api-rest-reference.html) | Public SepiaSearch API | No key required | Discovery only | Per-video license metadata when supplied |
+| [Videvo](https://www.videvo.net/) | Limited discovery | Open official search | Open original only | Verify each original item |
+| [Videezy](https://www.videezy.com/) | Limited discovery | Open official search | Open original only | Free items may require attribution; verify original |
+| [Mixkit](https://mixkit.co/) | Limited discovery | Open official search | Open original only | Free/restricted licenses vary; verify original |
+| [Coverr](https://api.coverr.co/docs) | Official API with user key | Limited: open official search | API media URL when supplied | Coverr API/license metadata; attribution retained |
+| [Vimeo](https://developer.vimeo.com/api/reference) | Official API with user token | Limited: open official search | Discovery only by default | License metadata only when explicitly supplied |
 
 API keys are credentials, not platform logins. They remain on this device, are masked in the UI, and can be added, replaced, tested, or removed under **Settings → Sources / Providers**. Keys are never placed in ordinary settings, logs, source code, Git, telemetry, or request URLs.
+
+## Link Downloader
+
+Open **Link Downloader**, paste one or more public media-page URLs, and choose **Analyze**. FootageFlow uses its bundled, configuration-isolated yt-dlp adapter to identify metadata, progressive quality choices, audio-only streams, and subtitles that the source actually reports. YouTube, X/Twitter, Vimeo, and other public sites supported by the bundled tool may work, but no site or item is guaranteed.
+
+Every selected item enters the same Download Manager used by search results, with progress, speed, cancellation, retry, folder reveal, download history, and source sidecars. FootageFlow does not load browser cookies, bypass DRM, bypass sign-in or private-video controls, or unlock paid/member content. It also rejects links containing embedded credentials or sensitive query parameters, and blocks local/private-network addresses. If access is unavailable, use **Open Original**.
+
+Download availability depends on the source website, individual media, access permissions, and platform changes. Users must follow the source site's terms, copyright rules, and applicable law.
+
+## Feedback & Community
+
+- Bugs → [GitHub Issues](https://github.com/xcslys99/FootageFlow/issues/new?template=bug_report.yml)
+- Feature ideas → [GitHub Discussions](https://github.com/xcslys99/FootageFlow/discussions/categories/ideas)
+- Questions → [GitHub Discussions Q&A](https://github.com/xcslys99/FootageFlow/discussions/categories/q-a)
+- Releases → [GitHub Releases](https://github.com/xcslys99/FootageFlow/releases)
+
+The in-app links prefill only the FootageFlow version, platform, OS version, and interface language. They never attach credentials, local paths, history, downloads, or project content.
 
 ## Rights and source safety
 

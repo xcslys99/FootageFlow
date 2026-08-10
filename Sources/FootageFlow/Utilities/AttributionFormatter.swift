@@ -4,7 +4,7 @@ enum AttributionFormatter {
   static func source(for asset: MediaAsset) -> String {
     var lines = [
       "\(tr("attribution.title")): \(asset.title)",
-      "\(tr("attribution.provider")): \(asset.provider.displayName)",
+      "\(tr("attribution.provider")): \(asset.sourceDisplayName)",
     ]
     if let creator = clean(asset.creator) {
       lines.append("\(tr("attribution.creator")): \(creator)")
@@ -20,7 +20,7 @@ enum AttributionFormatter {
     var lines = [
       "\(tr("attribution.title")): \(asset.title)",
       "\(tr("attribution.creator")): \(clean(asset.creator) ?? tr("common.notProvided"))",
-      "\(tr("attribution.source")): \(asset.provider.displayName)",
+      "\(tr("attribution.source")): \(asset.sourceDisplayName)",
       "\(tr("attribution.originalURL")): \(asset.sourcePageURL.absoluteString)",
     ]
     let rights = asset.effectiveRightsInfo

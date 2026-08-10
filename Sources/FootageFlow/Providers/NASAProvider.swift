@@ -10,13 +10,22 @@ struct NASAProvider: MediaProvider {
     capabilities: ProviderCapabilities(
       search: .supported, preview: .supported, metadata: .supported, license: .bestEffort,
       download: .supported, supportsVideo: true, supportsImage: true, supportsAudio: true,
+      pagination: .supported,
       accessMethods: [.officialAPI, .publicAPI]))
 
   func search(_ request: SearchRequest) async throws -> [MediaAsset] {
+    try await searchPage(request, continuation: nil).assets
+  }
+
+  func searchPage(
+    _ request: SearchRequest, continuation: ProviderContinuation?
+  ) async throws -> ProviderPage {
     try await ProviderRequestLimiter.shared.wait(for: .nasa, minimumInterval: .milliseconds(250))
+    let page = max(1, continuation?.page ?? 1)
     var queryItems = [
       URLQueryItem(name: "q", value: request.query),
       URLQueryItem(name: "page_size", value: String(min(request.pageSize, 24))),
+      URLQueryItem(name: "page", value: String(page)),
     ]
     if request.mediaType != .all {
       queryItems.append(URLQueryItem(name: "media_type", value: request.mediaType.rawValue))
@@ -45,7 +54,11 @@ struct NASAProvider: MediaProvider {
       }
       assets += resolved
     }
-    return assets.sorted { $0.relevanceScore > $1.relevanceScore }
+    let sorted = assets.sorted { $0.relevanceScore > $1.relevanceScore }
+    let hasMore = response.collection.links?.contains { $0.rel == "next" } == true
+    return ProviderPage(
+      assets: sorted, continuation: hasMore ? .nextPage(page + 1) : nil,
+      totalResults: response.collection.metadata?.totalHits)
   }
 
   static func asset(_ item: NASAItem, query: String, index: Int) async -> MediaAsset? {
@@ -145,7 +158,15 @@ struct NASAProvider: MediaProvider {
 }
 
 struct NASASearchResponse: Decodable { let collection: NASACollection }
-struct NASACollection: Decodable { let items: [NASAItem] }
+struct NASACollection: Decodable {
+  let items: [NASAItem]
+  let links: [NASALink]?
+  let metadata: NASAMetadata?
+}
+struct NASAMetadata: Decodable {
+  let totalHits: Int?
+  enum CodingKeys: String, CodingKey { case totalHits = "total_hits" }
+}
 struct NASAItem: Decodable {
   let href: String?
   let data: [NASAData]

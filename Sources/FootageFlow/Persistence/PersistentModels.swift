@@ -71,6 +71,7 @@ struct DownloadRecord: Identifiable, Codable, Hashable {
   var id: UUID = UUID()
   var stableAssetID: String
   var providerRaw: String
+  var sourceName: String?
   var title: String
   var fileName: String
   var localPath: String
@@ -82,6 +83,7 @@ struct DownloadRecord: Identifiable, Codable, Hashable {
   init(asset: MediaAsset, fileURL: URL, projectID: UUID?) {
     stableAssetID = asset.stableID
     providerRaw = asset.provider.rawValue
+    sourceName = asset.sourceDisplayName
     title = asset.title
     fileName = fileURL.lastPathComponent
     localPath = fileURL.path

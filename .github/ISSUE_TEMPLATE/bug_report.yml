@@ -14,12 +14,12 @@ body:
     validations:
       required: true
   - type: dropdown
-    id: platform
+    id: operating-system
     attributes:
-      label: Platform
+      label: Operating system
       options:
         - macOS Apple Silicon
-        - Windows (future release)
+        - Windows 11 x64
     validations:
       required: true
   - type: textarea
@@ -29,6 +29,33 @@ body:
       description: Describe the expected and actual behavior.
     validations:
       required: true
+  - type: input
+    id: application-language
+    attributes:
+      label: Application language
+      placeholder: English / 简体中文 / …
+  - type: dropdown
+    id: provider
+    attributes:
+      label: Related provider
+      options:
+        - Not provider-specific
+        - Pexels
+        - Pixabay
+        - Wikimedia Commons
+        - Internet Archive
+        - YouTube
+        - NASA
+        - Library of Congress
+        - National Archives
+        - Europeana
+        - PeerTube / SepiaSearch
+        - Videvo
+        - Videezy
+        - Mixkit
+        - Coverr
+        - Vimeo
+        - Link Downloader
   - type: textarea
     id: steps
     attributes:
@@ -37,7 +64,23 @@ body:
     validations:
       required: true
   - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What did you expect FootageFlow to do?
+    validations:
+      required: true
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots or recordings
+      description: Remove API keys, private paths, project content, and personal information first.
+  - type: textarea
     id: diagnostics
     attributes:
       label: Safe diagnostics
       description: Provider, HTTP status, and redacted log lines are useful. Never include credentials.
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional context

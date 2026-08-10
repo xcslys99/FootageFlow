@@ -83,7 +83,7 @@ struct DownloadsView: View {
           Text(item.statusLabel).font(.caption.bold()).foregroundStyle(statusColor(item.status))
         }
         Text(
-          [item.asset.provider.displayName, item.projectName ?? tr("common.uncategorized")]
+          [item.asset.sourceDisplayName, item.projectName ?? tr("common.uncategorized")]
             .joined(
               separator: " · ")
         )
@@ -128,7 +128,7 @@ struct DownloadsView: View {
       VStack(alignment: .leading, spacing: 4) {
         Text(record.fileName).font(.headline).lineLimit(1)
         Text(
-          "\(ProviderID(rawValue: record.providerRaw)?.displayName ?? record.providerRaw) · \(record.downloadedAt.formatted(date: .abbreviated, time: .shortened))"
+          "\(record.sourceName?.nilIfEmpty ?? ProviderID(rawValue: record.providerRaw)?.displayName ?? record.providerRaw) · \(record.downloadedAt.formatted(date: .abbreviated, time: .shortened))"
         )
         .font(.caption).foregroundStyle(.secondary)
         Text(record.localPath).font(.caption2).foregroundStyle(.tertiary).lineLimit(1)

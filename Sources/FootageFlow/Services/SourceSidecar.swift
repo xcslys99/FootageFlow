@@ -15,17 +15,19 @@ enum SourceSidecar {
     let rights = asset.effectiveRightsInfo
     let status = rights.known ? asset.licenseStatus.label : tr("sidecar.authorizationUnknown")
     let sidecar = Sidecar(
-      title: asset.title, assetID: asset.id, provider: asset.provider.displayName,
+      title: asset.title, assetID: asset.id, provider: asset.sourceDisplayName,
       creator: asset.creator ?? tr("common.unknown"),
-      sourcePage: asset.sourcePageURL.absoluteString,
-      originalFileURL: asset.downloadURL?.absoluteString ?? tr("common.unknown"),
+      sourcePage: LinkURLSecurity.redactedString(asset.sourcePageURL)
+        ?? asset.sourcePageURL.absoluteString,
+      originalFileURL: LinkURLSecurity.redactedString(asset.downloadURL) ?? tr("common.unknown"),
       licenseName: rights.statement ?? asset.license ?? tr("common.unknown"),
       licenseURL: rights.uri?.absoluteString ?? asset.licenseURL?.absoluteString
         ?? tr("common.unknown"), licenseStatus: status,
-      searchKeyword: asset.searchKeyword, downloadDate: formatter.string(from: .now),
+      searchKeyword: redactedKeyword(asset.searchKeyword),
+      downloadDate: formatter.string(from: .now),
       projectName: projectName ?? tr("common.uncategorized"),
       segment: segmentIndex.map(String.init) ?? tr("common.notSpecified"),
-      rightsSource: rights.source ?? asset.provider.displayName)
+      rightsSource: rights.source ?? asset.sourceDisplayName)
     let base = mediaURL.deletingPathExtension()
     let jsonURL = base.appendingPathExtension("source.json")
     let textURL = base.appendingPathExtension("source.txt")
@@ -50,5 +52,10 @@ enum SourceSidecar {
       \(tr("sidecar.segment")): \(sidecar.segment)
       """
     try Data(text.utf8).write(to: textURL, options: .atomic)
+  }
+
+  private static func redactedKeyword(_ value: String) -> String {
+    guard let url = URL(string: value), url.scheme != nil else { return value }
+    return LinkURLSecurity.redactedString(url) ?? value
   }
 }

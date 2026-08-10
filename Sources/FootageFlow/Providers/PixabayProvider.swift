@@ -11,22 +11,45 @@ struct PixabayProvider: MediaProvider {
     capabilities: ProviderCapabilities(
       search: .supported, preview: .supported, metadata: .supported, license: .supported,
       download: .supported, supportsVideo: true, supportsImage: true,
+      pagination: .supported,
       accessMethods: [.officialAPI, .directSearch]))
 
   func search(_ request: SearchRequest) async throws -> [MediaAsset] {
-    guard !apiKey.isEmpty else { throw ProviderError.missingAPIKey(.pixabay) }
-    guard request.mediaType != .audio else { return [] }
-    var results: [MediaAsset] = []
-    if request.mediaType != .image { results += try await videos(request) }
-    if request.mediaType != .video { results += try await images(request) }
-    return results
+    try await searchPage(request, continuation: nil).assets
   }
 
-  private func baseItems(_ request: SearchRequest) -> [URLQueryItem] {
+  func searchPage(
+    _ request: SearchRequest, continuation: ProviderContinuation?
+  ) async throws -> ProviderPage {
+    guard !apiKey.isEmpty else { throw ProviderError.missingAPIKey(.pixabay) }
+    guard request.mediaType != .audio else { return ProviderPage(assets: [], continuation: nil) }
+    let page = max(1, continuation?.page ?? 1)
+    var results: [MediaAsset] = []
+    var hasMore = false
+    var totalResults = 0
+    if request.mediaType != .image {
+      let value = try await videos(request, page: page)
+      results += value.assets
+      hasMore = hasMore || value.hasMore
+      totalResults += value.totalResults
+    }
+    if request.mediaType != .video {
+      let value = try await images(request, page: page)
+      results += value.assets
+      hasMore = hasMore || value.hasMore
+      totalResults += value.totalResults
+    }
+    return ProviderPage(
+      assets: results, continuation: hasMore ? .nextPage(page + 1) : nil,
+      totalResults: totalResults)
+  }
+
+  private func baseItems(_ request: SearchRequest, page: Int) -> [URLQueryItem] {
     var items = [
       URLQueryItem(name: "key", value: apiKey),
       URLQueryItem(name: "q", value: String(request.query.prefix(100))),
       URLQueryItem(name: "per_page", value: String(max(3, min(request.pageSize, 50)))),
+      URLQueryItem(name: "page", value: String(page)),
       URLQueryItem(name: "safesearch", value: "true"),
     ]
     if request.orientation == .landscape {
@@ -41,11 +64,14 @@ struct PixabayProvider: MediaProvider {
     return items
   }
 
-  private func videos(_ request: SearchRequest) async throws -> [MediaAsset] {
-    let url = try URL.endpoint("https://pixabay.com/api/videos/", queryItems: baseItems(request))
+  private func videos(_ request: SearchRequest, page: Int) async throws
+    -> (assets: [MediaAsset], hasMore: Bool, totalResults: Int)
+  {
+    let url = try URL.endpoint(
+      "https://pixabay.com/api/videos/", queryItems: baseItems(request, page: page))
     let response = try await HTTPClient.shared.decode(
       PixabayVideoResponse.self, request: URLRequest(url: url))
-    return response.hits.enumerated().compactMap { index, hit in
+    let assets: [MediaAsset] = response.hits.enumerated().compactMap { index, hit in
       let files = [hit.videos.large, hit.videos.medium, hit.videos.small, hit.videos.tiny]
         .compactMap { $0 }.filter { !$0.url.isEmpty }
       guard let best = files.max(by: { $0.width * $0.height < $1.width * $1.height }),
@@ -63,15 +89,21 @@ struct PixabayProvider: MediaProvider {
         publishedDate: nil, downloadable: true, originalMetadata: [:], searchKeyword: request.query,
         relevanceScore: 1 - Double(index) * 0.01)
     }
+    let total = response.totalHits ?? response.total ?? assets.count
+    let perPage = max(3, min(request.pageSize, 50))
+    return (assets, page * perPage < total && !response.hits.isEmpty, total)
   }
 
-  private func images(_ request: SearchRequest) async throws -> [MediaAsset] {
+  private func images(_ request: SearchRequest, page: Int) async throws
+    -> (assets: [MediaAsset], hasMore: Bool, totalResults: Int)
+  {
     let url = try URL.endpoint(
       "https://pixabay.com/api/",
-      queryItems: baseItems(request) + [URLQueryItem(name: "image_type", value: "all")])
+      queryItems: baseItems(request, page: page)
+        + [URLQueryItem(name: "image_type", value: "all")])
     let response = try await HTTPClient.shared.decode(
       PixabayImageResponse.self, request: URLRequest(url: url))
-    return response.hits.enumerated().compactMap { index, hit in
+    let assets: [MediaAsset] = response.hits.enumerated().compactMap { index, hit in
       guard let page = URLValidator.remote(hit.pageURL) else { return nil }
       let download = hit.imageURL ?? hit.fullHDURL ?? hit.largeImageURL
       guard let downloadURL = URLValidator.remote(download) else { return nil }
@@ -86,10 +118,16 @@ struct PixabayProvider: MediaProvider {
         originalMetadata: [:], searchKeyword: request.query,
         relevanceScore: 1 - Double(index) * 0.01)
     }
+    let total = response.totalHits ?? response.total ?? assets.count
+    let perPage = max(3, min(request.pageSize, 50))
+    return (assets, page * perPage < total && !response.hits.isEmpty, total)
   }
 }
 
-struct PixabayVideoResponse: Decodable { let hits: [PixabayVideoHit] }
+struct PixabayVideoResponse: Decodable {
+  let total, totalHits: Int?
+  let hits: [PixabayVideoHit]
+}
 struct PixabayVideoHit: Decodable {
   let id: Int
   let pageURL: String
@@ -105,7 +143,10 @@ struct PixabayVideoFile: Decodable {
   let size: Int?
   let thumbnail: String?
 }
-struct PixabayImageResponse: Decodable { let hits: [PixabayImageHit] }
+struct PixabayImageResponse: Decodable {
+  let total, totalHits: Int?
+  let hits: [PixabayImageHit]
+}
 struct PixabayImageHit: Decodable {
   let id: Int
   let pageURL: String
