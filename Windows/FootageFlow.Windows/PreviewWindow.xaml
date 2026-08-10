@@ -8,9 +8,9 @@
     <MediaElement x:Name="Player" LoadedBehavior="Manual" UnloadedBehavior="Stop" Stretch="Uniform" MediaOpened="Player_MediaOpened" MediaEnded="Player_MediaEnded" />
     <Image x:Name="ImagePreview" Stretch="Uniform" Visibility="Collapsed" />
     <StackPanel Grid.Row="1" Orientation="Horizontal" Background="#E6111827" HorizontalAlignment="Stretch" Margin="0" >
-      <Button Content="▶ Play" Click="Play_Click" /><Button Content="⏸ Pause" Click="Pause_Click" /><Button x:Name="MuteButton" Content="🔊 Mute" Click="Mute_Click" />
+      <Button x:Name="PlayButton" Click="Play_Click" /><Button x:Name="PauseButton" Click="Pause_Click" /><Button x:Name="MuteButton" Click="Mute_Click" />
       <Slider x:Name="PositionSlider" Width="430" Minimum="0" Margin="12,0" ValueChanged="PositionSlider_ValueChanged" />
-      <Button Content="Open Source" Click="OpenSource_Click" />
+      <Button x:Name="OpenSourceButton" Click="OpenSource_Click" />
     </StackPanel>
   </Grid>
 </Window>

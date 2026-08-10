@@ -42,7 +42,8 @@ jobs:
           dist/FootageFlow.app/Contents/MacOS/FootageFlow --self-test
 
   windows-core:
-    runs-on: windows-2025
+    # Swift 6.3 currently requires the Visual Studio 2022 C++ environment.
+    runs-on: windows-2022
     timeout-minutes: 45
     steps:
       - name: Check out source

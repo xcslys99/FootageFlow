@@ -1,5 +1,7 @@
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Windows;
+using System.Windows.Data;
 using System.Windows.Input;
 using FootageFlow.Windows.Infrastructure;
 using FootageFlow.Windows.Models;
@@ -22,8 +24,12 @@ public sealed class MainViewModel : ObservableObject
     private string _mediaType = "video";
     private string _orientation = "all";
     private string _resolution = "all";
+    private string _duration = "all";
+    private string _licenseFilter = "all";
+    private string _sort = "relevance";
     private ProjectRecord? _currentProject;
     private string _newProjectName = "";
+    private string _projectEditName = "";
     private string _scriptText = "";
 
     public MainViewModel()
@@ -31,6 +37,9 @@ public sealed class MainViewModel : ObservableObject
         _localization = new LocalizationService(_settings);
         _localization.LanguageChanged += (_, _) => RefreshLanguage();
         Downloads = new DownloadQueueService(_core, _settings, _ytDlp, _localization);
+        ResultsView = CollectionViewSource.GetDefaultView(Results);
+        ResultsView.Filter = value => value is MediaAsset asset && MatchesFilters(asset);
+        ApplySort();
         Providers = new ObservableCollection<ProviderOption>(new[]
         {
             NewProvider("pexels", "Pexels"), NewProvider("pixabay", "Pixabay"),
@@ -53,8 +62,10 @@ public sealed class MainViewModel : ObservableObject
         FavoriteCommand = new AsyncRelayCommand(asset => ToggleFavoriteAsync(asset as MediaAsset));
         DownloadCommand = new RelayCommand(asset => EnqueueDownload(asset as MediaAsset));
         CreateProjectCommand = new AsyncRelayCommand(_ => CreateProjectAsync());
+        SaveProjectCommand = new AsyncRelayCommand(_ => SaveProjectAsync(), _ => CurrentProject is not null);
         DeleteProjectCommand = new AsyncRelayCommand(project => DeleteProjectAsync(project as ProjectRecord));
         SearchHistoryCommand = new AsyncRelayCommand(history => SearchHistoryAsync(history as SearchHistoryRecord));
+        DeleteHistoryCommand = new AsyncRelayCommand(history => DeleteHistoryAsync(history as SearchHistoryRecord));
         ClearHistoryCommand = new AsyncRelayCommand(_ => ClearHistoryAsync());
         CancelDownloadCommand = new RelayCommand(item => Downloads.Cancel((DownloadTaskItem)item!));
         RetryDownloadCommand = new RelayCommand(item => Downloads.Retry((DownloadTaskItem)item!));
@@ -70,6 +81,9 @@ public sealed class MainViewModel : ObservableObject
         {
             if ((record as DownloadRecord)?.LocalPath is { } path) ShellService.OpenFile(path);
         });
+        OpenRecordSourceCommand = new RelayCommand(record =>
+            ShellService.OpenUrl((record as DownloadRecord)?.SourcePageURL));
+        RemoveDownloadRecordCommand = new AsyncRelayCommand(record => RemoveDownloadRecordAsync(record as DownloadRecord));
         AnalyzeScriptCommand = new AsyncRelayCommand(_ => AnalyzeScriptAsync());
         RefreshProviderModes();
         SearchStatus = T("search.initialStatus");
@@ -80,6 +94,7 @@ public sealed class MainViewModel : ObservableObject
     public DownloadQueueService Downloads { get; }
     public ObservableCollection<ProviderOption> Providers { get; }
     public ObservableCollection<MediaAsset> Results { get; } = [];
+    public ICollectionView ResultsView { get; }
     public ObservableCollection<SearchKeyword> SearchKeywords { get; } = [];
     public ObservableCollection<ProjectRecord> Projects { get; } = [];
     public ObservableCollection<SavedAssetRecord> Favorites { get; } = [];
@@ -95,14 +110,18 @@ public sealed class MainViewModel : ObservableObject
     public ICommand FavoriteCommand { get; }
     public ICommand DownloadCommand { get; }
     public ICommand CreateProjectCommand { get; }
+    public ICommand SaveProjectCommand { get; }
     public ICommand DeleteProjectCommand { get; }
     public ICommand SearchHistoryCommand { get; }
+    public ICommand DeleteHistoryCommand { get; }
     public ICommand ClearHistoryCommand { get; }
     public ICommand CancelDownloadCommand { get; }
     public ICommand RetryDownloadCommand { get; }
     public ICommand RevealDownloadCommand { get; }
     public ICommand RevealRecordCommand { get; }
     public ICommand OpenRecordCommand { get; }
+    public ICommand OpenRecordSourceCommand { get; }
+    public ICommand RemoveDownloadRecordCommand { get; }
     public ICommand AnalyzeScriptCommand { get; }
 
     public string CurrentPage
@@ -136,11 +155,33 @@ public sealed class MainViewModel : ObservableObject
             (StopSearchCommand as RelayCommand)?.RaiseCanExecuteChanged();
         }
     }
-    public string MediaType { get => _mediaType; set => Set(ref _mediaType, value); }
-    public string Orientation { get => _orientation; set => Set(ref _orientation, value); }
-    public string Resolution { get => _resolution; set => Set(ref _resolution, value); }
-    public ProjectRecord? CurrentProject { get => _currentProject; set => Set(ref _currentProject, value); }
+    public string MediaType { get => _mediaType; set { if (Set(ref _mediaType, value)) ResultsView.Refresh(); } }
+    public string Orientation { get => _orientation; set { if (Set(ref _orientation, value)) ResultsView.Refresh(); } }
+    public string Resolution { get => _resolution; set { if (Set(ref _resolution, value)) ResultsView.Refresh(); } }
+    public string Duration { get => _duration; set { if (Set(ref _duration, value)) ResultsView.Refresh(); } }
+    public string LicenseFilter { get => _licenseFilter; set { if (Set(ref _licenseFilter, value)) ResultsView.Refresh(); } }
+    public string Sort
+    {
+        get => _sort;
+        set
+        {
+            if (!Set(ref _sort, value)) return;
+            ApplySort();
+        }
+    }
+    public ProjectRecord? CurrentProject
+    {
+        get => _currentProject;
+        set
+        {
+            if (!Set(ref _currentProject, value)) return;
+            ProjectEditName = value?.Name ?? "";
+            ScriptText = value?.Script ?? "";
+            (SaveProjectCommand as AsyncRelayCommand)?.RaiseCanExecuteChanged();
+        }
+    }
     public string NewProjectName { get => _newProjectName; set => Set(ref _newProjectName, value); }
+    public string ProjectEditName { get => _projectEditName; set => Set(ref _projectEditName, value); }
     public string ScriptText { get => _scriptText; set => Set(ref _scriptText, value); }
     public string DownloadRoot => _settings.Current.DownloadRoot;
     public string LanguageButton => _localization.Language == "zh-Hans" ? "🌐 简体中文" : "🌐 English";
@@ -161,6 +202,9 @@ public sealed class MainViewModel : ObservableObject
     public string TypeTitle => T("filter.type");
     public string OrientationTitle => T("filter.orientation");
     public string ResolutionTitle => T("filter.resolution");
+    public string DurationTitle => T("filter.duration");
+    public string LicenseTitle => T("filter.license");
+    public string SortTitle => T("filter.sort");
     public string ProjectTitle => T("common.project");
     public string ScriptTitle => T("script.title");
     public string ScriptHelp => T("script.help");
@@ -185,6 +229,19 @@ public sealed class MainViewModel : ObservableObject
     public string LandscapeText => T("media.landscape");
     public string PortraitText => T("media.portrait");
     public string SquareText => T("media.square");
+    public string Under10Text => T("filter.under10");
+    public string TenTo30Text => T("filter.tenTo30");
+    public string ThirtyTo60Text => T("filter.thirtyTo60");
+    public string Over60Text => T("filter.over60");
+    public string LicenseKnownText => T("license.knownOnly");
+    public string LicenseSafeText => T("license.safe");
+    public string LicenseAttributionText => T("license.attribution");
+    public string LicensePublicDomainText => T("license.publicDomain");
+    public string LicenseUnknownText => T("license.unknown");
+    public string SortRelevanceText => T("sort.relevance");
+    public string SortNewestText => T("sort.newest");
+    public string SortResolutionText => T("sort.resolution");
+    public string SortDurationText => T("sort.duration");
     public string DeleteText => T("common.delete");
     public string CancelText => T("common.cancel");
     public string RetryText => T("common.retry");
@@ -322,7 +379,7 @@ public sealed class MainViewModel : ObservableObject
             var response = await _core.SendAsync(new CoreRequest
             {
                 Action = "search", Query = query, MediaType = MediaType, Orientation = Orientation,
-                Resolution = Resolution, Duration = "all", PageSize = 20, ProviderIDs = [option.Id],
+                Resolution = Resolution, Duration = Duration, PageSize = 20, ProviderIDs = [option.Id],
                 ApiKeys = CredentialDictionary(option.Id), Language = _settings.Current.Language
             }, cancellationToken: cancellationToken);
             var batch = response.ProviderBatches?.FirstOrDefault() ?? new ProviderBatch
@@ -386,6 +443,18 @@ public sealed class MainViewModel : ObservableObject
         ApplyDatabase(response.Database);
     }
 
+    private async Task SaveProjectAsync()
+    {
+        if (CurrentProject is null) return;
+        var response = await _core.SendAsync(new CoreRequest
+        {
+            Action = "updateProject", ProjectID = CurrentProject.Id.ToString(),
+            ProjectName = ProjectEditName, ProjectScript = ScriptText,
+            Language = _settings.Current.Language
+        });
+        ApplyDatabase(response.Database);
+    }
+
     private async Task SearchHistoryAsync(SearchHistoryRecord? history)
     {
         if (history is null) return;
@@ -403,6 +472,17 @@ public sealed class MainViewModel : ObservableObject
         ApplyDatabase(response.Database);
     }
 
+    private async Task DeleteHistoryAsync(SearchHistoryRecord? history)
+    {
+        if (history is null) return;
+        var response = await _core.SendAsync(new CoreRequest
+        {
+            Action = "deleteHistory", RecordID = history.Id.ToString(),
+            Language = _settings.Current.Language
+        });
+        ApplyDatabase(response.Database);
+    }
+
     private async Task AnalyzeScriptAsync()
     {
         var response = await _core.SendAsync(new CoreRequest
@@ -411,6 +491,17 @@ public sealed class MainViewModel : ObservableObject
         });
         ScriptSegments.Clear();
         foreach (var segment in response.Segments ?? []) ScriptSegments.Add(segment);
+    }
+
+    private async Task RemoveDownloadRecordAsync(DownloadRecord? record)
+    {
+        if (record is null) return;
+        var response = await _core.SendAsync(new CoreRequest
+        {
+            Action = "deleteDownload", RecordID = record.Id.ToString(),
+            Language = _settings.Current.Language
+        });
+        ApplyDatabase(response.Database);
     }
 
     private async Task LoadDatabaseAsync()
@@ -440,6 +531,55 @@ public sealed class MainViewModel : ObservableObject
     {
         target.Clear();
         foreach (var value in values) target.Add(value);
+    }
+
+    private bool MatchesFilters(MediaAsset asset)
+    {
+        if (MediaType != "all" && asset.MediaType != MediaType) return false;
+        if (Orientation != "all" && AssetOrientation(asset) != Orientation) return false;
+        var minimumHeight = Resolution switch { "hd720" => 720, "fullHD" => 1080, "uhd4K" => 2160, _ => 0 };
+        if (minimumHeight > 0 && Math.Min(asset.Width ?? 0, asset.Height ?? 0) < minimumHeight) return false;
+        if (!DurationMatches(asset.Duration)) return false;
+        return LicenseFilter switch
+        {
+            "knownOnly" => asset.LicenseStatus != "UNKNOWN",
+            "safe" => asset.LicenseStatus == "SAFE",
+            "attribution" => asset.LicenseStatus == "ATTRIBUTION_REQUIRED",
+            "publicDomain" => asset.LicenseStatus == "PUBLIC_DOMAIN",
+            "unknown" => asset.LicenseStatus == "UNKNOWN",
+            _ => true
+        };
+    }
+
+    private bool DurationMatches(double? value) => Duration switch
+    {
+        "under10" => value is >= 0 and < 10,
+        "tenTo30" => value is >= 10 and < 30,
+        "thirtyTo60" => value is >= 30 and < 60,
+        "over60" => value is >= 60,
+        _ => true
+    };
+
+    private static string AssetOrientation(MediaAsset asset)
+    {
+        if (asset.Width is not > 0 || asset.Height is not > 0) return "unknown";
+        var ratio = asset.Width.Value / (double)asset.Height.Value;
+        if (ratio > 1.12) return "landscape";
+        if (ratio < 0.88) return "portrait";
+        return "square";
+    }
+
+    private void ApplySort()
+    {
+        ResultsView.SortDescriptions.Clear();
+        var property = Sort switch
+        {
+            "newest" => nameof(MediaAsset.SortPublishedDate),
+            "resolution" => nameof(MediaAsset.PixelCount),
+            "duration" => nameof(MediaAsset.SortDuration),
+            _ => nameof(MediaAsset.RelevanceScore)
+        };
+        ResultsView.SortDescriptions.Add(new SortDescription(property, ListSortDirection.Descending));
     }
 
     private Dictionary<string, string> CredentialDictionary(string provider)

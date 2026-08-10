@@ -17,7 +17,7 @@ public partial class MainWindow : Window
         DataContext = _viewModel;
         _viewModel.PreviewRequested += asset =>
         {
-            if (asset is not null) new PreviewWindow(asset) { Owner = this }.Show();
+            if (asset is not null) new PreviewWindow(asset, _viewModel.T) { Owner = this }.Show();
         };
     }
 

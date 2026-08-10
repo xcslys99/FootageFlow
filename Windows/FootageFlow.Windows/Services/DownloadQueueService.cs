@@ -85,7 +85,7 @@ public sealed class DownloadQueueService
                     if (string.IsNullOrWhiteSpace(item.Asset.DownloadURL))
                         throw new InvalidOperationException("This source does not provide a direct download.");
                     saved = WindowsPathSafety.UniquePath(directory, preferredName);
-                    await DownloadDirectAsync(item.Asset.DownloadURL, saved, item, item.Cancellation.Token);
+                    await DownloadDirectWithRetryAsync(item.Asset.DownloadURL, saved, item, item.Cancellation.Token);
                 }
                 item.LocalPath = saved;
                 var sidecar = await _core.SendAsync(new CoreRequest
@@ -158,13 +158,64 @@ public sealed class DownloadQueueService
         }
     }
 
-    private static string FriendlyMessage(Exception error) => error switch
+    private async Task DownloadDirectWithRetryAsync(
+        string url,
+        string destination,
+        DownloadTaskItem item,
+        CancellationToken cancellationToken)
     {
-        HttpRequestException { StatusCode: System.Net.HttpStatusCode.TooManyRequests } => "Too many requests. Please try again later.",
-        HttpRequestException => "The download server could not be reached.",
-        ExternalToolException tool => tool.Message,
-        CoreHostException core => core.Message,
-        _ => error.Message
+        for (var attempt = 1; ; attempt++)
+        {
+            try
+            {
+                await DownloadDirectAsync(url, destination, item, cancellationToken);
+                return;
+            }
+            catch (Exception error) when (attempt == 1 && ShouldRetry(error))
+            {
+                item.ErrorMessage = _localization.Text("download.retrying", 2);
+                item.Progress = 0;
+                await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
+            }
+        }
+    }
+
+    private static bool ShouldRetry(Exception error) => error switch
+    {
+        IOException => true,
+        HttpRequestException { StatusCode: null } => true,
+        HttpRequestException { StatusCode: >= System.Net.HttpStatusCode.InternalServerError } => true,
+        _ => false
+    };
+
+    private string FriendlyMessage(Exception error) => error switch
+    {
+        HttpRequestException { StatusCode: System.Net.HttpStatusCode.TooManyRequests } => _localization.Text("download.rateLimited"),
+        HttpRequestException { StatusCode: System.Net.HttpStatusCode.NotFound } => _localization.Text("error.notFound"),
+        HttpRequestException { StatusCode: System.Net.HttpStatusCode.Forbidden } => _localization.Text("download.accessRestricted"),
+        HttpRequestException => _localization.Text("error.noNetwork"),
+        ExternalToolException tool => LocalizedToolError(tool),
+        CoreHostException core => LocalizedCoreError(core),
+        InvalidOperationException => error.Message,
+        _ => _localization.Text("download.failed")
+    };
+
+    private string LocalizedToolError(ExternalToolException error) => error.Code switch
+    {
+        "rateLimited" => _localization.Text("download.rateLimited"),
+        "videoUnavailable" => _localization.Text("download.videoUnavailable"),
+        "regionalRestriction" => _localization.Text("download.regionalRestriction"),
+        "temporarilyBlocked" => _localization.Text("download.accessRestricted"),
+        "externalToolUnavailable" => _localization.Text("download.ytDLPUnavailable"),
+        "timeout" => _localization.Text("error.timeout"),
+        _ => _localization.Text("download.failed")
+    };
+
+    private string LocalizedCoreError(CoreHostException error) => error.Code switch
+    {
+        "timeout" => _localization.Text("error.timeout"),
+        "coreUnavailable" => _localization.Text("common.unavailable"),
+        _ => _localization.Text("download.failed")
     };
 
     private void SetState(DownloadTaskItem item, string state)

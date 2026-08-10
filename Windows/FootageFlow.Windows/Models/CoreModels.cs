@@ -190,4 +190,7 @@ public sealed class MediaAsset
     [JsonIgnore] public string Resolution => Width is > 0 && Height is > 0 ? $"{Width}×{Height}" : "—";
     [JsonIgnore] public string DurationText => Duration is null ? "—" : TimeSpan.FromSeconds(Duration.Value).ToString(@"mm\:ss");
     [JsonIgnore] public string LicenseText => string.IsNullOrWhiteSpace(License) ? LicenseStatus : License;
+    [JsonIgnore] public long PixelCount => (long)(Width ?? 0) * (Height ?? 0);
+    [JsonIgnore] public DateTimeOffset SortPublishedDate => PublishedDate ?? DateTimeOffset.MinValue;
+    [JsonIgnore] public double SortDuration => Duration ?? -1;
 }

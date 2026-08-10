@@ -8,12 +8,18 @@ namespace FootageFlow.Windows;
 public partial class PreviewWindow : Window
 {
     private readonly MediaAsset _asset;
+    private readonly Func<string, string> _text;
 
-    public PreviewWindow(MediaAsset asset)
+    public PreviewWindow(MediaAsset asset, Func<string, string> text)
     {
         _asset = asset;
+        _text = text;
         InitializeComponent();
         Title = asset.Title;
+        PlayButton.Content = $"▶ {_text("media.play")}";
+        PauseButton.Content = $"⏸ {_text("media.pause")}";
+        MuteButton.Content = $"🔊 {_text("media.mute")}";
+        OpenSourceButton.Content = _text("media.openSource");
         if (asset.MediaType == "image")
         {
             ImagePreview.Visibility = Visibility.Visible;
@@ -31,7 +37,7 @@ public partial class PreviewWindow : Window
             }
             else
             {
-                MessageBox.Show("This source does not provide an embedded preview. Open the original source page instead.", "FootageFlow");
+                MessageBox.Show(_text("media.previewUnavailable"), "FootageFlow");
             }
         }
     }
@@ -46,7 +52,7 @@ public partial class PreviewWindow : Window
     private void Mute_Click(object sender, RoutedEventArgs e)
     {
         Player.IsMuted = !Player.IsMuted;
-        MuteButton.Content = Player.IsMuted ? "🔇 Unmute" : "🔊 Mute";
+        MuteButton.Content = Player.IsMuted ? $"🔇 {_text("media.unmute")}" : $"🔊 {_text("media.mute")}";
     }
     private void PositionSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
