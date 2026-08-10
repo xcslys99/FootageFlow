@@ -17,9 +17,8 @@ rm -rf "$APP_DIR" "$ICONSET_DIR"
 mkdir -p "$MACOS_DIR" "$RESOURCES_DIR" "$ICONSET_DIR"
 cp "$BIN_DIR/FootageFlow" "$MACOS_DIR/FootageFlow"
 cp "$PROJECT_DIR/Resources/Info.plist" "$CONTENTS_DIR/Info.plist"
-for bundle in "$BIN_DIR"/*.bundle(N); do
-    cp -R "$bundle" "$RESOURCES_DIR/"
-done
+cp -R "$PROJECT_DIR/Sources/FootageFlow/Resources/en.lproj" "$RESOURCES_DIR/"
+cp -R "$PROJECT_DIR/Sources/FootageFlow/Resources/zh-Hans.lproj" "$RESOURCES_DIR/"
 
 swiftc "$PROJECT_DIR/Tools/IconMaker.swift" -o "$PROJECT_DIR/.build/IconMaker" -framework AppKit
 "$PROJECT_DIR/.build/IconMaker" "$PROJECT_DIR/.build/icon-1024.png"

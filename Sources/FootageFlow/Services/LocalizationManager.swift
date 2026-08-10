@@ -25,15 +25,15 @@ final class LocalizationManager: ObservableObject, @unchecked Sendable {
 
   init(defaults: UserDefaults = .standard) {
     self.defaults = defaults
-    let resources = Self.resourceBundle()
     var bundles: [AppLanguage: Bundle] = [:]
     for language in AppLanguage.allCases {
-      for name in [language.rawValue, language.rawValue.lowercased()] {
-        if let path = resources.path(forResource: name, ofType: "lproj"),
-          let bundle = Bundle(path: path)
-        {
-          bundles[language] = bundle
-          break
+      search: for root in Self.resourceRoots() {
+        for name in [language.rawValue, language.rawValue.lowercased()] {
+          let directory = root.appendingPathComponent("\(name).lproj", isDirectory: true)
+          if let bundle = Bundle(url: directory) {
+            bundles[language] = bundle
+            break search
+          }
         }
       }
     }
@@ -69,14 +69,14 @@ final class LocalizationManager: ObservableObject, @unchecked Sendable {
     return value == key ? nil : value
   }
 
-  private static func resourceBundle() -> Bundle {
-    if let resources = Bundle.main.resourceURL,
-      let packaged = Bundle(
-        url: resources.appendingPathComponent("FootageFlow_FootageFlow.bundle", isDirectory: true))
-    {
-      return packaged
-    }
-    return Bundle.module
+  private static func resourceRoots() -> [URL] {
+    var roots: [URL] = []
+    if let packaged = Bundle.main.resourceURL { roots.append(packaged) }
+    let development = URL(
+      fileURLWithPath: FileManager.default.currentDirectoryPath, isDirectory: true
+    ).appendingPathComponent("Sources/FootageFlow/Resources", isDirectory: true)
+    if !roots.contains(development) { roots.append(development) }
+    return roots
   }
 }
 

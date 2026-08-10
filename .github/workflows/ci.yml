@@ -34,5 +34,6 @@ jobs:
       - name: Build and verify app bundle
         run: |
           scripts/build_app.sh
+          scripts/binary_privacy_scan.sh
           codesign --verify --deep --strict dist/FootageFlow.app
           dist/FootageFlow.app/Contents/MacOS/FootageFlow --self-test

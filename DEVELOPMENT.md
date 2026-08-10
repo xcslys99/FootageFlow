@@ -79,7 +79,7 @@ This Mac currently has Command Line Tools rather than full Xcode. Release builds
 
 ## Packaging
 
-`scripts/build_app.sh` builds a Release executable, creates the `.app`, copies the SwiftPM resource bundle, generates the original FootageFlow icon, and performs Ad Hoc signing. `scripts/build_dmg.sh` creates the drag-to-Applications DMG and SHA-256 checksum. No Developer ID certificate or notarization is claimed for v0.1.0.
+`scripts/build_app.sh` builds a Release executable, creates the `.app`, copies localized resources without embedding a developer path, generates the original FootageFlow icon, and performs Ad Hoc signing. `scripts/binary_privacy_scan.sh` rejects personal build paths and credential-like strings. `scripts/build_dmg.sh` creates the drag-to-Applications DMG and SHA-256 checksum. No Developer ID certificate or notarization is claimed for v0.1.0.
 
 ## Windows direction
 
