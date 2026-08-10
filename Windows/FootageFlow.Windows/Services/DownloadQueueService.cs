@@ -8,19 +8,25 @@ namespace FootageFlow.Windows.Services;
 public sealed class DownloadQueueService
 {
     private readonly SemaphoreSlim _slots = new(3, 3);
-    private readonly HttpClient _http = new() { Timeout = Timeout.InfiniteTimeSpan };
+    private readonly HttpClient _http;
     private readonly CoreHostClient _core;
     private readonly SettingsService _settings;
     private readonly YtDlpPlatformService _ytDlp;
     private readonly LocalizationService _localization;
     public ObservableCollection<DownloadTaskItem> Items { get; } = [];
 
-    public DownloadQueueService(CoreHostClient core, SettingsService settings, YtDlpPlatformService ytDlp, LocalizationService localization)
+    public DownloadQueueService(
+        CoreHostClient core,
+        SettingsService settings,
+        YtDlpPlatformService ytDlp,
+        LocalizationService localization,
+        HttpClient? httpClient = null)
     {
         _core = core;
         _settings = settings;
         _ytDlp = ytDlp;
         _localization = localization;
+        _http = httpClient ?? new HttpClient { Timeout = Timeout.InfiniteTimeSpan };
         _http.DefaultRequestHeaders.UserAgent.ParseAdd("FootageFlow/0.2.0");
     }
 

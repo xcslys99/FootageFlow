@@ -1,4 +1,6 @@
 using System.Windows;
+using FootageFlow.Windows.Models;
+using FootageFlow.Windows.Services;
 
 namespace FootageFlow.Windows;
 
@@ -6,6 +8,13 @@ public partial class App : Application
 {
     protected override void OnStartup(StartupEventArgs e)
     {
+        if (e.Args.Contains("--health-check", StringComparer.OrdinalIgnoreCase))
+        {
+            StartupUri = null;
+            var exitCode = RunInstalledHealthCheck();
+            Shutdown(exitCode);
+            return;
+        }
         DispatcherUnhandledException += (_, args) =>
         {
             MessageBox.Show(
@@ -14,5 +23,18 @@ public partial class App : Application
             args.Handled = true;
         };
         base.OnStartup(e);
+    }
+
+    private static int RunInstalledHealthCheck()
+    {
+        try
+        {
+            var response = new CoreHostClient().SendAsync(new CoreRequest
+            {
+                Action = "health", ProviderIDs = ["wikimedia", "internetArchive"], Language = "en"
+            }).GetAwaiter().GetResult();
+            return response.Success && response.Platform == "windows" ? 0 : 1;
+        }
+        catch { return 1; }
     }
 }

@@ -100,13 +100,79 @@ jobs:
           $env:FOOTAGEFLOW_CORE_PATH = Join-Path (swift build -c release --show-bin-path) "FootageFlow.exe"
           dotnet run --project Windows/FootageFlow.Windows.Tests/FootageFlow.Windows.Tests.csproj -c Release
 
-      - name: Scan tracked files for secrets
+      - name: Build self-contained Windows package
+        shell: pwsh
+        run: scripts/windows/build-package.ps1 -Version "0.2.0"
+
+      - name: Verify packaged runtimes
         shell: pwsh
         run: |
-          $tracked = git ls-files
-          $patterns = 'AIza[0-9A-Za-z_-]{20,}|sk-[A-Za-z0-9_-]{20,}|(?i)(api[_ -]?key|token|secret)\s*[:=]\s*["'']?[A-Za-z0-9._-]{16,}'
-          $matches = Select-String -Path $tracked -Pattern $patterns -ErrorAction SilentlyContinue
-          if ($matches) {
-            $matches | ForEach-Object { Write-Host "$($_.Path):$($_.LineNumber)" }
-            throw "Potential secret found"
+          $stage = Join-Path $PWD ".build\windows-stage"
+          $required = @(
+            "FootageFlow.exe",
+            "Core\FootageFlowCore.exe",
+            "Tools\yt-dlp.exe",
+            "Resources\en.lproj\Localizable.strings",
+            "Resources\zh-Hans.lproj\Localizable.strings"
+          )
+          foreach ($relative in $required) {
+            if (-not (Test-Path (Join-Path $stage $relative) -PathType Leaf)) {
+              throw "Packaged file is missing: $relative"
+            }
           }
+          & (Join-Path $stage "FootageFlow.exe") --health-check
+          if ($LASTEXITCODE -ne 0) { throw "The packaged Windows app health check failed." }
+          $toolVersion = & (Join-Path $stage "Tools\yt-dlp.exe") --version
+          if ($toolVersion -ne "2026.07.04") { throw "The bundled yt-dlp version is not the pinned release." }
+
+      - name: Compile Windows installer
+        shell: pwsh
+        run: |
+          $compiler = (& scripts/windows/install-inno.ps1 | Select-Object -Last 1)
+          $stage = (Resolve-Path ".build\windows-stage").Path
+          $output = (Resolve-Path "dist\windows").Path
+          & $compiler "/DAppVersion=0.2.0" "/DSourceDirectory=$stage" "/DOutputDirectory=$output" "Windows\Installer\FootageFlow.iss"
+          if ($LASTEXITCODE -ne 0) { throw "The Windows installer could not be compiled." }
+          $installer = Join-Path $output "FootageFlow-Setup-0.2.0-Windows-x64.exe"
+          if (-not (Test-Path $installer -PathType Leaf)) { throw "The Windows installer is missing." }
+          $signature = Get-AuthenticodeSignature $installer
+          Write-Host "Installer signature status: $($signature.Status) (unsigned development build expected)"
+          (Get-FileHash $installer -Algorithm SHA256).Hash.ToLowerInvariant() + "  " + (Split-Path $installer -Leaf) |
+            Set-Content ($installer + ".sha256") -Encoding ascii
+
+      - name: Clean install, launch, and uninstall test
+        shell: pwsh
+        run: |
+          $installer = (Resolve-Path "dist\windows\FootageFlow-Setup-0.2.0-Windows-x64.exe").Path
+          $installRoot = Join-Path $env:RUNNER_TEMP "FootageFlow-Clean-Install"
+          if (Test-Path $installRoot) { Remove-Item $installRoot -Recurse -Force }
+          $install = Start-Process $installer -ArgumentList @(
+            "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/DIR=`"$installRoot`""
+          ) -Wait -PassThru
+          if ($install.ExitCode -ne 0) { throw "Installer exited with code $($install.ExitCode)." }
+          $app = Join-Path $installRoot "FootageFlow.exe"
+          if (-not (Test-Path $app -PathType Leaf)) { throw "Clean installation did not create FootageFlow.exe." }
+          & $app --health-check
+          if ($LASTEXITCODE -ne 0) { throw "The installed app health check failed." }
+          $process = Start-Process $app -PassThru
+          Start-Sleep -Seconds 5
+          if ($process.HasExited) { throw "The installed Windows GUI exited during startup." }
+          Stop-Process -Id $process.Id -Force
+          $uninstaller = Join-Path $installRoot "unins000.exe"
+          $uninstall = Start-Process $uninstaller -ArgumentList @(
+            "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART"
+          ) -Wait -PassThru
+          if ($uninstall.ExitCode -ne 0) { throw "Uninstaller exited with code $($uninstall.ExitCode)." }
+          if (Test-Path $app) { throw "Uninstall left the application executable behind." }
+
+      - name: Upload Windows candidate artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: FootageFlow-0.2.0-Windows-x64
+          path: dist/windows/*
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Scan tracked files for secrets
+        shell: bash
+        run: scripts/secret_scan.sh

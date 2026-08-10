@@ -11,10 +11,18 @@ public sealed class SettingsService
         WriteIndented = true
     };
 
+    private readonly string? _settingsFile;
     public AppSettingsModel Current { get; private set; } = new();
 
-    public SettingsService()
+    public SettingsService(AppSettingsModel? initial = null, string? settingsFile = null)
     {
+        if (initial is not null)
+        {
+            Current = initial;
+            _settingsFile = settingsFile;
+            return;
+        }
+        _settingsFile = settingsFile ?? AppPaths.SettingsFile;
         Directory.CreateDirectory(AppPaths.DataRoot);
         Load();
         if (string.IsNullOrWhiteSpace(Current.DownloadRoot)) Current.DownloadRoot = AppPaths.DefaultDownloadRoot;
@@ -22,19 +30,20 @@ public sealed class SettingsService
 
     public void Save()
     {
-        Directory.CreateDirectory(AppPaths.DataRoot);
-        var temporary = AppPaths.SettingsFile + ".tmp";
+        if (string.IsNullOrWhiteSpace(_settingsFile)) return;
+        Directory.CreateDirectory(Path.GetDirectoryName(_settingsFile)!);
+        var temporary = _settingsFile + ".tmp";
         File.WriteAllText(temporary, JsonSerializer.Serialize(Current, JsonOptions));
-        File.Move(temporary, AppPaths.SettingsFile, true);
+        File.Move(temporary, _settingsFile, true);
     }
 
     private void Load()
     {
         try
         {
-            if (!File.Exists(AppPaths.SettingsFile)) return;
+            if (string.IsNullOrWhiteSpace(_settingsFile) || !File.Exists(_settingsFile)) return;
             Current = JsonSerializer.Deserialize<AppSettingsModel>(
-                File.ReadAllText(AppPaths.SettingsFile), JsonOptions) ?? new AppSettingsModel();
+                File.ReadAllText(_settingsFile), JsonOptions) ?? new AppSettingsModel();
         }
         catch
         {
