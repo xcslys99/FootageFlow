@@ -120,8 +120,11 @@ jobs:
               throw "Packaged file is missing: $relative"
             }
           }
-          & (Join-Path $stage "FootageFlow.exe") --health-check
-          if ($LASTEXITCODE -ne 0) { throw "The packaged Windows app health check failed." }
+          $healthRequest = '{"id":"packaged-health","action":"health","providerIDs":["wikimedia","internetArchive"],"language":"en"}'
+          $health = $healthRequest | & (Join-Path $stage "Core\FootageFlowCore.exe") --core-request | ConvertFrom-Json
+          if (-not $health.success -or $health.platform -ne "windows") {
+            throw "The packaged Windows core health check failed."
+          }
           $toolVersion = & (Join-Path $stage "Tools\yt-dlp.exe") --version
           if ($toolVersion -ne "2026.07.04") { throw "The bundled yt-dlp version is not the pinned release." }
 
@@ -160,8 +163,12 @@ jobs:
           if ($install.ExitCode -ne 0) { throw "Installer exited with code $($install.ExitCode)." }
           $app = Join-Path $installRoot "FootageFlow.exe"
           if (-not (Test-Path $app -PathType Leaf)) { throw "Clean installation did not create FootageFlow.exe." }
-          & $app --health-check
-          if ($LASTEXITCODE -ne 0) { throw "The installed app health check failed." }
+          $installedCore = Join-Path $installRoot "Core\FootageFlowCore.exe"
+          $healthRequest = '{"id":"installed-health","action":"health","providerIDs":["wikimedia","internetArchive"],"language":"en"}'
+          $health = $healthRequest | & $installedCore --core-request | ConvertFrom-Json
+          if (-not $health.success -or $health.platform -ne "windows") {
+            throw "The installed Windows core health check failed."
+          }
           $process = Start-Process $app -PassThru
           Start-Sleep -Seconds 5
           if ($process.HasExited) { throw "The installed Windows GUI exited during startup." }
