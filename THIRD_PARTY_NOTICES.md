@@ -6,6 +6,8 @@ The unreleased cross-platform branch bundles the platform executable from [yt-dl
 
 The Windows package contains the Swift runtime libraries from the official Swift toolchain. Swift is distributed under the [Apache License 2.0 with Runtime Library Exception](https://www.swift.org/LICENSE.txt). The self-contained Windows interface includes .NET 10.0.10 and WPF, distributed by Microsoft under the [MIT License](https://github.com/dotnet/runtime/blob/main/LICENSE.TXT) and their accompanying third-party notices. Copies of the official Swift and .NET license files are included under the packaged `Licenses` directory.
 
+The Windows setup executable is produced with [Inno Setup 7.0.2](https://jrsoftware.org/isinfo.php). Inno Setup is an installer-building tool and is not used by FootageFlow after installation; its copyright and distribution terms remain those published by its authors.
+
 The app interoperates with independent services through their public APIs:
 
 - Pexels API

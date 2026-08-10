@@ -52,14 +52,26 @@ try {
     Copy-Item (Join-Path $dotnetRoot "LICENSE.txt") (Join-Path $dotnetLicenseDirectory "LICENSE.txt")
     Copy-Item (Join-Path $dotnetRoot "ThirdPartyNotices.txt") (Join-Path $dotnetLicenseDirectory "ThirdPartyNotices.txt")
 
-    $swiftBin = Split-Path (Get-Command swift).Source
-    $swiftToolchainRoot = (Resolve-Path (Join-Path $swiftBin "..\..")).Path
-    $swiftLicense = Get-ChildItem $swiftToolchainRoot -Recurse -File -Include "LICENSE.txt", "LICENSE" |
-        Select-Object -First 1
-    if (-not $swiftLicense) { throw "The official Swift runtime license file was not found." }
     $swiftLicenseDirectory = Join-Path $licensesDirectory "swift"
     New-Item -ItemType Directory -Path $swiftLicenseDirectory -Force | Out-Null
-    Copy-Item $swiftLicense.FullName (Join-Path $swiftLicenseDirectory "LICENSE.txt")
+    $swiftLicenseDestination = Join-Path $swiftLicenseDirectory "LICENSE.txt"
+    $swiftBin = Split-Path (Get-Command swift).Source
+    $swiftInstallRoot = (Resolve-Path (Join-Path $swiftBin "..\..\..\..")).Path
+    $swiftLicense = Get-ChildItem $swiftInstallRoot -Recurse -File -Include "LICENSE.txt", "LICENSE" |
+        Where-Object { Select-String -Path $_.FullName -Pattern "Runtime Library Exception" -Quiet } |
+        Select-Object -First 1
+    if ($swiftLicense) {
+        Copy-Item $swiftLicense.FullName $swiftLicenseDestination
+    } else {
+        $swiftLicenseURL = "https://www.swift.org/LICENSE.txt"
+        $swiftLicenseSHA256 = "167beb36f181bd163c93c6feb45c68e5f9462fe1af55b278f7bfd1df20e673a3"
+        Invoke-WebRequest -Uri $swiftLicenseURL -OutFile $swiftLicenseDestination -UseBasicParsing
+        $downloadedSHA256 = (Get-FileHash $swiftLicenseDestination -Algorithm SHA256).Hash.ToLowerInvariant()
+        if ($downloadedSHA256 -ne $swiftLicenseSHA256) {
+            Remove-Item $swiftLicenseDestination -Force
+            throw "The downloaded official Swift runtime license did not match its pinned checksum."
+        }
+    }
 
     $archive = Join-Path $OutputDirectory "FootageFlow-$Version-Windows-x64-portable.zip"
     if (Test-Path $archive) { Remove-Item $archive -Force }
