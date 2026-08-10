@@ -54,9 +54,6 @@ struct LocalizationCatalog: Sendable {
 
   private static func resourceRoots() -> [URL] {
     var roots: [URL] = []
-    #if SWIFT_PACKAGE
-      if let packaged = Bundle.module.resourceURL { roots.append(packaged) }
-    #endif
     if let packaged = Bundle.main.resourceURL, !roots.contains(packaged) {
       roots.append(packaged)
     }
