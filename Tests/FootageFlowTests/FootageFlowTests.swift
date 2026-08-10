@@ -184,9 +184,10 @@ import Foundation
       } else {
         XCTFail("Unsupported links must be classified")
       }
-      XCTAssertEqual(
-        LinkDownloaderViewModel.errorKey(ProviderError.rateLimited(retryAfter: nil)),
-        "link.rateLimited")
+      if case .rateLimited = YTDLPService.mapFailure("HTTP 429 Too Many Requests") {
+      } else {
+        XCTFail("HTTP 429 must be classified as rate limited")
+      }
       XCTAssertTrue(LinkURLParser.urls(from: "http://127.0.0.1/private").isEmpty)
       XCTAssertTrue(LinkURLParser.urls(from: "https://example.com/watch?token=secret").isEmpty)
       XCTAssertTrue(LinkURLParser.urls(from: "https://user:pass@example.com/watch").isEmpty)
