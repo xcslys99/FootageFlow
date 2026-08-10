@@ -16,6 +16,12 @@
     var asset: MediaAsset? = nil
     var mediaPath: String? = nil
     var projectName: String? = nil
+    var projectID: String? = nil
+    var projectScript: String? = nil
+    var recordID: String? = nil
+    var localPath: String? = nil
+    var keywords: [String]? = nil
+    var resultCount: Int? = nil
     var segmentIndex: Int? = nil
     var externalToolOutputBase64: String? = nil
   }
@@ -30,6 +36,9 @@
     var assets: [MediaAsset]? = nil
     var keywords: [SearchKeyword]? = nil
     var segments: [String]? = nil
+    var database: PersistentDatabase? = nil
+    var project: ProjectRecord? = nil
+    var fileName: String? = nil
     var errorCode: String? = nil
     var errorMessage: String? = nil
   }
@@ -115,6 +124,19 @@
           id: request.id, success: true, segments: KeywordEngine.splitScript(query))
       case "mapYTDLPSearch":
         return mapYTDLPSearch(request)
+      case "databaseSnapshot", "addProject", "deleteProject", "updateProject",
+        "toggleFavorite", "addHistory", "deleteHistory", "clearHistory", "addDownload",
+        "deleteDownload":
+        return database(request)
+      case "suggestFileName":
+        guard let asset = request.asset else {
+          return WindowsCoreResponse(
+            id: request.id, success: false, errorCode: "missingAsset",
+            errorMessage: "Select an asset first.")
+        }
+        return WindowsCoreResponse(
+          id: request.id, success: true,
+          fileName: FileNameSanitizer.fileName(asset: asset, index: request.segmentIndex))
       case "writeSidecar":
         return writeSidecar(request)
       default:
@@ -122,6 +144,66 @@
           id: request.id, success: false, errorCode: "unsupportedAction",
           errorMessage: "Unsupported core action.")
       }
+    }
+
+    private static func database(_ request: WindowsCoreRequest) -> WindowsCoreResponse {
+      let store = PersistentStore()
+      switch request.action {
+      case "databaseSnapshot":
+        break
+      case "addProject":
+        let project = store.addProject(name: request.projectName ?? "")
+        return WindowsCoreResponse(
+          id: request.id, success: true, database: store.database, project: project)
+      case "deleteProject":
+        guard let id = uuid(request.projectID) else { return invalidRecordID(request.id) }
+        store.deleteProject(id: id)
+      case "updateProject":
+        guard let id = uuid(request.projectID),
+          var project = store.projects.first(where: { $0.id == id })
+        else { return invalidRecordID(request.id) }
+        if let name = request.projectName { project.name = name }
+        if let script = request.projectScript { project.script = script }
+        store.updateProject(project)
+      case "toggleFavorite":
+        guard let asset = request.asset else {
+          return WindowsCoreResponse(
+            id: request.id, success: false, errorCode: "missingAsset",
+            errorMessage: "Select an asset first.")
+        }
+        store.toggleFavorite(
+          asset: asset, projectID: uuid(request.projectID), segmentIndex: request.segmentIndex)
+      case "addHistory":
+        guard let query = nonempty(request.query) else { return missingQuery(request.id) }
+        let providers = Set((request.providerIDs ?? []).compactMap(ProviderID.init(rawValue:)))
+        store.addHistory(
+          SearchHistoryRecord(
+            originalQuery: query, keywords: request.keywords ?? [], providers: providers,
+            projectID: uuid(request.projectID), resultCount: max(0, request.resultCount ?? 0)))
+      case "deleteHistory":
+        guard let id = uuid(request.recordID) else { return invalidRecordID(request.id) }
+        store.deleteHistory(id: id)
+      case "clearHistory":
+        store.clearHistory()
+      case "addDownload":
+        guard let asset = request.asset, let path = nonempty(request.localPath) else {
+          return WindowsCoreResponse(
+            id: request.id, success: false, errorCode: "invalidDownloadRecord",
+            errorMessage: "The downloaded asset and local path are required.")
+        }
+        store.addDownload(
+          DownloadRecord(
+            asset: asset, fileURL: URL(fileURLWithPath: path),
+            projectID: uuid(request.projectID)))
+      case "deleteDownload":
+        guard let id = uuid(request.recordID) else { return invalidRecordID(request.id) }
+        store.deleteDownloadRecord(id: id)
+      default:
+        return WindowsCoreResponse(
+          id: request.id, success: false, errorCode: "unsupportedAction",
+          errorMessage: "Unsupported database action.")
+      }
+      return WindowsCoreResponse(id: request.id, success: true, database: store.database)
     }
 
     private static func search(_ request: WindowsCoreRequest) async -> WindowsCoreResponse {
@@ -291,6 +373,16 @@
     private static func nonempty(_ value: String?) -> String? {
       let clean = value?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
       return clean.isEmpty ? nil : clean
+    }
+
+    private static func uuid(_ value: String?) -> UUID? {
+      value.flatMap(UUID.init(uuidString:))
+    }
+
+    private static func invalidRecordID(_ id: String) -> WindowsCoreResponse {
+      WindowsCoreResponse(
+        id: id, success: false, errorCode: "invalidRecordID",
+        errorMessage: "The selected record is no longer available.")
     }
 
     private static func providerOrder(_ id: ProviderID) -> Int {

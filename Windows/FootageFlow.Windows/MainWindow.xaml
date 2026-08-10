@@ -1,0 +1,188 @@
+<Window x:Class="FootageFlow.Windows.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:models="clr-namespace:FootageFlow.Windows.Models"
+        Title="FootageFlow" Width="1380" Height="880" MinWidth="1080" MinHeight="700"
+        WindowStartupLocation="CenterScreen" Background="#FAFBFC"
+        Icon="Assets/FootageFlow.png">
+  <Window.Resources>
+    <BooleanToVisibilityConverter x:Key="BoolVisibility" />
+    <Style x:Key="NavButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+      <Setter Property="HorizontalContentAlignment" Value="Left" />
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="Margin" Value="10,2" />
+      <Setter Property="Padding" Value="14,10" />
+      <Setter Property="FontSize" Value="14" />
+    </Style>
+    <Style x:Key="SectionTitle" TargetType="TextBlock">
+      <Setter Property="FontSize" Value="24" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="Margin" Value="0,0,0,12" />
+    </Style>
+    <DataTemplate x:Key="AssetCard" DataType="{x:Type models:MediaAsset}">
+      <Border Width="292" Margin="7" Background="White" BorderBrush="#E1E5EA" BorderThickness="1" CornerRadius="9">
+        <Grid>
+          <Grid.RowDefinitions>
+            <RowDefinition Height="164" /><RowDefinition Height="Auto" />
+          </Grid.RowDefinitions>
+          <Border Background="#E9EDF2" CornerRadius="8,8,0,0" ClipToBounds="True">
+            <Image Source="{Binding ThumbnailURL}" Stretch="UniformToFill" />
+          </Border>
+          <StackPanel Grid.Row="1" Margin="12">
+            <TextBlock Text="{Binding Title}" FontWeight="SemiBold" FontSize="14" TextWrapping="Wrap" MaxHeight="42" />
+            <TextBlock Margin="0,7,0,0" Foreground="{StaticResource SubtleTextBrush}">
+              <Run Text="{Binding Provider}" /><Run Text="  ·  " /><Run Text="{Binding Resolution}" /><Run Text="  ·  " /><Run Text="{Binding DurationText}" />
+            </TextBlock>
+            <TextBlock Text="{Binding LicenseText}" Foreground="{StaticResource SubtleTextBrush}" TextTrimming="CharacterEllipsis" Margin="0,4,0,8" />
+            <WrapPanel>
+              <Button Content="Preview" Command="{Binding DataContext.PreviewCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" />
+              <Button Content="♡" ToolTip="Favorite" Command="{Binding DataContext.FavoriteCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" />
+              <Button Content="Download" Command="{Binding DataContext.DownloadCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" IsEnabled="{Binding Downloadable}" />
+              <Button Content="Source" Command="{Binding DataContext.OpenSourceCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" />
+            </WrapPanel>
+          </StackPanel>
+        </Grid>
+      </Border>
+    </DataTemplate>
+  </Window.Resources>
+
+  <Grid>
+    <Grid.RowDefinitions><RowDefinition Height="64" /><RowDefinition Height="*" /></Grid.RowDefinitions>
+    <Border Grid.Row="0" Background="White" BorderBrush="#E2E6EB" BorderThickness="0,0,0,1">
+      <Grid Margin="18,0">
+        <Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+          <Image Source="Assets/FootageFlow.png" Width="38" Height="38" Margin="0,0,10,0" />
+          <TextBlock Text="FootageFlow" FontSize="20" FontWeight="SemiBold" VerticalAlignment="Center" />
+        </StackPanel>
+        <Button Grid.Column="1" x:Name="LanguageButton" Content="{Binding LanguageButton}" Click="LanguageButton_Click" FontWeight="SemiBold" MinWidth="132" />
+      </Grid>
+    </Border>
+
+    <Grid Grid.Row="1">
+      <Grid.ColumnDefinitions><ColumnDefinition Width="226" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+      <Border Background="{StaticResource SidebarBrush}" BorderBrush="#E2E6EB" BorderThickness="0,0,1,0">
+        <StackPanel Margin="0,12">
+          <Button Style="{StaticResource NavButton}" Content="{Binding NavSearch}" Command="{Binding NavigateCommand}" CommandParameter="search" />
+          <Button Style="{StaticResource NavButton}" Content="{Binding NavScript}" Command="{Binding NavigateCommand}" CommandParameter="script" />
+          <Button Style="{StaticResource NavButton}" Content="{Binding NavProjects}" Command="{Binding NavigateCommand}" CommandParameter="projects" />
+          <Button Style="{StaticResource NavButton}" Content="{Binding NavFavorites}" Command="{Binding NavigateCommand}" CommandParameter="favorites" />
+          <Button Style="{StaticResource NavButton}" Content="{Binding NavDownloads}" Command="{Binding NavigateCommand}" CommandParameter="downloads" />
+          <Button Style="{StaticResource NavButton}" Content="{Binding NavHistory}" Command="{Binding NavigateCommand}" CommandParameter="history" />
+          <Separator Margin="14,10" />
+          <Button Style="{StaticResource NavButton}" Content="{Binding NavSettings}" Command="{Binding NavigateCommand}" CommandParameter="settings" />
+        </StackPanel>
+      </Border>
+
+      <Grid Grid.Column="1" Margin="24">
+        <Grid Visibility="{Binding IsSearchPage, Converter={StaticResource BoolVisibility}}">
+          <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions>
+          <StackPanel>
+            <TextBlock Text="{Binding NavSearch}" Style="{StaticResource SectionTitle}" />
+            <TextBlock Text="{Binding SearchTagline}" Foreground="{StaticResource SubtleTextBrush}" Margin="0,0,0,12" />
+          </StackPanel>
+          <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+            <TextBox Text="{Binding Query, UpdateSourceTrigger=PropertyChanged}" FontSize="17" MinHeight="46" ToolTip="{Binding SearchPlaceholder}" />
+            <Button Grid.Column="1" Style="{StaticResource PrimaryButton}" Content="{Binding SearchButtonText}" Command="{Binding SearchCommand}" MinWidth="132" />
+            <Button Grid.Column="2" Content="{Binding StopText}" Command="{Binding StopSearchCommand}" />
+          </Grid>
+          <StackPanel Grid.Row="2" Margin="0,12,0,6">
+            <WrapPanel>
+              <TextBlock Text="{Binding TypeTitle}" VerticalAlignment="Center" Margin="0,0,6,0" />
+              <ComboBox SelectedValue="{Binding MediaType}" SelectedValuePath="Tag" Width="110">
+                <ComboBoxItem Content="Video" Tag="video" /><ComboBoxItem Content="Image" Tag="image" /><ComboBoxItem Content="All" Tag="all" />
+              </ComboBox>
+              <TextBlock Text="{Binding OrientationTitle}" VerticalAlignment="Center" Margin="15,0,6,0" />
+              <ComboBox SelectedValue="{Binding Orientation}" SelectedValuePath="Tag" Width="125">
+                <ComboBoxItem Content="All" Tag="all" /><ComboBoxItem Content="Landscape" Tag="landscape" /><ComboBoxItem Content="Portrait" Tag="portrait" /><ComboBoxItem Content="Square" Tag="square" />
+              </ComboBox>
+              <TextBlock Text="{Binding ResolutionTitle}" VerticalAlignment="Center" Margin="15,0,6,0" />
+              <ComboBox SelectedValue="{Binding Resolution}" SelectedValuePath="Tag" Width="110">
+                <ComboBoxItem Content="All" Tag="all" /><ComboBoxItem Content="≥720p" Tag="hd720" /><ComboBoxItem Content="≥1080p" Tag="fullHD" /><ComboBoxItem Content="≥4K" Tag="uhd4K" />
+              </ComboBox>
+              <TextBlock Text="{Binding ProjectTitle}" VerticalAlignment="Center" Margin="15,0,6,0" />
+              <ComboBox ItemsSource="{Binding Projects}" SelectedItem="{Binding CurrentProject}" DisplayMemberPath="Name" Width="180" />
+            </WrapPanel>
+            <ItemsControl ItemsSource="{Binding Providers}" Margin="0,8,0,0">
+              <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate><CheckBox Content="{Binding DisplayName}" IsChecked="{Binding Enabled}" Margin="0,0,16,0" ToolTip="{Binding Status}" /></DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+          <StackPanel Grid.Row="3" Margin="0,4,0,8">
+            <TextBlock Text="{Binding KeywordsTitle}" FontWeight="SemiBold" />
+            <ItemsControl ItemsSource="{Binding SearchKeywords}">
+              <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate><DataTemplate><Border Background="#E8F2FF" CornerRadius="10" Padding="9,4" Margin="0,5,6,0"><TextBlock Text="{Binding Text}" /></Border></DataTemplate></ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <TextBlock Text="{Binding SearchStatus}" Margin="0,7,0,0" Foreground="{StaticResource SubtleTextBrush}" />
+          </StackPanel>
+          <ScrollViewer Grid.Row="4" VerticalScrollBarVisibility="Auto">
+            <ItemsControl ItemsSource="{Binding Results}" ItemTemplate="{StaticResource AssetCard}">
+              <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+            </ItemsControl>
+          </ScrollViewer>
+        </Grid>
+
+        <Grid Visibility="{Binding IsScriptPage, Converter={StaticResource BoolVisibility}}">
+          <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="220" /><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions>
+          <StackPanel><TextBlock Text="{Binding ScriptTitle}" Style="{StaticResource SectionTitle}" /><TextBlock Text="{Binding ScriptHelp}" Foreground="{StaticResource SubtleTextBrush}" TextWrapping="Wrap" /></StackPanel>
+          <TextBox Grid.Row="1" Text="{Binding ScriptText, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" VerticalScrollBarVisibility="Auto" TextWrapping="Wrap" Margin="0,14,0,8" />
+          <Button Grid.Row="2" Content="{Binding ScriptAnalyze}" Style="{StaticResource PrimaryButton}" Command="{Binding AnalyzeScriptCommand}" HorizontalAlignment="Left" />
+          <ListBox Grid.Row="3" ItemsSource="{Binding ScriptSegments}" Margin="0,12,0,0">
+            <ListBox.ItemTemplate><DataTemplate><Border Padding="12" BorderBrush="#E1E5EA" BorderThickness="0,0,0,1"><TextBlock Text="{Binding}" TextWrapping="Wrap" /></Border></DataTemplate></ListBox.ItemTemplate>
+          </ListBox>
+        </Grid>
+
+        <Grid Visibility="{Binding IsProjectsPage, Converter={StaticResource BoolVisibility}}">
+          <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions>
+          <TextBlock Text="{Binding ProjectsTitle}" Style="{StaticResource SectionTitle}" />
+          <StackPanel Grid.Row="1" Orientation="Horizontal"><TextBox Width="320" Text="{Binding NewProjectName, UpdateSourceTrigger=PropertyChanged}" /><Button Content="{Binding NewProjectTitle}" Style="{StaticResource PrimaryButton}" Command="{Binding CreateProjectCommand}" /></StackPanel>
+          <ListBox Grid.Row="2" ItemsSource="{Binding Projects}" SelectedItem="{Binding CurrentProject}" Margin="0,14,0,0">
+            <ListBox.ItemTemplate><DataTemplate><Grid Margin="8"><Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><StackPanel><TextBlock Text="{Binding Name}" FontWeight="SemiBold" /><TextBlock Text="{Binding UpdatedAt}" Foreground="{StaticResource SubtleTextBrush}" /></StackPanel><Button Grid.Column="1" Content="Delete" Command="{Binding DataContext.DeleteProjectCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" /></Grid></DataTemplate></ListBox.ItemTemplate>
+          </ListBox>
+        </Grid>
+
+        <Grid Visibility="{Binding IsFavoritesPage, Converter={StaticResource BoolVisibility}}">
+          <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions>
+          <TextBlock Text="{Binding FavoritesTitle}" Style="{StaticResource SectionTitle}" />
+          <ScrollViewer Grid.Row="1"><ItemsControl ItemsSource="{Binding Favorites}"><ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel><ItemsControl.ItemTemplate><DataTemplate><ContentControl Content="{Binding Asset}" ContentTemplate="{StaticResource AssetCard}" /></DataTemplate></ItemsControl.ItemTemplate></ItemsControl></ScrollViewer>
+        </Grid>
+
+        <Grid Visibility="{Binding IsDownloadsPage, Converter={StaticResource BoolVisibility}}">
+          <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions>
+          <TextBlock Text="{Binding DownloadsTitle}" Style="{StaticResource SectionTitle}" />
+          <ScrollViewer Grid.Row="1"><StackPanel>
+            <ItemsControl ItemsSource="{Binding Downloads.Items}"><ItemsControl.ItemTemplate><DataTemplate><Border Background="White" BorderBrush="#E1E5EA" BorderThickness="1" CornerRadius="7" Padding="12" Margin="0,0,0,8"><Grid><Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition Width="170" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><StackPanel><TextBlock Text="{Binding Asset.Title}" FontWeight="SemiBold" /><TextBlock Text="{Binding Status}" Foreground="{StaticResource SubtleTextBrush}" /><TextBlock Text="{Binding ErrorMessage}" Foreground="#B42318" TextWrapping="Wrap" /></StackPanel><StackPanel Grid.Column="1"><ProgressBar Value="{Binding Progress}" Maximum="100" Height="8" Margin="8" /><TextBlock Text="{Binding Speed}" HorizontalAlignment="Center" /></StackPanel><WrapPanel Grid.Column="2"><Button Content="Cancel" Command="{Binding DataContext.CancelDownloadCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" /><Button Content="Retry" Command="{Binding DataContext.RetryDownloadCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" /><Button Content="Open Folder" Command="{Binding DataContext.RevealDownloadCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" /></WrapPanel></Grid></Border></DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
+            <Separator Margin="0,8" />
+            <ItemsControl ItemsSource="{Binding DownloadRecords}"><ItemsControl.ItemTemplate><DataTemplate><Grid Margin="8"><Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><StackPanel><TextBlock Text="{Binding FileName}" FontWeight="SemiBold" /><TextBlock Text="{Binding ProviderRaw}" Foreground="{StaticResource SubtleTextBrush}" /></StackPanel><WrapPanel Grid.Column="1"><Button Content="Open" Command="{Binding DataContext.OpenRecordCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" /><Button Content="Open Folder" Command="{Binding DataContext.RevealRecordCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" /></WrapPanel></Grid></DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
+          </StackPanel></ScrollViewer>
+        </Grid>
+
+        <Grid Visibility="{Binding IsHistoryPage, Converter={StaticResource BoolVisibility}}">
+          <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions>
+          <TextBlock Text="{Binding HistoryTitle}" Style="{StaticResource SectionTitle}" /><Button Grid.Row="1" Content="Clear All" Command="{Binding ClearHistoryCommand}" HorizontalAlignment="Right" />
+          <ListBox Grid.Row="2" ItemsSource="{Binding History}"><ListBox.ItemTemplate><DataTemplate><Grid Margin="8"><Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><StackPanel><TextBlock Text="{Binding OriginalQuery}" FontWeight="SemiBold" /><TextBlock Text="{Binding SearchedAt}" Foreground="{StaticResource SubtleTextBrush}" /></StackPanel><Button Grid.Column="1" Content="Search Again" Command="{Binding DataContext.SearchHistoryCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" /></Grid></DataTemplate></ListBox.ItemTemplate></ListBox>
+        </Grid>
+
+        <ScrollViewer Visibility="{Binding IsSettingsPage, Converter={StaticResource BoolVisibility}}" VerticalScrollBarVisibility="Auto">
+          <StackPanel>
+            <TextBlock Text="{Binding SettingsTitle}" Style="{StaticResource SectionTitle}" />
+            <TextBlock Text="{Binding SourcesTitle}" FontSize="18" FontWeight="SemiBold" />
+            <TextBlock Text="{Binding ApiExplanation}" TextWrapping="Wrap" Foreground="{StaticResource SubtleTextBrush}" Margin="0,7,0,14" MaxWidth="850" HorizontalAlignment="Left" />
+            <ItemsControl ItemsSource="{Binding Providers}">
+              <ItemsControl.ItemTemplate><DataTemplate><Border Background="White" BorderBrush="#E1E5EA" BorderThickness="1" CornerRadius="8" Padding="14" Margin="0,0,0,10"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="180" /><ColumnDefinition Width="180" /><ColumnDefinition /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><StackPanel><TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" FontSize="15" /><TextBlock Text="{Binding Mode}" Foreground="{StaticResource SubtleTextBrush}" /></StackPanel><TextBlock Grid.Column="1" Text="{Binding Status}" VerticalAlignment="Center" TextWrapping="Wrap" /><PasswordBox Grid.Column="2" x:Name="ApiKeyBox" Margin="8,0" Padding="9" IsEnabled="{Binding SupportsApiKey}" ToolTip="API Key (stored in Windows Credential Manager)" /><WrapPanel Grid.Column="3"><Button Content="Save" Tag="{Binding Id}" Click="SaveApiKey_Click" IsEnabled="{Binding SupportsApiKey}" /><Button Content="Remove" Tag="{Binding Id}" Click="RemoveApiKey_Click" IsEnabled="{Binding SupportsApiKey}" /><Button Content="Test" Tag="{Binding Id}" Click="TestProvider_Click" /></WrapPanel></Grid></Border></DataTemplate></ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <TextBlock Text="Download folder" FontWeight="SemiBold" FontSize="16" Margin="0,14,0,6" />
+            <DockPanel><Button DockPanel.Dock="Right" Content="Choose…" Click="ChooseDownloadFolder_Click" /><TextBox Text="{Binding DownloadRoot}" IsReadOnly="True" /></DockPanel>
+            <TextBlock Text="{Binding PrivacyTitle}" FontWeight="SemiBold" FontSize="16" Margin="0,20,0,6" />
+            <TextBlock Text="{Binding PrivacyBody}" TextWrapping="Wrap" Foreground="{StaticResource SubtleTextBrush}" MaxWidth="850" HorizontalAlignment="Left" />
+          </StackPanel>
+        </ScrollViewer>
+      </Grid>
+    </Grid>
+  </Grid>
+</Window>

@@ -1,0 +1,16 @@
+<Window x:Class="FootageFlow.Windows.PreviewWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Width="900" Height="620" MinWidth="640" MinHeight="440"
+        WindowStartupLocation="CenterOwner" Background="#111827" Icon="Assets/FootageFlow.png">
+  <Grid>
+    <Grid.RowDefinitions><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+    <MediaElement x:Name="Player" LoadedBehavior="Manual" UnloadedBehavior="Stop" Stretch="Uniform" MediaOpened="Player_MediaOpened" MediaEnded="Player_MediaEnded" />
+    <Image x:Name="ImagePreview" Stretch="Uniform" Visibility="Collapsed" />
+    <StackPanel Grid.Row="1" Orientation="Horizontal" Background="#E6111827" HorizontalAlignment="Stretch" Margin="0" >
+      <Button Content="▶ Play" Click="Play_Click" /><Button Content="⏸ Pause" Click="Pause_Click" /><Button x:Name="MuteButton" Content="🔊 Mute" Click="Mute_Click" />
+      <Slider x:Name="PositionSlider" Width="430" Minimum="0" Margin="12,0" ValueChanged="PositionSlider_ValueChanged" />
+      <Button Content="Open Source" Click="OpenSource_Click" />
+    </StackPanel>
+  </Grid>
+</Window>

@@ -9,6 +9,8 @@ DerivedData/
 *.dSYM/
 *.xcuserstate
 xcuserdata/
+bin/
+obj/
 
 # Local build and verification artifacts
 dist/
@@ -40,4 +42,3 @@ Secrets/
 .idea/
 .vscode/
 *~
-
