@@ -88,7 +88,7 @@ if (OperatingSystem.IsWindows())
         {
             var task = queue.Enqueue(media, null, "Test Project");
             await WaitForStateAsync(task, "completed", TimeSpan.FromSeconds(20));
-            Check(task.State == "completed", "Download queue completion");
+            Check(task.State == "completed", $"Download queue completion ({task.ErrorCode ?? "no-code"})");
             Check(handler.Attempts == 2, "Bounded automatic download retry");
             Check(task.LocalPath is not null && File.Exists(task.LocalPath), "Downloaded media exists");
             if (task.LocalPath is { } downloaded)

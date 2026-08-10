@@ -9,10 +9,12 @@ if (-not $OutputDirectory) { $OutputDirectory = Join-Path $projectRoot "dist\win
 $stage = Join-Path $projectRoot ".build\windows-stage"
 $coreDirectory = Join-Path $stage "Core"
 $toolsDirectory = Join-Path $stage "Tools"
+$licensesDirectory = Join-Path $stage "Licenses"
 
 if (Test-Path $stage) { Remove-Item $stage -Recurse -Force }
 New-Item -ItemType Directory -Path $coreDirectory -Force | Out-Null
 New-Item -ItemType Directory -Path $toolsDirectory -Force | Out-Null
+New-Item -ItemType Directory -Path $licensesDirectory -Force | Out-Null
 New-Item -ItemType Directory -Path $OutputDirectory -Force | Out-Null
 
 . (Join-Path $PSScriptRoot "enter-dev-shell.ps1")
@@ -35,6 +37,21 @@ try {
     Copy-Item $ytDlp (Join-Path $toolsDirectory "yt-dlp.exe") -Force
     Copy-Item "LICENSE" (Join-Path $stage "LICENSE.txt")
     Copy-Item "THIRD_PARTY_NOTICES.md" (Join-Path $stage "THIRD_PARTY_NOTICES.md")
+
+    $dotnetRoot = Split-Path (Get-Command dotnet).Source
+    $dotnetLicenseDirectory = Join-Path $licensesDirectory "dotnet"
+    New-Item -ItemType Directory -Path $dotnetLicenseDirectory -Force | Out-Null
+    Copy-Item (Join-Path $dotnetRoot "LICENSE.txt") (Join-Path $dotnetLicenseDirectory "LICENSE.txt")
+    Copy-Item (Join-Path $dotnetRoot "ThirdPartyNotices.txt") (Join-Path $dotnetLicenseDirectory "ThirdPartyNotices.txt")
+
+    $swiftBin = Split-Path (Get-Command swift).Source
+    $swiftToolchainRoot = (Resolve-Path (Join-Path $swiftBin "..\..")).Path
+    $swiftLicense = Get-ChildItem $swiftToolchainRoot -Recurse -File -Include "LICENSE.txt", "LICENSE" |
+        Select-Object -First 1
+    if (-not $swiftLicense) { throw "The official Swift runtime license file was not found." }
+    $swiftLicenseDirectory = Join-Path $licensesDirectory "swift"
+    New-Item -ItemType Directory -Path $swiftLicenseDirectory -Force | Out-Null
+    Copy-Item $swiftLicense.FullName (Join-Path $swiftLicenseDirectory "LICENSE.txt")
 
     $archive = Join-Path $OutputDirectory "FootageFlow-$Version-Windows-x64-portable.zip"
     if (Test-Path $archive) { Remove-Item $archive -Force }

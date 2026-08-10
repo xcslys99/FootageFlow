@@ -4,7 +4,7 @@ FootageFlow uses Apple system frameworks and the Swift standard libraries suppli
 
 The unreleased cross-platform branch bundles the platform executable from [yt-dlp 2026.07.04](https://github.com/yt-dlp/yt-dlp/releases/tag/2026.07.04) for best-effort YouTube interoperability. yt-dlp is distributed under [The Unlicense](https://github.com/yt-dlp/yt-dlp/blob/master/LICENSE). Each build downloads the fixed platform release and verifies its SHA-256 before packaging. FootageFlow does not bundle FFmpeg.
 
-The Windows package contains the Swift runtime libraries from the official Swift toolchain. Swift is distributed under the [Apache License 2.0 with Runtime Library Exception](https://www.swift.org/LICENSE.txt). The self-contained Windows interface includes the .NET runtime and WPF, distributed by Microsoft under the [MIT License](https://github.com/dotnet/runtime/blob/main/LICENSE.TXT) and their accompanying third-party notices.
+The Windows package contains the Swift runtime libraries from the official Swift toolchain. Swift is distributed under the [Apache License 2.0 with Runtime Library Exception](https://www.swift.org/LICENSE.txt). The self-contained Windows interface includes .NET 10.0.10 and WPF, distributed by Microsoft under the [MIT License](https://github.com/dotnet/runtime/blob/main/LICENSE.TXT) and their accompanying third-party notices. Copies of the official Swift and .NET license files are included under the packaged `Licenses` directory.
 
 The app interoperates with independent services through their public APIs:
 

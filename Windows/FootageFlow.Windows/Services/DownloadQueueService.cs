@@ -51,6 +51,7 @@ public sealed class DownloadQueueService
         if (!item.CanRetry) return;
         item.ResetCancellation();
         item.ErrorMessage = null;
+        item.ErrorCode = null;
         item.Progress = 0;
         SetState(item, "waiting");
         _ = RunAsync(item);
@@ -119,6 +120,7 @@ public sealed class DownloadQueueService
         catch (Exception error)
         {
             SetState(item, "failed");
+            item.ErrorCode = ErrorCode(error);
             item.ErrorMessage = FriendlyMessage(error);
             item.Speed = "";
         }
@@ -139,20 +141,22 @@ public sealed class DownloadQueueService
             response.EnsureSuccessStatusCode();
             var total = response.Content.Headers.ContentLength;
             await using var input = await response.Content.ReadAsStreamAsync(cancellationToken);
-            await using var output = new FileStream(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None, 131072, true);
-            var buffer = new byte[131072];
-            long received = 0;
-            var watch = Stopwatch.StartNew();
-            int read;
-            while ((read = await input.ReadAsync(buffer, cancellationToken)) > 0)
+            await using (var output = new FileStream(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None, 131072, true))
             {
-                await output.WriteAsync(buffer.AsMemory(0, read), cancellationToken);
-                received += read;
-                if (total is > 0) item.Progress = Math.Min(100, received * 100d / total.Value);
-                if (watch.Elapsed.TotalSeconds > 0.5)
-                    item.Speed = $"{received / Math.Max(1, watch.Elapsed.TotalSeconds) / 1_048_576:0.0} MB/s";
+                var buffer = new byte[131072];
+                long received = 0;
+                var watch = Stopwatch.StartNew();
+                int read;
+                while ((read = await input.ReadAsync(buffer, cancellationToken)) > 0)
+                {
+                    await output.WriteAsync(buffer.AsMemory(0, read), cancellationToken);
+                    received += read;
+                    if (total is > 0) item.Progress = Math.Min(100, received * 100d / total.Value);
+                    if (watch.Elapsed.TotalSeconds > 0.5)
+                        item.Speed = $"{received / Math.Max(1, watch.Elapsed.TotalSeconds) / 1_048_576:0.0} MB/s";
+                }
+                await output.FlushAsync(cancellationToken);
             }
-            await output.FlushAsync(cancellationToken);
             File.Move(temporary, destination);
             item.Progress = 100;
         }
@@ -204,6 +208,14 @@ public sealed class DownloadQueueService
         CoreHostException core => LocalizedCoreError(core),
         InvalidOperationException => error.Message,
         _ => _localization.Text("download.failed")
+    };
+
+    private static string ErrorCode(Exception error) => error switch
+    {
+        HttpRequestException { StatusCode: var status } => $"http-{(int?)status}",
+        ExternalToolException tool => tool.Code,
+        CoreHostException core => core.Code,
+        _ => error.GetType().Name
     };
 
     private string LocalizedToolError(ExternalToolException error) => error.Code switch
