@@ -12,9 +12,17 @@ struct InternetArchiveProvider: MediaProvider {
       search: .supported, preview: .supported, metadata: .supported, license: .bestEffort,
       download: .bestEffort, supportsVideo: true, supportsImage: true,
       supportsAudio: true,
+      pagination: .supported,
       accessMethods: [.publicAPI, .publicInterface]))
 
   func search(_ request: SearchRequest) async throws -> [MediaAsset] {
+    try await searchPage(request, continuation: nil).assets
+  }
+
+  func searchPage(
+    _ request: SearchRequest, continuation: ProviderContinuation?
+  ) async throws -> ProviderPage {
+    let page = max(1, continuation?.page ?? 1)
     let mediaClause: String
     switch request.mediaType {
     case .video: mediaClause = "mediatype:movies"
@@ -34,7 +42,7 @@ struct InternetArchiveProvider: MediaProvider {
       URLQueryItem(name: "fl[]", value: "licenseurl"),
       URLQueryItem(name: "fl[]", value: "rights"),
       URLQueryItem(name: "rows", value: String(min(request.pageSize, 12))),
-      URLQueryItem(name: "page", value: "1"),
+      URLQueryItem(name: "page", value: String(page)),
       URLQueryItem(name: "output", value: "json"),
     ]
     items.append(URLQueryItem(name: "sort[]", value: "downloads desc"))
@@ -64,7 +72,14 @@ struct InternetArchiveProvider: MediaProvider {
       }
       assets += values
     }
-    return assets.sorted { $0.relevanceScore > $1.relevanceScore }
+    let sorted = assets.sorted { $0.relevanceScore > $1.relevanceScore }
+    let total = int(response["numFound"])
+    let rows = min(request.pageSize, 12)
+    let hasMoreByTotal = total.map { page * rows < $0 } ?? (docs.count == rows)
+    let hasMore = !docs.isEmpty && hasMoreByTotal
+    return ProviderPage(
+      assets: sorted, continuation: hasMore ? .nextPage(page + 1) : nil,
+      totalResults: total)
   }
 
   private func details(identifier: String, doc: [String: Any], request: SearchRequest, rank: Int)

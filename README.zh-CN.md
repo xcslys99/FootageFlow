@@ -2,15 +2,17 @@
 
 [English](README.md) · [简体中文](README.zh-CN.md)
 
-**一次搜索 9 个素材来源。支持 macOS + Windows。免费开源。**
+**一次搜索 15 个素材来源，也可直接粘贴公开媒体链接。支持 macOS + Windows。免费开源。**
 
 FootageFlow 是一款注重隐私的桌面素材发现、下载与管理软件，面向历史、国家、财经、人物、科普、纪录片和短视频创作者，可搜索真实视频、图片和音频资料。
 
-FootageFlow v0.4.0 正式支持 **macOS 15+ Apple Silicon** 和 **Windows 11 x64**。两个版本共用 Provider 行为、统一 Metadata/Rights、高级筛选、署名文本、关键词、来源 Sidecar 和项目持久化核心。
+FootageFlow v0.5.0 正式支持 **macOS 15+ Apple Silicon** 和 **Windows 11 x64**。两个版本共用 Provider、分页、统一 Metadata/Rights、高级筛选、署名文本、关键词、来源 Sidecar 和项目持久化核心。
 
 ## 已实现功能
 
-- 并发、逐来源搜索 Pexels、Pixabay、Wikimedia Commons、Internet Archive、YouTube、NASA、Library of Congress、National Archives 和 Europeana
+- 并发搜索 15 个来源，包括 Pexels、Pixabay、Wikimedia Commons、Internet Archive、YouTube、NASA、Library of Congress、National Archives、Europeana、PeerTube/SepiaSearch、Coverr 和 Vimeo
+- Provider 独立分页和“加载更多”；追加结果不会清空已有列表，下一页失败也不会丢失已加载素材
+- “链接下载”可一次解析一个或多个公开媒体链接，显示实际可用清晰度/字幕，并将所选任务送入原有下载管理器
 - 按来源、素材类型、年份、时长、分辨率、Rights 和直接下载能力进行高级筛选
 - 多选、选择当前可见结果、批量进入原有三并发下载队列、加入项目、重试失败任务、复制来源信息
 - 每项均可复制来源或复制署名信息，内容只使用 Provider 实际提供的元数据
@@ -18,6 +20,7 @@ FootageFlow v0.4.0 正式支持 **macOS 15+ Apple Silicon** 和 **Windows 11 x64
 - 每个成功下载文件自动生成同名 `.source.txt` 和 `.source.json`
 - 支持 English、简体中文、繁體中文、西班牙语、巴西葡萄牙语、日语、韩语、德语、法语和俄语；首次启动仍默认 English
 - 搜索栏下方明确提示 National Archives、Europeana 和 YouTube 配置官方免费 API 后效果更好，并可直接进入素材来源设置
+- 明显的“反馈与社区”页面可进入 GitHub 报告问题、提出建议、提问并查看版本
 - 可选 API Key 只保存在 macOS Keychain 或 Windows Credential Manager
 - 不含分析、广告、跟踪、云端账号、付费大模型，也不依赖 OpenAI API、Codex 或终端脚本
 
@@ -25,27 +28,25 @@ FootageFlow v0.4.0 正式支持 **macOS 15+ Apple Silicon** 和 **Windows 11 x64
 
 ## 界面截图
 
-以下截图来自 macOS 版 FootageFlow v0.4.0，展示当前 9 来源搜索、可选 API 建议、高级筛选、批量操作、Provider 模式和 10 种语言界面。Windows 版采用相同产品结构，并使用符合 Windows 习惯的原生控件。
+以下截图来自 macOS 版 FootageFlow。Windows 版采用相同产品结构，并使用符合 Windows 习惯的原生控件。
 
-![FootageFlow v0.4.0 九来源搜索与可选 API 建议](docs/images/main-search.png)
+![FootageFlow v0.5.0 真实 15 来源搜索、Provider 状态与加载更多](docs/images/main-search.png)
 
-![FootageFlow v0.4.0 高级筛选](docs/images/advanced-filters.png)
+![FootageFlow v0.5.0 链接下载器解析公开 YouTube 和 X 链接](docs/images/link-downloader.png)
 
-![FootageFlow v0.4.0 多选和批量下载](docs/images/multi-select-batch-download.png)
-
-![FootageFlow v0.4.0 Provider 模式与 10 种语言设置](docs/images/provider-settings.png)
+![FootageFlow v0.5.0 Provider 模式与 10 种语言设置](docs/images/provider-settings.png)
 
 ## 在 macOS 安装
 
-1. 从 Releases 下载 `FootageFlow-0.4.0-macOS-arm64.dmg`。
+1. 从 Releases 下载 `FootageFlow-0.5.0-macOS-arm64.dmg`。
 2. 打开 DMG，把 FootageFlow 拖入“应用程序”。
-3. 打开 FootageFlow。v0.4.0 使用 Ad Hoc 签名，尚未公证；如果首次启动被系统拦截，请前往“系统设置 → 隐私与安全性 → 仍要打开”。
+3. 打开 FootageFlow。v0.5.0 使用 Ad Hoc 签名，尚未公证；如果首次启动被系统拦截，请前往“系统设置 → 隐私与安全性 → 仍要打开”。
 
 日常使用不需要打开终端。
 
 ## 在 Windows 安装
 
-1. 在 Windows 11 x64 电脑上下载 `FootageFlow-Setup-0.4.0-Windows-x64.exe`。
+1. 在 Windows 11 x64 电脑上下载 `FootageFlow-Setup-0.5.0-Windows-x64.exe`。
 2. 使用同时提供的 `.sha256` 文件核对安装包，然后双击安装。
 3. 完成安装向导，从“开始”菜单打开 FootageFlow。
 
@@ -58,6 +59,7 @@ FootageFlow v0.4.0 正式支持 **macOS 15+ Apple Silicon** 和 **Windows 11 x64
 3. 勾选结果后，可批量下载、加入现有/新项目或复制来源信息。
 4. 发布前使用“复制署名信息”，并核对原始来源页。
 5. National Archives、Europeana 和 YouTube 接入官方免费 API 后搜索效果更好；如需配置，请进入“设置 → 素材来源”。
+6. 如需从公开媒体页面下载，进入“链接下载”，粘贴一个或多个 URL，选择实际可用格式后点击“下载所选”。
 
 macOS 默认下载目录为 `~/Movies/FootageFlow/<项目名>/`，Windows 默认为 `%USERPROFILE%\Videos\FootageFlow\<项目名>\`，均可在设置中修改。删除数据库记录不会删除已经下载的素材文件。
 
@@ -76,8 +78,31 @@ FootageFlow 不要求所有素材来源采用相同的接入方式。部分平�
 | [Library of Congress](https://www.loc.gov/apis/) | 官方公开 JSON API | 无需 Key | 来源给出且未限制的资源 | Rights Advisory/Access 字段 |
 | [National Archives](https://www.archives.gov/research/catalog/help/api) | 用户 Key + Catalog API | 受限：打开官方搜索 | 来源给出 Digital Object 时可下载 | 来源限制/Rights 字段 |
 | [Europeana](https://europeana.atlassian.net/wiki/spaces/EF/pages/2462351393/Accessing+the+APIs) | 用户 Key + Search API | 受限：打开官方搜索 | 来源给出直接媒体时可下载 | 来源 `edmRights`/rights |
+| [PeerTube / SepiaSearch](https://docs.joinpeertube.org/api-rest-reference.html) | 公开 SepiaSearch API | 无需 Key | 仅发现 | 来源明确提供的单项 License |
+| [Videvo](https://www.videvo.net/) | 受限发现 | 打开官方搜索 | 仅打开原始页面 | 逐项核对原始页面 |
+| [Videezy](https://www.videezy.com/) | 受限发现 | 打开官方搜索 | 仅打开原始页面 | 免费素材可能要求署名，逐项核对 |
+| [Mixkit](https://mixkit.co/) | 受限发现 | 打开官方搜索 | 仅打开原始页面 | 免费/受限授权不同，逐项核对 |
+| [Coverr](https://api.coverr.co/docs) | 用户 Key + 官方 API | 受限：打开官方搜索 | API 提供媒体地址时可下载 | 保留 Coverr API/License 与署名信息 |
+| [Vimeo](https://developer.vimeo.com/api/reference) | 用户 Token + 官方 API | 受限：打开官方搜索 | 默认仅发现 | 仅显示来源明确提供的 License |
 
 API Key 是开发接口凭据，不等同于平台登录账号。Key 只留在本机、界面默认隐藏，可在“设置 → 素材来源”中添加、替换、测试或删除。Key 不会进入普通设置、日志、源码、Git、Telemetry 或请求 URL。
+
+## 链接下载
+
+进入“链接下载”，粘贴一个或多个公开媒体页面 URL，然后点击“解析”。FootageFlow 使用内置、隔离用户配置的 yt-dlp 适配器读取来源实际提供的元数据、渐进式清晰度、纯音频流和字幕。YouTube、X/Twitter、Vimeo 及内置工具支持的其他公开网站可能可用，但不承诺任何网站或具体链接 100% 可下载。
+
+所选任务全部进入搜索下载共用的 Download Manager，继续支持进度、速度、取消、重试、打开文件夹、下载记录和来源 Sidecar。FootageFlow 不读取浏览器 Cookie、不绕过 DRM、不绕过登录/私人视频权限，也不破解付费或会员内容；同时拒绝包含内嵌凭据或敏感查询参数的链接，并阻止本机与私有网络地址。无法访问时请使用“打开原始页面”。
+
+下载可用性取决于来源网站、具体媒体、访问权限以及平台变化。用户应遵守来源网站条款、版权规则及适用法律。
+
+## 反馈与社区
+
+- Bug → [GitHub Issues](https://github.com/xcslys99/FootageFlow/issues/new?template=bug_report.yml)
+- 功能建议 → [GitHub Discussions](https://github.com/xcslys99/FootageFlow/discussions/categories/ideas)
+- 提问 → [GitHub Discussions Q&A](https://github.com/xcslys99/FootageFlow/discussions/categories/q-a)
+- 版本下载 → [GitHub Releases](https://github.com/xcslys99/FootageFlow/releases)
+
+应用内链接只预填 FootageFlow 版本、平台、系统版本和界面语言，不会附带凭据、本地路径、历史记录、下载记录或项目内容。
 
 ## Rights 与来源安全
 

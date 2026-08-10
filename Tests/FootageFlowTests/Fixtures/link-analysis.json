@@ -1,0 +1,17 @@
+{
+  "id": "link-fixture",
+  "title": "Public Link Fixture",
+  "webpage_url": "https://www.youtube.com/watch?v=link-fixture",
+  "extractor_key": "Youtube",
+  "channel": "Fixture Channel",
+  "duration": 61,
+  "thumbnail": "https://i.ytimg.com/vi/link-fixture/hqdefault.jpg",
+  "formats": [
+    { "format_id": "18", "ext": "mp4", "width": 640, "height": 360, "fps": 30, "vcodec": "avc1", "acodec": "mp4a", "filesize": 1000 },
+    { "format_id": "22", "ext": "mp4", "width": 1280, "height": 720, "fps": 30, "vcodec": "avc1", "acodec": "mp4a", "filesize_approx": 2000 },
+    { "format_id": "140", "ext": "m4a", "vcodec": "none", "acodec": "mp4a", "filesize": 500 },
+    { "format_id": "drm-1080", "ext": "mp4", "width": 1920, "height": 1080, "vcodec": "avc1", "acodec": "mp4a", "has_drm": true }
+  ],
+  "subtitles": { "en": [{ "url": "https://example.com/en.vtt", "ext": "vtt" }] },
+  "automatic_captions": { "zh-Hans": [{ "url": "https://example.com/zh.vtt", "ext": "vtt" }] }
+}

@@ -81,10 +81,22 @@ final class DownloadManager: NSObject, ObservableObject, URLSessionDownloadDeleg
   @MainActor func configure(store: DataStore) { self.store = store }
 
   @MainActor
-  func start(asset: MediaAsset, projectID: UUID?, projectName: String?, segmentIndex: Int? = nil) {
+  func start(
+    asset: MediaAsset, projectID: UUID?, projectName: String?, segmentIndex: Int? = nil,
+    destinationRoot: URL? = nil
+  ) {
     if let current = states[asset.stableID],
       current.status == .waiting || current.status == .downloading
     {
+      return
+    }
+    if let record = store?.downloads.first(where: {
+      $0.stableAssetID == asset.stableID && FileManager.default.fileExists(atPath: $0.localPath)
+    }) {
+      let existing = URL(fileURLWithPath: record.localPath)
+      states[asset.stableID] = progress(
+        asset: asset, projectID: projectID, projectName: projectName, destination: existing,
+        value: 1, status: .completed, detailKey: "download.duplicate", localURL: existing)
       return
     }
     guard asset.downloadable, let url = try? URLValidator.remote(asset.downloadURL) else {
@@ -93,7 +105,8 @@ final class DownloadManager: NSObject, ObservableObject, URLSessionDownloadDeleg
         status: .failed, detailKey: "download.notAvailable")
       return
     }
-    let directory = DownloadPathSafety.projectDirectory(projectName: projectName)
+    let directory = DownloadPathSafety.projectDirectory(
+      projectName: projectName, root: destinationRoot ?? AppSettings.downloadRootURL)
     do {
       try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
     } catch {
@@ -244,7 +257,16 @@ final class DownloadManager: NSObject, ObservableObject, URLSessionDownloadDeleg
       guard let self else { return }
       do {
         let savedURL = try await YTDLPService().download(
-          sourceURL: sourceURL, directory: directory, fileStem: stem)
+          sourceURL: sourceURL, directory: directory, fileStem: stem,
+          options: YTDLPDownloadOptions(asset: context.asset),
+          progress: { [weak self] update in
+            Task { @MainActor [weak self] in
+              guard let self else { return }
+              self.states[context.asset.stableID] = self.progress(
+                context: context, value: update.fraction, status: .downloading,
+                speed: update.bytesPerSecond)
+            }
+          })
         do {
           try SourceSidecar.write(
             asset: context.asset, mediaURL: savedURL, projectName: context.projectName,
@@ -280,7 +302,7 @@ final class DownloadManager: NSObject, ObservableObject, URLSessionDownloadDeleg
         context: context, status: .failed, detailKey: downloadDetailKey(for: error))
       Task {
         await AppLogger.shared.write(
-          provider: .youtube, requestType: "yt-dlp download", error: error)
+          provider: context.asset.provider, requestType: "yt-dlp download", error: error)
       }
     }
     startNextExternal()
@@ -300,6 +322,7 @@ final class DownloadManager: NSObject, ObservableObject, URLSessionDownloadDeleg
     case .regionalRestriction: "download.regionalRestriction"
     case .temporarilyBlocked: "download.accessRestricted"
     case .externalToolUnavailable: "download.ytDLPUnavailable"
+    case .unsupported: "download.notAvailable"
     default: "download.failed"
     }
   }

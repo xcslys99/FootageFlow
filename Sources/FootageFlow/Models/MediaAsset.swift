@@ -3,6 +3,8 @@ import Foundation
 enum ProviderID: String, Codable, CaseIterable, Identifiable, Sendable {
   case pexels, pixabay, wikimedia, internetArchive, youtube
   case nasa, libraryOfCongress, nationalArchives, europeana
+  case peertube, videvo, videezy, mixkit, coverr, vimeo
+  case linkDownloader
 
   var id: String { rawValue }
   var displayName: String {
@@ -16,12 +18,22 @@ enum ProviderID: String, Codable, CaseIterable, Identifiable, Sendable {
     case .libraryOfCongress: "Library of Congress"
     case .nationalArchives: "National Archives"
     case .europeana: "Europeana"
+    case .peertube: "PeerTube / SepiaSearch"
+    case .videvo: "Videvo"
+    case .videezy: "Videezy"
+    case .mixkit: "Mixkit"
+    case .coverr: "Coverr"
+    case .vimeo: "Vimeo"
+    case .linkDownloader: "Link Downloader"
     }
   }
   var supportsAPIKey: Bool {
-    [.pexels, .pixabay, .youtube, .nationalArchives, .europeana].contains(self)
+    [.pexels, .pixabay, .youtube, .nationalArchives, .europeana, .coverr, .vimeo].contains(self)
   }
   var requiresAPIKey: Bool { [.nationalArchives, .europeana].contains(self) }
+
+  /// Providers shown by aggregated search. Link Downloader creates assets but is not a search source.
+  static var searchCases: [ProviderID] { allCases.filter { $0 != .linkDownloader } }
 }
 
 enum MediaType: String, Codable, CaseIterable, Identifiable, Sendable {
@@ -182,6 +194,10 @@ struct MediaAsset: Identifiable, Codable, Hashable, Sendable {
   var downloadAvailability: DownloadAvailability? = nil
 
   var stableID: String { "\(provider.rawValue):\(id)" }
+  var sourceDisplayName: String {
+    originalMetadata["sourceName"]?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
+      ?? provider.displayName
+  }
   var effectiveDownloadStrategy: AssetDownloadStrategy { downloadStrategy ?? .directURL }
   var effectiveDownloadAvailability: DownloadAvailability {
     downloadAvailability ?? (downloadable && downloadURL != nil ? .direct : .unavailable)

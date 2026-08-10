@@ -8,6 +8,8 @@ struct SettingsView: View {
   @State private var youtubeKey = ""
   @State private var nationalArchivesKey = ""
   @State private var europeanaKey = ""
+  @State private var coverrKey = ""
+  @State private var vimeoKey = ""
   @State private var enabled = AppSettings.enabledProviders
   @State private var statuses: [ProviderID: String] = [:]
   @State private var messages: [ProviderID: String] = [:]
@@ -47,6 +49,24 @@ struct SettingsView: View {
               .youtube, key: $youtubeKey,
               applyURL: "https://console.cloud.google.com/apis/library/youtube.googleapis.com",
               noKeyDetail: tr("settings.youtubeBestEffortDetail"))
+            Divider()
+            noKeyRow(.peertube, detail: tr("settings.peerTubeDetail"))
+            Divider()
+            limitedRow(.videvo)
+            Divider()
+            limitedRow(.videezy)
+            Divider()
+            limitedRow(.mixkit)
+            Divider()
+            providerCard(
+              .coverr, key: $coverrKey,
+              applyURL: ProviderPolicy.apiKeyHelpURL(for: .coverr)!.absoluteString,
+              noKeyDetail: tr("settings.limitedDiscoveryDetail"))
+            Divider()
+            providerCard(
+              .vimeo, key: $vimeoKey,
+              applyURL: ProviderPolicy.apiKeyHelpURL(for: .vimeo)!.absoluteString,
+              noKeyDetail: tr("settings.vimeoDiscoveryDetail"))
             Divider()
             noKeyRow(.nasa, detail: tr("settings.nasaDetail"))
             Divider()
@@ -111,6 +131,8 @@ struct SettingsView: View {
       youtubeKey = KeychainService.read(.youtube)
       nationalArchivesKey = KeychainService.read(.nationalArchives)
       europeanaKey = KeychainService.read(.europeana)
+      coverrKey = KeychainService.read(.coverr)
+      vimeoKey = KeychainService.read(.vimeo)
     }
     .alert(tr("history.clearConfirmTitle"), isPresented: $confirmClearHistory) {
       Button(tr("common.cancel"), role: .cancel) {}
@@ -137,7 +159,8 @@ struct SettingsView: View {
           Label(tr("settings.recommended"), systemImage: "checkmark.circle.fill")
             .font(.caption).foregroundStyle(.green)
         } else if !hasKey {
-          Text(tr("provider.bestEffort")).font(.caption).foregroundStyle(.blue)
+          Text(mode == .limited ? tr("provider.limitedMode") : tr("provider.bestEffort"))
+            .font(.caption).foregroundStyle(mode == .limited ? .orange : .blue)
         }
       }
       if hasKey && !editingKeys.contains(provider) {
@@ -166,7 +189,7 @@ struct SettingsView: View {
               editingKeys.remove(provider)
             }
           }
-          if provider == .nationalArchives || provider == .europeana {
+          if mode == .limited {
             Button(tr("provider.openOfficialSearch")) { openOfficialSearch(provider) }
           } else {
             Button(tr("settings.testDirectSearch")) { test(provider, key: "") }
@@ -203,6 +226,20 @@ struct SettingsView: View {
     }.padding(.vertical, 10)
   }
 
+  private func limitedRow(_ provider: ProviderID) -> some View {
+    HStack(spacing: 10) {
+      Toggle("", isOn: enabledBinding(provider)).labelsHidden()
+      VStack(alignment: .leading) {
+        Text(provider.displayName).font(.headline)
+        Text(tr("settings.limitedDiscoveryDetail")).font(.caption).foregroundStyle(.secondary)
+        Text(capabilitySummary(provider, key: "")).font(.caption2).foregroundStyle(.secondary)
+      }
+      Spacer()
+      Text(tr("provider.limitedMode")).font(.caption.bold()).foregroundStyle(.orange)
+      Button(tr("provider.openOfficialSearch")) { openOfficialSearch(provider) }
+    }.padding(.vertical, 10)
+  }
+
   private func enabledBinding(_ provider: ProviderID) -> Binding<Bool> {
     Binding(
       get: { enabled.contains(provider) },
@@ -230,7 +267,7 @@ struct SettingsView: View {
       editingKeys.remove(provider)
       statuses[provider] = tr("settings.notConfigured")
       messages[provider] =
-        provider == .nationalArchives || provider == .europeana
+        ProviderFactory.make(provider, apiKey: "").info.mode == .limited
         ? tr("provider.limitedMode") : tr("settings.directSearchEnabled")
     } catch {
       statuses[provider] = tr("settings.saveFailed")

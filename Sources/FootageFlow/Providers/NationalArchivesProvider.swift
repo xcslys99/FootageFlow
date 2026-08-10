@@ -12,9 +12,16 @@ struct NationalArchivesProvider: MediaProvider {
     capabilities: ProviderCapabilities(
       search: .supported, preview: .bestEffort, metadata: .supported, license: .bestEffort,
       download: .bestEffort, supportsVideo: true, supportsImage: true, supportsAudio: true,
+      pagination: .supported,
       accessMethods: [.officialAPI]))
 
   func search(_ request: SearchRequest) async throws -> [MediaAsset] {
+    try await searchPage(request, continuation: nil).assets
+  }
+
+  func searchPage(
+    _ request: SearchRequest, continuation: ProviderContinuation?
+  ) async throws -> ProviderPage {
     guard !apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
       throw ProviderError.missingAPIKey(.nationalArchives)
     }
@@ -25,11 +32,30 @@ struct NationalArchivesProvider: MediaProvider {
       queryItems: [
         URLQueryItem(name: "q", value: request.query),
         URLQueryItem(name: "limit", value: String(min(request.pageSize, 20))),
+        URLQueryItem(name: "searchAfter", value: continuation?.token ?? "*"),
       ])
     var urlRequest = URLRequest(url: url)
     urlRequest.setValue(apiKey, forHTTPHeaderField: "x-api-key")
     let (data, _) = try await HTTPClient.shared.data(for: urlRequest, maxRetries: 1)
-    return try Self.assets(from: data, request: request)
+    let assets = try Self.assets(from: data, request: request)
+    guard let root = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+      throw ProviderError.invalidResponse
+    }
+    let body = root["body"] as? [String: Any] ?? root
+    let hitsContainer = body["hits"] as? [String: Any]
+    let hits = hitsContainer?["hits"] as? [[String: Any]] ?? []
+    let nextToken = (hits.last?["sort"] as? [Any])?.first.flatMap(naraString)
+    let totalValue = hitsContainer?["total"]
+    let total: Int? = {
+      if let dictionary = totalValue as? [String: Any] {
+        return naraString(dictionary["value"]).flatMap(Int.init)
+      }
+      return naraString(totalValue).flatMap(Int.init)
+    }()
+    return ProviderPage(
+      assets: assets,
+      continuation: nextToken.map { ProviderContinuation(token: $0) },
+      totalResults: total)
   }
 
   static func assets(from data: Data, request: SearchRequest) throws -> [MediaAsset] {

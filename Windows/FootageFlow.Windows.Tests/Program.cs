@@ -13,7 +13,7 @@ void Check(bool condition, string name)
 }
 
 Check(new AppSettingsModel().Language == "en", "English is the first-launch default");
-Check(new AppSettingsModel().EnabledProviders.Count == 9, "Nine providers enabled by default");
+Check(new AppSettingsModel().EnabledProviders.Count == 15, "Fifteen providers enabled by default");
 Check(LocalizationService.SupportedLanguages.Count == 10, "Ten interface languages are available");
 var settingsDirectory = Path.Combine(Path.GetTempPath(), "FootageFlowSettingsTest", Guid.NewGuid().ToString("N"));
 var settingsPath = Path.Combine(settingsDirectory, "settings.json");
@@ -59,6 +59,34 @@ var roundTrip = JsonSerializer.Deserialize<MediaAsset>(JsonSerializer.Serialize(
 Check(roundTrip?.StableId == "wikimedia:fixture", "MediaAsset JSON round trip");
 Check(roundTrip?.IsDirectlyDownloadable == true, "Direct-download availability model");
 Check(roundTrip?.RightsKnown == true && roundTrip.OpenLicense, "RightsInfo JSON round trip");
+var sourceRecord = new DownloadRecord { ProviderRaw = "linkDownloader", SourceName = "YouTube" };
+Check(sourceRecord.DisplaySource == "YouTube", "Windows link download source display");
+var linkItem = new LinkDownloadItem("https://vimeo.com/123")
+{
+    Analysis = new LinkAnalysisResult
+    {
+        Id = "vimeo:123", OriginalURL = "https://vimeo.com/123", SourceName = "Vimeo",
+        Title = "Fixture", ProgressiveHeights = [1080, 720], HasAudio = true,
+        SubtitleLanguages = ["en"], FormatCount = 4
+    }
+};
+linkItem.ConfigureQualityLabels(value => value);
+Check(linkItem.AvailableQualities.SequenceEqual(["best", "p1080", "p720", "p480", "audioOnly"]),
+    "Windows link format availability");
+Check(linkItem.HasSubtitles && linkItem.IsReady, "Windows link subtitle and ready state");
+linkItem.SelectedQuality = "audioOnly";
+linkItem.DownloadSubtitles = true;
+linkItem.SubtitleLanguage = "en";
+Check(linkItem.DownloadIdentity == "vimeo:123:audioOnly:subs:en",
+    "Windows link quality-specific download identity");
+Check(LinkUrlSafety.TryCreate("https://www.youtube.com/watch?v=fixture", out _),
+    "Windows public link validation");
+Check(!LinkUrlSafety.TryCreate("http://127.0.0.1/private", out _),
+    "Windows private address rejection");
+Check(!LinkUrlSafety.TryCreate("https://example.com/watch?access_token=secret", out _),
+    "Windows sensitive query rejection");
+Check(!LinkUrlSafety.TryCreate("https://user:password@example.com/watch", out _),
+    "Windows embedded credential rejection");
 if (roundTrip is not null)
 {
     roundTrip.IsSelected = true;
@@ -84,12 +112,21 @@ if (OperatingSystem.IsWindows())
         var core = new CoreHostClient(corePath);
         var health = await core.SendAsync(new CoreRequest { Action = "health" });
         Check(health.Success && health.Platform == "windows", "Windows core health");
-        Check(health.Providers?.Count == 9, "Windows core exposes nine shared providers");
+        Check(health.Providers?.Count == 15, "Windows core exposes fifteen shared providers");
         var keywords = await core.SendAsync(new CoreRequest { Action = "keywords", Query = "2001年阿根廷银行挤兑" });
         Check((keywords.Keywords?.Count ?? 0) >= 3, "Shared keyword engine");
         var attribution = await core.SendAsync(new CoreRequest { Action = "formatAttribution", Asset = media });
         Check(attribution.Text?.Contains("CC BY", StringComparison.Ordinal) == true,
             "Shared attribution formatter");
+        var feedback = await core.SendAsync(new CoreRequest
+        {
+            Action = "feedbackURL", FeedbackDestination = "bug", Language = "en"
+        });
+        Check(feedback.Text?.StartsWith("https://github.com/xcslys99/FootageFlow/issues/new", StringComparison.Ordinal) == true,
+            "Shared feedback URL builder");
+        Check(feedback.Text?.Contains("api_key", StringComparison.OrdinalIgnoreCase) != true &&
+              feedback.Text?.Contains("\\Users\\", StringComparison.OrdinalIgnoreCase) != true,
+            "Feedback URL excludes secrets and paths");
 
         var projectName = "Windows Self Test " + Guid.NewGuid().ToString("N");
         var added = await core.SendAsync(new CoreRequest { Action = "addProject", ProjectName = projectName });
@@ -139,6 +176,28 @@ if (OperatingSystem.IsWindows())
                 Check(File.Exists(Path.ChangeExtension(downloaded, ".source.json")), "Downloaded JSON sidecar");
             }
             Check(ReferenceEquals(task, queue.Enqueue(media, null, "Test Project")), "Duplicate active download prevention");
+
+            var cancellable = new MediaAsset
+            {
+                Id = "cancel-fixture", Provider = "wikimedia", Title = "Cancel Fixture",
+                SourcePageURL = "https://example.com/cancel-source",
+                DownloadURL = "https://example.com/cancel.mp4", LicenseStatus = "UNKNOWN",
+                MediaType = "video", Downloadable = true, SearchKeyword = "cancel",
+                DownloadAvailability = "direct"
+            };
+            var cancelHandler = new CancelThenSuccessHandler();
+            var cancelQueue = new DownloadQueueService(
+                core, testSettings, new YtDlpPlatformService(), localization,
+                new HttpClient(cancelHandler) { Timeout = Timeout.InfiniteTimeSpan });
+            var cancelTask = cancelQueue.Enqueue(cancellable, null, "Test Project");
+            await WaitForStateAsync(cancelTask, "downloading", TimeSpan.FromSeconds(5));
+            cancelQueue.Cancel(cancelTask);
+            await WaitForStateAsync(cancelTask, "cancelled", TimeSpan.FromSeconds(5));
+            Check(cancelTask.State == "cancelled", "Download Manager cancellation");
+            cancelQueue.Retry(cancelTask);
+            await WaitForStateAsync(cancelTask, "completed", TimeSpan.FromSeconds(20));
+            Check(cancelTask.State == "completed" && cancelHandler.Attempts == 2,
+                "Download Manager retry after cancellation");
         }
         finally
         {
@@ -172,5 +231,23 @@ sealed class RetryDownloadHandler : HttpMessageHandler
         };
         response.Content.Headers.ContentLength = 28;
         return Task.FromResult(response);
+    }
+}
+
+sealed class CancelThenSuccessHandler : HttpMessageHandler
+{
+    public int Attempts { get; private set; }
+
+    protected override async Task<HttpResponseMessage> SendAsync(
+        HttpRequestMessage request, CancellationToken cancellationToken)
+    {
+        Attempts++;
+        if (Attempts == 1) await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+        var response = new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new ByteArrayContent("FootageFlow retry fixture"u8.ToArray())
+        };
+        response.Content.Headers.ContentLength = 25;
+        return response;
     }
 }

@@ -11,9 +11,16 @@ struct EuropeanaProvider: MediaProvider {
     capabilities: ProviderCapabilities(
       search: .supported, preview: .supported, metadata: .supported, license: .supported,
       download: .bestEffort, supportsVideo: true, supportsImage: true, supportsAudio: true,
+      pagination: .supported,
       accessMethods: [.officialAPI]))
 
   func search(_ request: SearchRequest) async throws -> [MediaAsset] {
+    try await searchPage(request, continuation: nil).assets
+  }
+
+  func searchPage(
+    _ request: SearchRequest, continuation: ProviderContinuation?
+  ) async throws -> ProviderPage {
     guard !apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
       throw ProviderError.missingAPIKey(.europeana)
     }
@@ -25,6 +32,7 @@ struct EuropeanaProvider: MediaProvider {
       URLQueryItem(name: "media", value: "true"),
       URLQueryItem(name: "thumbnail", value: "true"),
       URLQueryItem(name: "landingpage", value: "true"),
+      URLQueryItem(name: "cursor", value: continuation?.cursor ?? "*"),
     ]
     if request.mediaType != .all {
       queryItems.append(
@@ -45,9 +53,13 @@ struct EuropeanaProvider: MediaProvider {
     let response = try await HTTPClient.shared.decode(
       EuropeanaSearchResponse.self, request: urlRequest, maxRetries: 1)
     guard response.success != false else { throw ProviderError.invalidResponse }
-    return response.items.enumerated().compactMap { index, item in
+    let assets = response.items.enumerated().compactMap { index, item in
       Self.asset(item, query: request.query, index: index)
     }
+    return ProviderPage(
+      assets: assets,
+      continuation: response.nextCursor.map { ProviderContinuation(cursor: $0) },
+      totalResults: response.totalResults)
   }
 
   static func asset(_ item: EuropeanaItem, query: String, index: Int) -> MediaAsset? {
@@ -95,6 +107,8 @@ struct EuropeanaProvider: MediaProvider {
 struct EuropeanaSearchResponse: Decodable {
   let success: Bool?
   let items: [EuropeanaItem]
+  let nextCursor: String?
+  let totalResults: Int?
 }
 struct EuropeanaItem: Decodable {
   let id: String

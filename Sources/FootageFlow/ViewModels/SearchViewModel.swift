@@ -21,12 +21,21 @@ final class SearchViewModel: ObservableObject {
   @Published private(set) var providerStates: [ProviderID: ProviderRuntimeState] = [:]
   @Published private(set) var providerModes: [ProviderID: ProviderMode] = [:]
   @Published private(set) var isSearching = false
+  @Published private(set) var isLoadingMore = false
+  @Published private(set) var loadMoreFailedProviders = Set<ProviderID>()
   @Published private(set) var status: SearchStatus = .initial
 
   private var task: Task<Void, Never>?
   private var store: DataStore?
+  private var pagination: [ProviderID: [ProviderQueryPageState]] = [:]
+  private var loadMoreInFlight: [ProviderID: ProviderQueryPageState] = [:]
+  private var searchGeneration = UUID()
 
   var statusText: String { status.text }
+  var canLoadMore: Bool { !pagination.values.allSatisfy(\.isEmpty) }
+  var providersWithMoreResults: Set<ProviderID> {
+    Set(pagination.compactMap { $0.value.isEmpty ? nil : $0.key })
+  }
 
   var filteredAssets: [MediaAsset] {
     let filter = AdvancedSearchFilter(
@@ -53,7 +62,7 @@ final class SearchViewModel: ObservableObject {
 
   func refreshProviderConfiguration() {
     let providers = makeProviders(directOverrides: [])
-    for id in ProviderID.allCases {
+    for id in ProviderID.searchCases {
       guard selectedProviders.contains(id),
         let provider = providers.first(where: { $0.info.id == id })
       else {
@@ -92,10 +101,20 @@ final class SearchViewModel: ObservableObject {
       return
     }
     task?.cancel()
+    let generation = UUID()
+    searchGeneration = generation
     isSearching = true
+    isLoadingMore = false
     providerErrors = [:]
-    providerCounts = [:]
-    providerModes = [:]
+    if providerID == nil {
+      providerCounts = [:]
+      providerModes = [:]
+      pagination = [:]
+      loadMoreInFlight = [:]
+      loadMoreFailedProviders = []
+    } else {
+      pagination[providerID!] = []
+    }
     status = .searchingProviders(selectedProviders.count)
     let filterSnapshot = (
       mediaType, orientation, resolution, duration, yearFrom, yearTo, downloadableOnly
@@ -119,6 +138,8 @@ final class SearchViewModel: ObservableObject {
         for provider in providers {
           group.addTask {
             var combined: [MediaAsset] = []
+            var nextPages: [ProviderQueryPageState] = []
+            var totalResults = 0
             do {
               let providerKeywords =
                 provider.info.mode == .limited
@@ -131,23 +152,30 @@ final class SearchViewModel: ObservableObject {
                   resolution: filterSnapshot.2, duration: filterSnapshot.3,
                   yearFrom: filterSnapshot.4, yearTo: filterSnapshot.5,
                   downloadableOnly: filterSnapshot.6, pageSize: 16)
+                let page: ProviderPage
                 if !forceRefresh, provider.info.id != .nationalArchives,
-                  let cached = await SearchCache.shared.assets(
+                  let cached = await SearchCache.shared.page(
                     provider: provider.info.id, request: request)
                 {
-                  combined += cached
+                  page = cached
                 } else {
-                  let found = try await provider.search(request)
+                  page = try await provider.searchPage(request, continuation: nil)
                   if provider.info.id != .nationalArchives {
                     await SearchCache.shared.store(
-                      found, provider: provider.info.id, request: request)
+                      page, provider: provider.info.id, request: request)
                   }
-                  combined += found
                 }
+                combined += page.assets
+                if let continuation = page.continuation {
+                  nextPages.append(
+                    ProviderQueryPageState(request: request, continuation: continuation))
+                }
+                if let total = page.totalResults { totalResults += total }
               }
               return ProviderSearchResult(
                 provider: provider.info.id, assets: combined, error: nil, state: nil,
-                mode: provider.info.mode)
+                mode: provider.info.mode, pagination: nextPages,
+                totalResults: totalResults > 0 ? totalResults : nil)
             } catch {
               await AppLogger.shared.write(
                 provider: provider.info.id, requestType: "search", error: error)
@@ -164,9 +192,11 @@ final class SearchViewModel: ObservableObject {
             group.cancelAll()
             break
           }
+          guard self.searchGeneration == generation else { continue }
           self.apply(batch)
         }
       }
+      guard self.searchGeneration == generation else { return }
       if Task.isCancelled {
         self.isSearching = false
         self.status = .stopped
@@ -182,7 +212,65 @@ final class SearchViewModel: ObservableObject {
     task?.cancel()
     task = nil
     isSearching = false
+    isLoadingMore = false
     status = .stopped
+  }
+
+  func loadMore(only providerID: ProviderID? = nil) {
+    guard !isSearching, !isLoadingMore else { return }
+    let eligible = pagination.keys.filter { id in
+      (providerID == nil || providerID == id) && !(pagination[id]?.isEmpty ?? true)
+    }
+    guard !eligible.isEmpty else { return }
+    let providers = makeProviders(directOverrides: []).filter { eligible.contains($0.info.id) }
+    guard !providers.isEmpty else { return }
+    let generation = searchGeneration
+    isLoadingMore = true
+    for provider in providers {
+      guard var states = pagination[provider.info.id], !states.isEmpty else { continue }
+      let next = states.removeFirst()
+      pagination[provider.info.id] = states
+      loadMoreInFlight[provider.info.id] = next
+    }
+    task = Task { [weak self] in
+      guard let self else { return }
+      await withTaskGroup(of: ProviderSearchResult.self) { group in
+        for provider in providers {
+          guard let state = self.loadMoreInFlight[provider.info.id] else { continue }
+          group.addTask {
+            do {
+              let page = try await provider.searchPage(
+                state.request, continuation: state.continuation)
+              let nextState = page.continuation.map {
+                ProviderQueryPageState(request: state.request, continuation: $0)
+              }
+              return ProviderSearchResult(
+                provider: provider.info.id, assets: page.assets, error: nil, state: nil,
+                mode: provider.info.mode, pagination: nextState.map { [$0] } ?? [],
+                totalResults: page.totalResults)
+            } catch {
+              await AppLogger.shared.write(
+                provider: provider.info.id, requestType: "load-more", error: error)
+              let providerError =
+                error as? ProviderError ?? ProviderError.message(error.localizedDescription)
+              return ProviderSearchResult(
+                provider: provider.info.id, assets: [], error: providerError,
+                state: ProviderRuntimeState.from(error: error), mode: provider.info.mode)
+            }
+          }
+        }
+        for await batch in group {
+          guard !Task.isCancelled, self.searchGeneration == generation else {
+            group.cancelAll()
+            break
+          }
+          self.applyLoadMore(batch)
+        }
+      }
+      guard self.searchGeneration == generation else { return }
+      self.isLoadingMore = false
+      self.status = self.assets.isEmpty ? .noResults : .found(self.assets.count)
+    }
   }
 
   func tryDirectSearch(_ providerID: ProviderID) {
@@ -191,7 +279,7 @@ final class SearchViewModel: ObservableObject {
   }
 
   private func makeProviders(directOverrides: Set<ProviderID>) -> [any MediaProvider] {
-    ProviderID.allCases.map { id in
+    ProviderID.searchCases.map { id in
       ProviderFactory.make(
         id, apiKey: directOverrides.contains(id) ? "" : KeychainService.read(id))
     }
@@ -199,7 +287,8 @@ final class SearchViewModel: ObservableObject {
 
   private func apply(_ batch: ProviderSearchResult) {
     providerModes[batch.provider] = batch.mode
-    providerCounts[batch.provider] = batch.assets.count
+    loadMoreFailedProviders.remove(batch.provider)
+    pagination[batch.provider] = batch.pagination
     if let error = batch.error {
       providerErrors[batch.provider] = error
       var state =
@@ -221,8 +310,40 @@ final class SearchViewModel: ObservableObject {
         availability: availability, message: nil, mode: batch.mode)
     }
     assets += batch.assets
-    assets = SearchDeduplicator.apply(assets).prefix(300).map { $0 }
+    assets = SearchDeduplicator.apply(assets)
+    providerCounts[batch.provider] = assets.filter { $0.provider == batch.provider }.count
     status = assets.isEmpty ? .searchingOthers : .progressiveFound(assets.count)
+  }
+
+  private func applyLoadMore(_ batch: ProviderSearchResult) {
+    guard let original = loadMoreInFlight.removeValue(forKey: batch.provider) else { return }
+    providerModes[batch.provider] = batch.mode
+    if let error = batch.error {
+      pagination[batch.provider, default: []].insert(original, at: 0)
+      loadMoreFailedProviders.insert(batch.provider)
+      providerErrors[batch.provider] = error
+      var state = batch.state ?? ProviderRuntimeState.from(error: error)
+      state.mode = batch.mode
+      providerStates[batch.provider] = state
+      return
+    }
+    providerErrors[batch.provider] = nil
+    loadMoreFailedProviders.remove(batch.provider)
+    pagination[batch.provider, default: []].append(contentsOf: batch.pagination)
+    assets += batch.assets
+    assets = SearchDeduplicator.apply(assets)
+    providerCounts[batch.provider] = assets.filter { $0.provider == batch.provider }.count
+    let availability: ProviderAvailability =
+      switch batch.mode {
+      case .officialAPI: .apiConnected
+      case .publicAPI: .publicAPI
+      case .limited: .limitedMode
+      case .directSearch, .ytDLP: .bestEffort
+      case .publicInterface: .available
+      }
+    providerStates[batch.provider] = ProviderRuntimeState(
+      availability: availability, message: nil, mode: batch.mode)
+    status = .progressiveFound(assets.count)
   }
 
   private func score(_ asset: MediaAsset) -> Double {

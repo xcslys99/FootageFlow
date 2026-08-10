@@ -3,11 +3,21 @@ import Foundation
 protocol MediaProvider: Sendable {
   var info: ProviderInfo { get }
   func search(_ request: SearchRequest) async throws -> [MediaAsset]
+  func searchPage(
+    _ request: SearchRequest, continuation: ProviderContinuation?
+  ) async throws -> ProviderPage
   func testConnection() async throws
   func resolveDownload(for asset: MediaAsset) async throws -> URL
 }
 
 extension MediaProvider {
+  func searchPage(
+    _ request: SearchRequest, continuation: ProviderContinuation?
+  ) async throws -> ProviderPage {
+    guard continuation == nil else { return ProviderPage(assets: [], continuation: nil) }
+    return ProviderPage(assets: try await search(request), continuation: nil)
+  }
+
   func testConnection() async throws {
     _ = try await search(SearchRequest(query: "bank", pageSize: 1))
   }
@@ -38,6 +48,11 @@ enum ProviderUtilities {
       || text.contains("cc0")
     {
       return .publicDomain
+    }
+    if text.contains("noncommercial") || text.contains("non-commercial")
+      || text.contains("by-nc") || text.contains("no derivatives") || text.contains("by-nd")
+    {
+      return .restricted
     }
     if text.contains("cc by") || text.contains("creativecommons.org/licenses/by")
       || text.contains("attribution")

@@ -5,6 +5,7 @@ enum AppSettings {
   static let downloadRootKey = "downloadRoot"
   private static let migrationKey = "didMigrateFootageFinderSettings"
   private static let providerCatalogV3Key = "didEnableDiscoveryProvidersV3"
+  private static let providerCatalogV5Key = "didEnableSearchExpansionProvidersV5"
 
   static func migrateLegacySettingsIfNeeded() {
     guard !UserDefaults.standard.bool(forKey: migrationKey) else { return }
@@ -20,18 +21,24 @@ enum AppSettings {
   static var enabledProviders: Set<ProviderID> {
     get {
       guard let values = UserDefaults.standard.array(forKey: enabledProvidersKey) as? [String]
-      else { return Set(ProviderID.allCases) }
+      else { return Set(ProviderID.searchCases) }
       var result = Set(values.compactMap(ProviderID.init(rawValue:)))
       if !UserDefaults.standard.bool(forKey: providerCatalogV3Key) {
         result.formUnion([.nasa, .libraryOfCongress, .nationalArchives, .europeana])
         UserDefaults.standard.set(result.map(\.rawValue), forKey: enabledProvidersKey)
         UserDefaults.standard.set(true, forKey: providerCatalogV3Key)
       }
+      if !UserDefaults.standard.bool(forKey: providerCatalogV5Key) {
+        result.formUnion([.peertube, .videvo, .videezy, .mixkit, .coverr, .vimeo])
+        UserDefaults.standard.set(result.map(\.rawValue), forKey: enabledProvidersKey)
+        UserDefaults.standard.set(true, forKey: providerCatalogV5Key)
+      }
       return result
     }
     set {
       UserDefaults.standard.set(newValue.map(\.rawValue), forKey: enabledProvidersKey)
       UserDefaults.standard.set(true, forKey: providerCatalogV3Key)
+      UserDefaults.standard.set(true, forKey: providerCatalogV5Key)
     }
   }
 

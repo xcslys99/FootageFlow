@@ -32,6 +32,13 @@ public sealed class SettingsService
             Current.DiscoveryProvidersV3Added = true;
             Save();
         }
+        if (!Current.SearchExpansionProvidersV5Added)
+        {
+            Current.EnabledProviders.UnionWith(
+                ["peertube", "videvo", "videezy", "mixkit", "coverr", "vimeo"]);
+            Current.SearchExpansionProvidersV5Added = true;
+            Save();
+        }
         if (string.IsNullOrWhiteSpace(Current.DownloadRoot)) Current.DownloadRoot = AppPaths.DefaultDownloadRoot;
     }
 

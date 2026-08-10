@@ -16,6 +16,7 @@ public sealed class CoreRequest
     public int? YearTo { get; init; }
     public bool? DownloadableOnly { get; init; }
     public int? PageSize { get; init; }
+    public ProviderContinuation? Continuation { get; init; }
     public IReadOnlyList<string>? ProviderIDs { get; init; }
     public IReadOnlyDictionary<string, string>? ApiKeys { get; init; }
     public string? Language { get; init; }
@@ -30,6 +31,7 @@ public sealed class CoreRequest
     public int? ResultCount { get; init; }
     public int? SegmentIndex { get; init; }
     public string? ExternalToolOutputBase64 { get; init; }
+    public string? FeedbackDestination { get; init; }
 }
 
 public sealed class CoreResponse
@@ -111,6 +113,7 @@ public sealed class DownloadRecord
     public Guid Id { get; init; }
     public string StableAssetID { get; init; } = "";
     public string ProviderRaw { get; init; } = "";
+    public string? SourceName { get; init; }
     public string Title { get; init; } = "";
     public string FileName { get; init; } = "";
     public string LocalPath { get; init; } = "";
@@ -118,6 +121,7 @@ public sealed class DownloadRecord
     public string SourcePageURL { get; init; } = "";
     public Guid? ProjectID { get; init; }
     public DateTimeOffset DownloadedAt { get; init; }
+    public string DisplaySource => string.IsNullOrWhiteSpace(SourceName) ? ProviderRaw : SourceName;
 }
 
 public sealed class ProviderDescriptor
@@ -136,6 +140,7 @@ public sealed class ProviderCapabilities
     public string Metadata { get; init; } = "unavailable";
     public string License { get; init; } = "unavailable";
     public string Download { get; init; } = "unavailable";
+    public string Pagination { get; init; } = "unavailable";
     public bool SupportsVideo { get; init; }
     public bool SupportsImage { get; init; }
     public bool SupportsAudio { get; init; }
@@ -149,7 +154,18 @@ public sealed class ProviderBatch
     public string Mode { get; init; } = "";
     public ProviderState State { get; init; } = new();
     public IReadOnlyList<MediaAsset> Assets { get; init; } = [];
+    public ProviderContinuation? Continuation { get; init; }
+    public int? TotalResults { get; init; }
     public string? ErrorCode { get; init; }
+}
+
+public sealed class ProviderContinuation
+{
+    public int? Page { get; init; }
+    public int? Offset { get; init; }
+    public string? Token { get; init; }
+    public string? Cursor { get; init; }
+    public string? NextURL { get; init; }
 }
 
 public sealed class ProviderState
@@ -197,6 +213,8 @@ public sealed class MediaAsset : ObservableObject
     [JsonIgnore] public bool IsSelected { get => _isSelected; set => Set(ref _isSelected, value); }
 
     [JsonIgnore] public string StableId => $"{Provider}:{Id}";
+    [JsonIgnore] public string SourceDisplayName =>
+        OriginalMetadata.GetValueOrDefault("sourceName") ?? Provider;
     [JsonIgnore] public string Resolution => Width is > 0 && Height is > 0 ? $"{Width}×{Height}" : "—";
     [JsonIgnore] public string DurationText => Duration is null
         ? "—"

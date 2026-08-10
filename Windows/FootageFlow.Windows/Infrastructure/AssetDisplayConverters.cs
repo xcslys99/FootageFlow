@@ -38,6 +38,13 @@ public sealed class ProviderNameConverter : IValueConverter
             "libraryOfCongress" => "Library of Congress",
             "nationalArchives" => "National Archives",
             "europeana" => "Europeana",
+            "peertube" => "PeerTube / SepiaSearch",
+            "videvo" => "Videvo",
+            "videezy" => "Videezy",
+            "mixkit" => "Mixkit",
+            "coverr" => "Coverr",
+            "vimeo" => "Vimeo",
+            "linkDownloader" => "Link Downloader",
             var other => other ?? ""
         };
 

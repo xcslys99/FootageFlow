@@ -23,8 +23,8 @@ enum FileNameSanitizer {
       if asset.mediaType == .image { return "jpg" }
       return "mp4"
     }()
-    return
-      "\(number)\(stem)_\(asset.provider.displayName.replacingOccurrences(of: " ", with: ""))_\(sanitize(asset.id, maxLength: 24)).\(ext)"
+    let provider = sanitize(asset.sourceDisplayName, maxLength: 24)
+    return "\(number)\(stem)_\(provider)_\(sanitize(asset.id, maxLength: 24)).\(ext)"
   }
 
   static func uniqueURL(in directory: URL, preferredName: String) -> URL {
