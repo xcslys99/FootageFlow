@@ -26,9 +26,17 @@ try {
     Copy-Item (Join-Path $swiftBinaryDirectory "FootageFlow.exe") (Join-Path $coreDirectory "FootageFlowCore.exe")
 
     $targetInfo = swiftc -print-target-info | ConvertFrom-Json
-    foreach ($runtimePath in $targetInfo.paths.runtimeLibraryPaths) {
-        Get-ChildItem $runtimePath -Filter "*.dll" -File | Copy-Item -Destination $coreDirectory -Force
+    $runtimeCandidates = @($targetInfo.paths.runtimeLibraryPaths) + @(
+        $env:Path -split ";" | Where-Object { $_ -match "[\\/]Swift[\\/]Runtimes[\\/].*[\\/]usr[\\/]bin[\\/]?$" }
+    )
+    $runtimeCount = 0
+    foreach ($runtimePath in ($runtimeCandidates | Select-Object -Unique)) {
+        if (-not (Test-Path $runtimePath -PathType Container)) { continue }
+        $runtimeFiles = Get-ChildItem $runtimePath -Filter "*.dll" -File
+        $runtimeCount += $runtimeFiles.Count
+        $runtimeFiles | Copy-Item -Destination $coreDirectory -Force
     }
+    if ($runtimeCount -eq 0) { throw "The official Swift runtime DLLs were not found." }
 
     dotnet publish "Windows\FootageFlow.Windows\FootageFlow.Windows.csproj" -c Release -r win-x64 --self-contained true -p:Version=$Version -o $stage
     if ($LASTEXITCODE -ne 0) { throw "Windows interface publish failed." }

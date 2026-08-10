@@ -14,6 +14,7 @@ public sealed class DownloadQueueService
     private readonly YtDlpPlatformService _ytDlp;
     private readonly LocalizationService _localization;
     public ObservableCollection<DownloadTaskItem> Items { get; } = [];
+    public event EventHandler<DownloadTaskItem>? DownloadCompleted;
 
     public DownloadQueueService(
         CoreHostClient core,
@@ -109,6 +110,7 @@ public sealed class DownloadQueueService
                 }, cancellationToken: item.Cancellation.Token);
                 SetState(item, "completed");
                 item.Speed = "";
+                DownloadCompleted?.Invoke(this, item);
             }
             finally { _slots.Release(); }
         }

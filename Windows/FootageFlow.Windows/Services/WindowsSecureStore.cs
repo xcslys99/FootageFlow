@@ -12,14 +12,23 @@ public sealed class WindowsSecureStore
 
     public string Read(string provider)
     {
-        if (!CredRead(Target(provider), CredTypeGeneric, 0, out var pointer)) return "";
+        if (!CredRead(Target(provider), CredTypeGeneric, 0, out var pointer))
+        {
+            var error = Marshal.GetLastWin32Error();
+            if (error == ErrorNotFound) return "";
+            throw new Win32Exception(error);
+        }
         try
         {
             var credential = Marshal.PtrToStructure<Credential>(pointer);
             if (credential.CredentialBlob == IntPtr.Zero || credential.CredentialBlobSize == 0) return "";
             var bytes = new byte[credential.CredentialBlobSize];
-            Marshal.Copy(credential.CredentialBlob, bytes, 0, bytes.Length);
-            return Encoding.Unicode.GetString(bytes).TrimEnd('\0');
+            try
+            {
+                Marshal.Copy(credential.CredentialBlob, bytes, 0, bytes.Length);
+                return Encoding.Unicode.GetString(bytes).TrimEnd('\0');
+            }
+            finally { Array.Clear(bytes); }
         }
         finally { CredFree(pointer); }
     }

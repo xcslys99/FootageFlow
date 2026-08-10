@@ -37,6 +37,7 @@ public sealed class MainViewModel : ObservableObject
         _localization = new LocalizationService(_settings);
         _localization.LanguageChanged += (_, _) => RefreshLanguage();
         Downloads = new DownloadQueueService(_core, _settings, _ytDlp, _localization);
+        Downloads.DownloadCompleted += (_, _) => _ = LoadDatabaseAsync();
         ResultsView = CollectionViewSource.GetDefaultView(Results);
         ResultsView.Filter = value => value is MediaAsset asset && MatchesFilters(asset);
         ApplySort();
@@ -277,7 +278,7 @@ public sealed class MainViewModel : ObservableObject
         option.Status = T("settings.connecting");
         try
         {
-            if (provider == "youtube" && string.IsNullOrWhiteSpace(_credentials.Read(provider)))
+            if (provider == "youtube" && string.IsNullOrWhiteSpace(ReadCredential(provider)))
             {
                 _ = await _ytDlp.SearchAsync("bank", 1, CancellationToken.None);
                 option.Status = T("settings.connectionSuccess");
@@ -360,7 +361,7 @@ public sealed class MainViewModel : ObservableObject
     {
         try
         {
-            if (option.Id == "youtube" && string.IsNullOrWhiteSpace(_credentials.Read("youtube")))
+            if (option.Id == "youtube" && string.IsNullOrWhiteSpace(ReadCredential("youtube")))
             {
                 var raw = await _ytDlp.SearchAsync(query, 16, cancellationToken);
                 var mapped = await _core.SendAsync(new CoreRequest
@@ -417,6 +418,13 @@ public sealed class MainViewModel : ObservableObject
     private void EnqueueDownload(MediaAsset? asset)
     {
         if (asset is null || !asset.Downloadable) return;
+        if (DownloadRecords.Any(record =>
+                record.StableAssetID.Equals(asset.StableId, StringComparison.OrdinalIgnoreCase) &&
+                File.Exists(record.LocalPath)))
+        {
+            CurrentPage = "downloads";
+            return;
+        }
         Downloads.Enqueue(asset, CurrentProject?.Id, CurrentProject?.Name ?? T("common.uncategorized"));
         CurrentPage = "downloads";
     }
@@ -584,16 +592,23 @@ public sealed class MainViewModel : ObservableObject
 
     private Dictionary<string, string> CredentialDictionary(string provider)
     {
-        var value = _credentials.Read(provider);
+        var value = ReadCredential(provider);
         return string.IsNullOrWhiteSpace(value) ? [] : new Dictionary<string, string> { [provider] = value };
+    }
+
+    private string ReadCredential(string provider)
+    {
+        try { return _credentials.Read(provider); }
+        catch { return ""; }
     }
 
     private void RefreshProviderModes()
     {
         foreach (var provider in Providers)
         {
-            var hasKey = provider.SupportsApiKey && !string.IsNullOrWhiteSpace(_credentials.Read(provider.Id));
-            provider.Mode = hasKey ? T("provider.mode.officialAPI") : provider.Id switch
+            var hasKey = provider.SupportsApiKey && !string.IsNullOrWhiteSpace(ReadCredential(provider.Id));
+            provider.Mode = hasKey
+                ? $"{T("provider.mode.officialAPI")} · ✓ {T("settings.recommended")}" : provider.Id switch
             {
                 "pexels" or "pixabay" => T("provider.mode.directSearch"),
                 "youtube" => T("provider.mode.ytDLP"),
@@ -613,7 +628,8 @@ public sealed class MainViewModel : ObservableObject
 
     private string ModeText(string value) => value switch
     {
-        "officialAPI" => T("provider.mode.officialAPI"), "directSearch" => T("provider.mode.directSearch"),
+        "officialAPI" => $"{T("provider.mode.officialAPI")} · ✓ {T("settings.recommended")}",
+        "directSearch" => T("provider.mode.directSearch"),
         "ytDLP" => T("provider.mode.ytDLP"), _ => T("provider.mode.publicInterface")
     };
 

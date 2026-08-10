@@ -13,6 +13,23 @@ void Check(bool condition, string name)
 }
 
 Check(new AppSettingsModel().Language == "en", "English is the first-launch default");
+var settingsDirectory = Path.Combine(Path.GetTempPath(), "FootageFlowSettingsTest", Guid.NewGuid().ToString("N"));
+var settingsPath = Path.Combine(settingsDirectory, "settings.json");
+try
+{
+    var settings = new SettingsService(new AppSettingsModel { Language = "en", DownloadRoot = settingsDirectory }, settingsPath);
+    var localization = new LocalizationService(settings);
+    Check(localization.Text("nav.quickSearch") == "Quick Search", "Windows English localization");
+    localization.SetLanguage("zh-Hans");
+    Check(localization.Text("nav.quickSearch") == "快速搜索", "Windows Chinese localization switch");
+    var reopened = new SettingsService(settingsFile: settingsPath);
+    Check(reopened.Current.Language == "zh-Hans", "Windows language persistence");
+    Check(!File.ReadAllText(settingsPath).Contains("local-test-value", StringComparison.Ordinal), "Settings exclude API keys");
+}
+finally
+{
+    if (Directory.Exists(settingsDirectory)) Directory.Delete(settingsDirectory, true);
+}
 Check(WindowsPathSafety.SanitizeName("CON") == "_CON", "Windows reserved filename");
 Check(!WindowsPathSafety.SanitizeName("bank:run?.mp4").Contains(':'), "Windows invalid filename characters");
 Check(WindowsPathSafety.SanitizeName(new string('a', 200)).Length == 80, "Windows filename length");
