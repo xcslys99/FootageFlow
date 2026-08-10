@@ -9,9 +9,9 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\FootageFlow.Windows\FootageFlow.Windows.csproj" />
-    <Content Include="..\..\Sources\FootageFlow\Resources\en.lproj\Localizable.strings"
-             Link="Resources\en.lproj\Localizable.strings" CopyToOutputDirectory="PreserveNewest" />
-    <Content Include="..\..\Sources\FootageFlow\Resources\zh-Hans.lproj\Localizable.strings"
-             Link="Resources\zh-Hans.lproj\Localizable.strings" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\Sources\FootageFlow\Resources\**\Localizable.strings">
+      <Link>Resources\%(RecursiveDir)Localizable.strings</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 </Project>

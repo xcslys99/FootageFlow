@@ -10,18 +10,13 @@ public sealed class LicenseDisplayConverter : IMultiValueConverter
         var license = values.ElementAtOrDefault(0) as string;
         if (!string.IsNullOrWhiteSpace(license)) return license;
         var status = values.ElementAtOrDefault(1) as string ?? "UNKNOWN";
-        var chinese = (values.ElementAtOrDefault(2) as string)?.Contains("简体中文", StringComparison.Ordinal) == true;
-        return (status, chinese) switch
+        return status switch
         {
-            ("SAFE", false) => "Clearly licensed",
-            ("SAFE", true) => "明确可用",
-            ("ATTRIBUTION_REQUIRED", false) => "Attribution required",
-            ("ATTRIBUTION_REQUIRED", true) => "需要署名",
-            ("PUBLIC_DOMAIN", _) => "Public Domain",
-            ("RESTRICTED", false) => "Restricted",
-            ("RESTRICTED", true) => "受限制",
-            (_, false) => "License unknown",
-            _ => "授权未知"
+            "SAFE" => values.ElementAtOrDefault(2) as string ?? "Clearly licensed",
+            "ATTRIBUTION_REQUIRED" => values.ElementAtOrDefault(3) as string ?? "Attribution required",
+            "PUBLIC_DOMAIN" => values.ElementAtOrDefault(4) as string ?? "Public Domain",
+            "RESTRICTED" => values.ElementAtOrDefault(5) as string ?? "Restricted",
+            _ => values.ElementAtOrDefault(6) as string ?? "License unknown"
         };
     }
 
@@ -39,6 +34,10 @@ public sealed class ProviderNameConverter : IValueConverter
             "wikimedia" => "Wikimedia Commons",
             "internetArchive" => "Internet Archive",
             "youtube" => "YouTube",
+            "nasa" => "NASA",
+            "libraryOfCongress" => "Library of Congress",
+            "nationalArchives" => "National Archives",
+            "europeana" => "Europeana",
             var other => other ?? ""
         };
 

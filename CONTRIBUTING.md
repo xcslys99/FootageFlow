@@ -9,7 +9,7 @@ Thank you for helping improve FootageFlow.
 3. Do not add analytics, tracking, advertising, hidden uploads, or paid AI dependencies.
 4. Never commit API keys, credentials, personal paths, downloaded media, logs, or local databases.
 5. Never guess a media license. Preserve unknown values as `UNKNOWN`.
-6. Add or update English and Simplified Chinese strings together.
+6. Add or update every supported localization together; `scripts/check_localizations.sh` must pass before commit.
 7. Add fixed fixtures and tests for provider parsing changes.
 
 Run before submitting:

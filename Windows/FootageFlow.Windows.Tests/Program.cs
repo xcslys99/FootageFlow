@@ -14,6 +14,7 @@ void Check(bool condition, string name)
 
 Check(new AppSettingsModel().Language == "en", "English is the first-launch default");
 Check(new AppSettingsModel().EnabledProviders.Count == 9, "Nine providers enabled by default");
+Check(LocalizationService.SupportedLanguages.Count == 10, "Ten interface languages are available");
 var settingsDirectory = Path.Combine(Path.GetTempPath(), "FootageFlowSettingsTest", Guid.NewGuid().ToString("N"));
 var settingsPath = Path.Combine(settingsDirectory, "settings.json");
 try
@@ -23,8 +24,18 @@ try
     Check(localization.Text("nav.quickSearch") == "Quick Search", "Windows English localization");
     localization.SetLanguage("zh-Hans");
     Check(localization.Text("nav.quickSearch") == "快速搜索", "Windows Chinese localization switch");
+    foreach (var language in LocalizationService.SupportedLanguages)
+    {
+        localization.SetLanguage(language.Code);
+        var recommendation = localization.Text("search.apiRecommendation");
+        Check(recommendation.Contains("National Archives", StringComparison.Ordinal) &&
+              recommendation.Contains("Europeana", StringComparison.Ordinal) &&
+              recommendation.Contains("YouTube", StringComparison.Ordinal),
+              $"Windows {language.Code} API recommendation localization");
+    }
+    localization.SetLanguage("ru");
     var reopened = new SettingsService(settingsFile: settingsPath);
-    Check(reopened.Current.Language == "zh-Hans", "Windows language persistence");
+    Check(reopened.Current.Language == "ru", "Windows language persistence");
     Check(!File.ReadAllText(settingsPath).Contains("local-test-value", StringComparison.Ordinal), "Settings exclude API keys");
 }
 finally

@@ -355,14 +355,25 @@ import Foundation
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
         let localization = LocalizationManager(defaults: defaults)
+        XCTAssertEqual(AppLanguage.allCases.count, 10)
         XCTAssertEqual(localization.language, .english)
         XCTAssertEqual(localization.text("nav.quickSearch"), "Quick Search")
         localization.setLanguage(.simplifiedChinese)
         XCTAssertEqual(localization.text("nav.quickSearch"), "快速搜索")
         XCTAssertEqual(localization.text("localization.fallbackProbe"), "English fallback")
-        XCTAssertEqual(LocalizationManager(defaults: defaults).language, .simplifiedChinese)
+        localization.setLanguage(.russian)
+        XCTAssertEqual(LocalizationManager(defaults: defaults).language, .russian)
+        let catalog = LocalizationCatalog()
+        for language in AppLanguage.allCases {
+          let recommendation = catalog.text(
+            "search.apiRecommendation", language: language, arguments: [])
+          XCTAssertTrue(recommendation.contains("Europeana"), "Missing Europeana in \(language)")
+          XCTAssertTrue(recommendation.contains("YouTube"), "Missing YouTube in \(language)")
+          XCTAssertNotEqual(recommendation, "search.apiRecommendation")
+        }
       #else
         let catalog = LocalizationCatalog()
+        XCTAssertEqual(AppLanguage.allCases.count, 10)
         XCTAssertEqual(
           catalog.text("nav.quickSearch", language: .english, arguments: []), "Quick Search")
         XCTAssertEqual(
@@ -370,6 +381,8 @@ import Foundation
         XCTAssertEqual(
           catalog.text("localization.fallbackProbe", language: .simplifiedChinese, arguments: []),
           "English fallback")
+        XCTAssertEqual(
+          catalog.text("nav.quickSearch", language: .japanese, arguments: []), "クイック検索")
       #endif
     }
 

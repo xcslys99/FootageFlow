@@ -7,12 +7,28 @@ import Foundation
 enum AppLanguage: String, CaseIterable, Identifiable, Codable, Sendable {
   case english = "en"
   case simplifiedChinese = "zh-Hans"
+  case traditionalChinese = "zh-Hant"
+  case spanish = "es"
+  case brazilianPortuguese = "pt-BR"
+  case japanese = "ja"
+  case korean = "ko"
+  case german = "de"
+  case french = "fr"
+  case russian = "ru"
 
   var id: String { rawValue }
   var displayName: String {
     switch self {
     case .english: "English"
     case .simplifiedChinese: "简体中文"
+    case .traditionalChinese: "繁體中文"
+    case .spanish: "Español"
+    case .brazilianPortuguese: "Português (Brasil)"
+    case .japanese: "日本語"
+    case .korean: "한국어"
+    case .german: "Deutsch"
+    case .french: "Français"
+    case .russian: "Русский"
     }
   }
   var locale: Locale { Locale(identifier: rawValue) }

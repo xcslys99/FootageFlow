@@ -2,6 +2,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using FootageFlow.Windows.Models;
+using FootageFlow.Windows.Services;
 using FootageFlow.Windows.ViewModels;
 using Microsoft.Win32;
 
@@ -24,11 +25,17 @@ public partial class MainWindow : Window
     private void LanguageButton_Click(object sender, RoutedEventArgs e)
     {
         var menu = new ContextMenu();
-        var english = new MenuItem { Header = "English" };
-        english.Click += (_, _) => _viewModel.SetLanguage("en");
-        var chinese = new MenuItem { Header = "简体中文" };
-        chinese.Click += (_, _) => _viewModel.SetLanguage("zh-Hans");
-        menu.Items.Add(english); menu.Items.Add(chinese);
+        foreach (var language in LocalizationService.SupportedLanguages)
+        {
+            var item = new MenuItem
+            {
+                Header = language.DisplayName,
+                IsCheckable = true,
+                IsChecked = _viewModel.LanguageCode == language.Code
+            };
+            item.Click += (_, _) => _viewModel.SetLanguage(language.Code);
+            menu.Items.Add(item);
+        }
         menu.PlacementTarget = LanguageButton;
         menu.IsOpen = true;
     }

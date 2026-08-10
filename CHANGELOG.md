@@ -4,6 +4,25 @@ All notable FootageFlow changes are documented here.
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-08-10
+
+### Added
+
+- Traditional Chinese, Spanish, Brazilian Portuguese, Japanese, Korean, German, French, and Russian interfaces on macOS and Windows
+- A localized recommendation below Quick Search explaining that National Archives, Europeana, and YouTube work better with their free official APIs, with a direct path to provider settings
+- Cross-platform locale resource validation, placeholder validation, fallback tests, persistence tests, and Windows installer language support
+
+### Changed
+
+- The language switcher now exposes ten native-language names while preserving English as the first-launch default
+- macOS and Windows packaging now include every supported locale automatically
+
+### Known limitations
+
+- The Windows installer is not code-signed and the macOS app is Ad Hoc signed but not notarized.
+- National Archives and Europeana still require a user key for complete in-app search; YouTube keyless search and downloading remain best-effort.
+- Provider-supplied rights metadata may be incomplete; unknown information must be checked on the original source page.
+
 ## [0.3.0] - 2026-08-10
 
 ### Added

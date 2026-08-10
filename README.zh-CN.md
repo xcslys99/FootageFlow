@@ -6,7 +6,7 @@
 
 FootageFlow 是一款注重隐私的桌面素材发现、下载与管理软件，面向历史、国家、财经、人物、科普、纪录片和短视频创作者，可搜索真实视频、图片和音频资料。
 
-FootageFlow v0.3.0 正式支持 **macOS 15+ Apple Silicon** 和 **Windows 11 x64**。两个版本共用 Provider 行为、统一 Metadata/Rights、高级筛选、署名文本、关键词、来源 Sidecar 和项目持久化核心。
+FootageFlow v0.4.0 正式支持 **macOS 15+ Apple Silicon** 和 **Windows 11 x64**。两个版本共用 Provider 行为、统一 Metadata/Rights、高级筛选、署名文本、关键词、来源 Sidecar 和项目持久化核心。
 
 ## 已实现功能
 
@@ -16,7 +16,8 @@ FootageFlow v0.3.0 正式支持 **macOS 15+ Apple Silicon** 和 **Windows 11 x64
 - 每项均可复制来源或复制署名信息，内容只使用 Provider 实际提供的元数据
 - 视频/图片预览、收藏、项目库、文稿拆分、搜索历史和下载历史
 - 每个成功下载文件自动生成同名 `.source.txt` 和 `.source.json`
-- English / 简体中文；首次启动默认 English，右上角提供醒目的语言切换
+- 支持 English、简体中文、繁體中文、西班牙语、巴西葡萄牙语、日语、韩语、德语、法语和俄语；首次启动仍默认 English
+- 搜索栏下方明确提示 National Archives、Europeana 和 YouTube 配置官方免费 API 后效果更好，并可直接进入素材来源设置
 - 可选 API Key 只保存在 macOS Keychain 或 Windows Credential Manager
 - 不含分析、广告、跟踪、云端账号、付费大模型，也不依赖 OpenAI API、Codex 或终端脚本
 
@@ -34,15 +35,15 @@ FootageFlow v0.3.0 正式支持 **macOS 15+ Apple Silicon** 和 **Windows 11 x64
 
 ## 在 macOS 安装
 
-1. 从 Releases 下载 `FootageFlow-0.3.0-macOS-arm64.dmg`。
+1. 从 Releases 下载 `FootageFlow-0.4.0-macOS-arm64.dmg`。
 2. 打开 DMG，把 FootageFlow 拖入“应用程序”。
-3. 打开 FootageFlow。v0.3.0 使用 Ad Hoc 签名，尚未公证；如果首次启动被系统拦截，请前往“系统设置 → 隐私与安全性 → 仍要打开”。
+3. 打开 FootageFlow。v0.4.0 使用 Ad Hoc 签名，尚未公证；如果首次启动被系统拦截，请前往“系统设置 → 隐私与安全性 → 仍要打开”。
 
 日常使用不需要打开终端。
 
 ## 在 Windows 安装
 
-1. 在 Windows 11 x64 电脑上下载 `FootageFlow-Setup-0.3.0-Windows-x64.exe`。
+1. 在 Windows 11 x64 电脑上下载 `FootageFlow-Setup-0.4.0-Windows-x64.exe`。
 2. 使用同时提供的 `.sha256` 文件核对安装包，然后双击安装。
 3. 完成安装向导，从“开始”菜单打开 FootageFlow。
 
@@ -54,7 +55,7 @@ FootageFlow v0.3.0 正式支持 **macOS 15+ Apple Silicon** 和 **Windows 11 x64
 2. 可先尝试 `Apollo 11` 或 `World War II`，再打开“高级筛选”或“仅显示可直接下载”。
 3. 勾选结果后，可批量下载、加入现有/新项目或复制来源信息。
 4. 发布前使用“复制署名信息”，并核对原始来源页。
-5. 如需完整的 National Archives 或 Europeana 应用内搜索，请在“设置 → 素材来源”添加自己的 Key。
+5. National Archives、Europeana 和 YouTube 接入官方免费 API 后搜索效果更好；如需配置，请进入“设置 → 素材来源”。
 
 macOS 默认下载目录为 `~/Movies/FootageFlow/<项目名>/`，Windows 默认为 `%USERPROFILE%\Videos\FootageFlow\<项目名>\`，均可在设置中修改。删除数据库记录不会删除已经下载的素材文件。
 
