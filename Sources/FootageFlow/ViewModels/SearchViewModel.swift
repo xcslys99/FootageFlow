@@ -2,140 +2,191 @@ import Foundation
 
 @MainActor
 final class SearchViewModel: ObservableObject {
-    @Published var query = ""
-    @Published var keywords: [SearchKeyword] = []
-    @Published var mediaType: MediaType = .video
-    @Published var orientation: AssetOrientation = .all
-    @Published var resolution: ResolutionFilter = .all
-    @Published var duration: DurationFilter = .all
-    @Published var licenseFilter: LicenseFilter = .all
-    @Published var sort: SearchSort = .relevance
-    @Published var selectedProviders = AppSettings.enabledProviders
-    @Published var currentProjectID: UUID?
-    @Published private(set) var assets: [MediaAsset] = []
-    @Published private(set) var providerErrors: [ProviderID: ProviderError] = [:]
-    @Published private(set) var providerCounts: [ProviderID: Int] = [:]
-    @Published private(set) var providerStates: [ProviderID: ProviderRuntimeState] = [:]
-    @Published private(set) var isSearching = false
-    @Published private(set) var status: SearchStatus = .initial
+  @Published var query = ""
+  @Published var keywords: [SearchKeyword] = []
+  @Published var mediaType: MediaType = .video
+  @Published var orientation: AssetOrientation = .all
+  @Published var resolution: ResolutionFilter = .all
+  @Published var duration: DurationFilter = .all
+  @Published var licenseFilter: LicenseFilter = .all
+  @Published var sort: SearchSort = .relevance
+  @Published var selectedProviders = AppSettings.enabledProviders
+  @Published var currentProjectID: UUID?
+  @Published private(set) var assets: [MediaAsset] = []
+  @Published private(set) var providerErrors: [ProviderID: ProviderError] = [:]
+  @Published private(set) var providerCounts: [ProviderID: Int] = [:]
+  @Published private(set) var providerStates: [ProviderID: ProviderRuntimeState] = [:]
+  @Published private(set) var isSearching = false
+  @Published private(set) var status: SearchStatus = .initial
 
-    private var task: Task<Void, Never>?
-    private var store: DataStore?
+  private var task: Task<Void, Never>?
+  private var store: DataStore?
 
-    var statusText: String { status.text }
+  var statusText: String { status.text }
 
-    var filteredAssets: [MediaAsset] {
-        var value = assets.filter { asset in
-            (mediaType == .all || asset.mediaType == mediaType) &&
-            (orientation == .all || asset.orientation == orientation) &&
-            (resolution.minimumHeight == nil || (asset.height ?? 0) >= resolution.minimumHeight!) &&
-            duration.matches(asset.duration) && licenseFilter.matches(asset.licenseStatus) &&
-            selectedProviders.contains(asset.provider)
-        }
-        switch sort {
-        case .relevance: value.sort { score($0) > score($1) }
-        case .newest: value.sort { ($0.publishedDate ?? .distantPast) > ($1.publishedDate ?? .distantPast) }
-        case .resolution: value.sort { ($0.width ?? 0) * ($0.height ?? 0) > ($1.width ?? 0) * ($1.height ?? 0) }
-        case .duration: value.sort { ($0.duration ?? -1) > ($1.duration ?? -1) }
-        }
-        return value
+  var filteredAssets: [MediaAsset] {
+    var value = assets.filter { asset in
+      (mediaType == .all || asset.mediaType == mediaType)
+        && (orientation == .all || asset.orientation == orientation)
+        && (resolution.minimumHeight == nil || (asset.height ?? 0) >= resolution.minimumHeight!)
+        && duration.matches(asset.duration) && licenseFilter.matches(asset.licenseStatus)
+        && selectedProviders.contains(asset.provider)
     }
+    switch sort {
+    case .relevance: value.sort { score($0) > score($1) }
+    case .newest:
+      value.sort { ($0.publishedDate ?? .distantPast) > ($1.publishedDate ?? .distantPast) }
+    case .resolution:
+      value.sort { ($0.width ?? 0) * ($0.height ?? 0) > ($1.width ?? 0) * ($1.height ?? 0) }
+    case .duration: value.sort { ($0.duration ?? -1) > ($1.duration ?? -1) }
+    }
+    return value
+  }
 
-    func configure(store: DataStore) { self.store = store }
+  func configure(store: DataStore) { self.store = store }
 
-    func prepareKeywords(translated: String? = nil) { keywords = KeywordEngine.keywords(for: query, translated: translated) }
-    func acceptTranslation(_ text: String) { keywords = KeywordEngine.mergeTranslation(text, into: keywords) }
-    func addKeyword() { keywords.append(SearchKeyword(text: "")) }
-    func removeKeyword(_ id: UUID) { keywords.removeAll { $0.id == id } }
+  func prepareKeywords(translated: String? = nil) {
+    keywords = KeywordEngine.keywords(for: query, translated: translated)
+  }
+  func acceptTranslation(_ text: String) {
+    keywords = KeywordEngine.mergeTranslation(text, into: keywords)
+  }
+  func addKeyword() { keywords.append(SearchKeyword(text: "")) }
+  func removeKeyword(_ id: UUID) { keywords.removeAll { $0.id == id } }
 
-    func search(forceRefresh: Bool = false, only providerID: ProviderID? = nil) {
-        let active = keywords.filter { $0.isEnabled && !$0.text.trimmingCharacters(in: .whitespaces).isEmpty }.map(\.text)
-        guard !active.isEmpty else { prepareKeywords(); if keywords.isEmpty { status = .enterQuery; return }; search(forceRefresh: forceRefresh, only: providerID); return }
-        task?.cancel()
-        isSearching = true; providerErrors = [:]; providerCounts = [:]
-        status = .searchingProviders(selectedProviders.count)
-        let filterSnapshot = (mediaType, orientation, resolution, duration)
-        let providerSet = providerID.map { Set([$0]) } ?? selectedProviders
-        let providers = makeProviders().filter { providerSet.contains($0.info.id) }
-        for id in ProviderID.allCases {
-            providerStates[id] = selectedProviders.contains(id)
-                ? ProviderRuntimeState(availability: .available, message: nil)
-                : ProviderRuntimeState(availability: .disabled, message: nil)
-        }
-        for provider in providers where provider.info.requiresAPIKey && KeychainService.read(provider.info.id).isEmpty {
-            providerStates[provider.info.id] = ProviderRuntimeState(availability: .authenticationRequired, message: ProviderError.missingAPIKey(provider.info.id).errorDescription)
-        }
-        task = Task { [weak self] in
-            guard let self else { return }
-            if providerID == nil { self.assets = [] }
-            await withTaskGroup(of: ProviderSearchResult.self) { group in
-                for provider in providers {
-                    group.addTask {
-                        var combined: [MediaAsset] = []
-                        do {
-                            let providerKeywords = provider.info.id == .youtube ? Array(active.prefix(2)) : active
-                            for keyword in providerKeywords {
-                                try Task.checkCancellation()
-                                let request = SearchRequest(query: keyword, mediaType: filterSnapshot.0, orientation: filterSnapshot.1, resolution: filterSnapshot.2, duration: filterSnapshot.3, pageSize: 16)
-                                if !forceRefresh, let cached = await SearchCache.shared.assets(provider: provider.info.id, request: request) { combined += cached }
-                                else {
-                                    let found = try await provider.search(request)
-                                    await SearchCache.shared.store(found, provider: provider.info.id, request: request)
-                                    combined += found
-                                }
-                            }
-                            return ProviderSearchResult(provider: provider.info.id, assets: combined, error: nil, state: nil)
-                        } catch {
-                            await AppLogger.shared.write(provider: provider.info.id, requestType: "search", error: error)
-                            let providerError = error as? ProviderError ?? ProviderError.message(error.localizedDescription)
-                            return ProviderSearchResult(provider: provider.info.id, assets: combined, error: providerError, state: ProviderRuntimeState.from(error: error))
-                        }
-                    }
+  func search(forceRefresh: Bool = false, only providerID: ProviderID? = nil) {
+    let active = keywords.filter {
+      $0.isEnabled && !$0.text.trimmingCharacters(in: .whitespaces).isEmpty
+    }.map(\.text)
+    guard !active.isEmpty else {
+      prepareKeywords()
+      if keywords.isEmpty {
+        status = .enterQuery
+        return
+      }
+      search(forceRefresh: forceRefresh, only: providerID)
+      return
+    }
+    task?.cancel()
+    isSearching = true
+    providerErrors = [:]
+    providerCounts = [:]
+    status = .searchingProviders(selectedProviders.count)
+    let filterSnapshot = (mediaType, orientation, resolution, duration)
+    let providerSet = providerID.map { Set([$0]) } ?? selectedProviders
+    let providers = makeProviders().filter { providerSet.contains($0.info.id) }
+    for id in ProviderID.allCases {
+      providerStates[id] =
+        selectedProviders.contains(id)
+        ? ProviderRuntimeState(availability: .available, message: nil)
+        : ProviderRuntimeState(availability: .disabled, message: nil)
+    }
+    for provider in providers
+    where provider.info.requiresAPIKey && KeychainService.read(provider.info.id).isEmpty {
+      providerStates[provider.info.id] = ProviderRuntimeState(
+        availability: .authenticationRequired,
+        message: ProviderError.missingAPIKey(provider.info.id).errorDescription)
+    }
+    task = Task { [weak self] in
+      guard let self else { return }
+      if providerID == nil { self.assets = [] }
+      await withTaskGroup(of: ProviderSearchResult.self) { group in
+        for provider in providers {
+          group.addTask {
+            var combined: [MediaAsset] = []
+            do {
+              let providerKeywords = provider.info.id == .youtube ? Array(active.prefix(2)) : active
+              for keyword in providerKeywords {
+                try Task.checkCancellation()
+                let request = SearchRequest(
+                  query: keyword, mediaType: filterSnapshot.0, orientation: filterSnapshot.1,
+                  resolution: filterSnapshot.2, duration: filterSnapshot.3, pageSize: 16)
+                if !forceRefresh,
+                  let cached = await SearchCache.shared.assets(
+                    provider: provider.info.id, request: request)
+                {
+                  combined += cached
+                } else {
+                  let found = try await provider.search(request)
+                  await SearchCache.shared.store(
+                    found, provider: provider.info.id, request: request)
+                  combined += found
                 }
-                for await batch in group {
-                    if Task.isCancelled { group.cancelAll(); break }
-                    self.apply(batch)
-                }
+              }
+              return ProviderSearchResult(
+                provider: provider.info.id, assets: combined, error: nil, state: nil)
+            } catch {
+              await AppLogger.shared.write(
+                provider: provider.info.id, requestType: "search", error: error)
+              let providerError =
+                error as? ProviderError ?? ProviderError.message(error.localizedDescription)
+              return ProviderSearchResult(
+                provider: provider.info.id, assets: combined, error: providerError,
+                state: ProviderRuntimeState.from(error: error))
             }
-            if Task.isCancelled { self.isSearching = false; self.status = .stopped; return }
-            self.isSearching = false
-            self.status = self.assets.isEmpty ? .noResults : .found(self.assets.count)
-            self.saveHistory(active: active)
+          }
         }
-    }
-
-    func stop() { task?.cancel(); task = nil; isSearching = false; status = .stopped }
-
-    private func makeProviders() -> [any MediaProvider] {
-        [
-            PexelsProvider(apiKey: KeychainService.read(.pexels)),
-            PixabayProvider(apiKey: KeychainService.read(.pixabay)),
-            WikimediaProvider(), InternetArchiveProvider(),
-            YouTubeProvider(apiKey: KeychainService.read(.youtube))
-        ]
-    }
-
-    private func apply(_ batch: ProviderSearchResult) {
-        providerCounts[batch.provider] = batch.assets.count
-        if let error = batch.error {
-            providerErrors[batch.provider] = error
-            providerStates[batch.provider] = batch.state ?? ProviderRuntimeState(availability: .unavailable, message: error.errorDescription)
-        } else {
-            providerErrors[batch.provider] = nil
-            providerStates[batch.provider] = ProviderRuntimeState(availability: .available, message: nil)
+        for await batch in group {
+          if Task.isCancelled {
+            group.cancelAll()
+            break
+          }
+          self.apply(batch)
         }
-        assets += batch.assets
-        assets = SearchDeduplicator.apply(assets).prefix(300).map { $0 }
-        status = assets.isEmpty ? .searchingOthers : .progressiveFound(assets.count)
+      }
+      if Task.isCancelled {
+        self.isSearching = false
+        self.status = .stopped
+        return
+      }
+      self.isSearching = false
+      self.status = self.assets.isEmpty ? .noResults : .found(self.assets.count)
+      self.saveHistory(active: active)
     }
+  }
 
-    private func score(_ asset: MediaAsset) -> Double {
-        asset.relevanceScore + (asset.downloadable ? 0.08 : 0) + (asset.height ?? 0 >= 1080 ? 0.04 : 0) + (asset.creator != nil ? 0.01 : 0) + (asset.licenseStatus != .unknown ? 0.03 : 0)
-    }
+  func stop() {
+    task?.cancel()
+    task = nil
+    isSearching = false
+    status = .stopped
+  }
 
-    private func saveHistory(active: [String]) {
-        guard let store else { return }
-        let record = SearchHistoryRecord(originalQuery: query, keywords: active, providers: selectedProviders, projectID: currentProjectID, resultCount: assets.count)
-        store.addHistory(record)
+  private func makeProviders() -> [any MediaProvider] {
+    [
+      PexelsProvider(apiKey: KeychainService.read(.pexels)),
+      PixabayProvider(apiKey: KeychainService.read(.pixabay)),
+      WikimediaProvider(), InternetArchiveProvider(),
+      YouTubeProvider(apiKey: KeychainService.read(.youtube)),
+    ]
+  }
+
+  private func apply(_ batch: ProviderSearchResult) {
+    providerCounts[batch.provider] = batch.assets.count
+    if let error = batch.error {
+      providerErrors[batch.provider] = error
+      providerStates[batch.provider] =
+        batch.state
+        ?? ProviderRuntimeState(availability: .unavailable, message: error.errorDescription)
+    } else {
+      providerErrors[batch.provider] = nil
+      providerStates[batch.provider] = ProviderRuntimeState(availability: .available, message: nil)
     }
+    assets += batch.assets
+    assets = SearchDeduplicator.apply(assets).prefix(300).map { $0 }
+    status = assets.isEmpty ? .searchingOthers : .progressiveFound(assets.count)
+  }
+
+  private func score(_ asset: MediaAsset) -> Double {
+    asset.relevanceScore + (asset.downloadable ? 0.08 : 0) + (asset.height ?? 0 >= 1080 ? 0.04 : 0)
+      + (asset.creator != nil ? 0.01 : 0) + (asset.licenseStatus != .unknown ? 0.03 : 0)
+  }
+
+  private func saveHistory(active: [String]) {
+    guard let store else { return }
+    let record = SearchHistoryRecord(
+      originalQuery: query, keywords: active, providers: selectedProviders,
+      projectID: currentProjectID, resultCount: assets.count)
+    store.addHistory(record)
+  }
 }

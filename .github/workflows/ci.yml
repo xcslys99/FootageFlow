@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test-and-build:
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Show Swift toolchain
+        run: swift --version
+
+      - name: Lint source and localizations
+        run: scripts/lint.sh
+
+      - name: Scan tracked files for secrets
+        run: scripts/secret_scan.sh
+
+      - name: Build release executable
+        run: swift build -c release
+
+      - name: Run unit tests
+        run: swift test
+
+      - name: Build and verify app bundle
+        run: |
+          scripts/build_app.sh
+          codesign --verify --deep --strict dist/FootageFlow.app
+          dist/FootageFlow.app/Contents/MacOS/FootageFlow --self-test
