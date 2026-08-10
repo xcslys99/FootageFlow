@@ -32,15 +32,23 @@ struct InternetArchiveProvider: MediaProvider {
               let response = root["response"] as? [String: Any],
               let docs = response["docs"] as? [[String: Any]] else { throw ProviderError.invalidResponse }
 
-        return await withTaskGroup(of: MediaAsset?.self) { group in
-            for (index, doc) in docs.enumerated() {
-                guard let identifier = string(doc["identifier"]) else { continue }
-                group.addTask { await details(identifier: identifier, doc: doc, request: request, rank: index) }
+        var assets: [MediaAsset] = []
+        let indexed = Array(docs.enumerated())
+        for start in stride(from: 0, to: indexed.count, by: 4) {
+            if Task.isCancelled { break }
+            let batch = Array(indexed[start..<min(start + 4, indexed.count)])
+            let values = await withTaskGroup(of: MediaAsset?.self, returning: [MediaAsset].self) { group in
+                for (index, doc) in batch {
+                    guard let identifier = string(doc["identifier"]) else { continue }
+                    group.addTask { await details(identifier: identifier, doc: doc, request: request, rank: index) }
+                }
+                var output: [MediaAsset] = []
+                for await asset in group { if let asset { output.append(asset) } }
+                return output
             }
-            var assets: [MediaAsset] = []
-            for await asset in group { if let asset { assets.append(asset) } }
-            return assets.sorted { $0.relevanceScore > $1.relevanceScore }
+            assets += values
         }
+        return assets.sorted { $0.relevanceScore > $1.relevanceScore }
     }
 
     private func details(identifier: String, doc: [String: Any], request: SearchRequest, rank: Int) async -> MediaAsset? {

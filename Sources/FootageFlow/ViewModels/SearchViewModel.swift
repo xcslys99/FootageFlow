@@ -15,6 +15,7 @@ final class SearchViewModel: ObservableObject {
     @Published private(set) var assets: [MediaAsset] = []
     @Published private(set) var providerErrors: [ProviderID: String] = [:]
     @Published private(set) var providerCounts: [ProviderID: Int] = [:]
+    @Published private(set) var providerStates: [ProviderID: ProviderRuntimeState] = [:]
     @Published private(set) var isSearching = false
     @Published private(set) var statusText = "输入题材后搜索真实素材库"
 
@@ -54,9 +55,18 @@ final class SearchViewModel: ObservableObject {
         let filterSnapshot = (mediaType, orientation, resolution, duration)
         let providerSet = providerID.map { Set([$0]) } ?? selectedProviders
         let providers = makeProviders().filter { providerSet.contains($0.info.id) }
+        for id in ProviderID.allCases {
+            providerStates[id] = selectedProviders.contains(id)
+                ? ProviderRuntimeState(availability: .available, message: nil)
+                : ProviderRuntimeState(availability: .disabled, message: nil)
+        }
+        for provider in providers where provider.info.requiresAPIKey && KeychainService.read(provider.info.id).isEmpty {
+            providerStates[provider.info.id] = ProviderRuntimeState(availability: .authenticationRequired, message: ProviderError.missingAPIKey(provider.info.id).errorDescription)
+        }
         task = Task { [weak self] in
             guard let self else { return }
-            let batches = await withTaskGroup(of: ProviderSearchResult.self, returning: [ProviderSearchResult].self) { group in
+            if providerID == nil { self.assets = [] }
+            await withTaskGroup(of: ProviderSearchResult.self) { group in
                 for provider in providers {
                     group.addTask {
                         var combined: [MediaAsset] = []
@@ -72,25 +82,19 @@ final class SearchViewModel: ObservableObject {
                                     combined += found
                                 }
                             }
-                            return ProviderSearchResult(provider: provider.info.id, assets: combined, errorMessage: nil)
+                            return ProviderSearchResult(provider: provider.info.id, assets: combined, errorMessage: nil, state: nil)
                         } catch {
                             await AppLogger.shared.write(provider: provider.info.id, requestType: "search", error: error)
-                            return ProviderSearchResult(provider: provider.info.id, assets: combined, errorMessage: (error as? LocalizedError)?.errorDescription ?? "搜索失败")
+                            return ProviderSearchResult(provider: provider.info.id, assets: combined, errorMessage: (error as? LocalizedError)?.errorDescription ?? "搜索失败", state: ProviderRuntimeState.from(error: error))
                         }
                     }
                 }
-                var output: [ProviderSearchResult] = []
-                for await batch in group { output.append(batch) }
-                return output
+                for await batch in group {
+                    if Task.isCancelled { group.cancelAll(); break }
+                    self.apply(batch)
+                }
             }
             if Task.isCancelled { self.isSearching = false; self.statusText = "搜索已停止"; return }
-            if providerID == nil { self.assets = [] }
-            for batch in batches {
-                self.providerCounts[batch.provider] = batch.assets.count
-                if let message = batch.errorMessage { self.providerErrors[batch.provider] = message }
-                self.assets += batch.assets
-            }
-            self.assets = SearchDeduplicator.apply(self.assets).prefix(300).map { $0 }
             self.isSearching = false
             self.statusText = self.assets.isEmpty ? "没有找到结果，可修改关键词后重试" : "已找到 \(self.assets.count) 条真实素材"
             self.saveHistory(active: active)
@@ -106,6 +110,20 @@ final class SearchViewModel: ObservableObject {
             WikimediaProvider(), InternetArchiveProvider(),
             YouTubeProvider(apiKey: KeychainService.read(.youtube))
         ]
+    }
+
+    private func apply(_ batch: ProviderSearchResult) {
+        providerCounts[batch.provider] = batch.assets.count
+        if let message = batch.errorMessage {
+            providerErrors[batch.provider] = message
+            providerStates[batch.provider] = batch.state ?? ProviderRuntimeState(availability: .unavailable, message: message)
+        } else {
+            providerErrors[batch.provider] = nil
+            providerStates[batch.provider] = ProviderRuntimeState(availability: .available, message: nil)
+        }
+        assets += batch.assets
+        assets = SearchDeduplicator.apply(assets).prefix(300).map { $0 }
+        statusText = assets.isEmpty ? "正在搜索其他素材库…" : "已找到 \(assets.count) 条真实素材，其他来源仍在搜索…"
     }
 
     private func score(_ asset: MediaAsset) -> Double {

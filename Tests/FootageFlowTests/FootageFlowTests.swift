@@ -72,6 +72,12 @@ final class FootageFlowTests: XCTestCase {
         XCTAssertTrue(FileManager.default.fileExists(atPath: legacy.path))
     }
 
+    func testProviderFailureStateMapping() {
+        XCTAssertEqual(ProviderRuntimeState.from(error: ProviderError.missingAPIKey(.pexels)).availability, .authenticationRequired)
+        XCTAssertEqual(ProviderRuntimeState.from(error: ProviderError.rateLimited(retryAfter: 10)).availability, .rateLimited)
+        XCTAssertEqual(ProviderRuntimeState.from(error: ProviderError.serverUnavailable).availability, .unavailable)
+    }
+
     @MainActor func testProjectCRUDAndPersistence() throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)

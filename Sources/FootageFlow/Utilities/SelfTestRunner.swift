@@ -24,6 +24,8 @@ enum SelfTestRunner {
         DataStore.migrateDatabaseIfNeeded(current: currentDatabase, legacy: legacyDatabase)
         check((try? String(contentsOf: currentDatabase, encoding: .utf8)) == "legacy", "Legacy database migration")
         try? FileManager.default.removeItem(at: migrationDirectory)
+        check(ProviderRuntimeState.from(error: ProviderError.missingAPIKey(.pexels)).availability == .authenticationRequired, "Provider auth state")
+        check(ProviderRuntimeState.from(error: ProviderError.rateLimited(retryAfter: nil)).availability == .rateLimited, "Provider rate-limit state")
 
         let sample = MediaAsset(id: "1", provider: .wikimedia, title: "Test", description: nil, thumbnailURL: nil, previewURL: nil, downloadURL: URL(string: "https://example.com/a.mp4"), sourcePageURL: URL(string: "https://example.com/item")!, creator: "A", license: "CC BY", licenseURL: nil, licenseStatus: .attributionRequired, width: 1920, height: 1080, duration: 10, fileType: "video/mp4", mediaType: .video, publishedDate: nil, downloadable: true, originalMetadata: [:], searchKeyword: "test", relevanceScore: 1)
         let duplicate = sample

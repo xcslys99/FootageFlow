@@ -24,10 +24,37 @@ struct ProviderInfo: Sendable {
     let supportsDownload: Bool
 }
 
+enum ProviderAvailability: String, Codable, Sendable {
+    case available
+    case unavailable
+    case authenticationRequired
+    case rateLimited
+    case disabled
+}
+
+struct ProviderRuntimeState: Codable, Equatable, Sendable {
+    var availability: ProviderAvailability
+    var message: String?
+
+    static func from(error: Error) -> ProviderRuntimeState {
+        guard let providerError = error as? ProviderError else {
+            return ProviderRuntimeState(availability: .unavailable, message: error.localizedDescription)
+        }
+        let availability: ProviderAvailability = switch providerError {
+        case .missingAPIKey, .invalidAPIKey: .authenticationRequired
+        case .rateLimited: .rateLimited
+        case .cancelled: .unavailable
+        default: .unavailable
+        }
+        return ProviderRuntimeState(availability: availability, message: providerError.errorDescription)
+    }
+}
+
 struct ProviderSearchResult: Sendable {
     let provider: ProviderID
     let assets: [MediaAsset]
     let errorMessage: String?
+    let state: ProviderRuntimeState?
 }
 
 enum ProviderError: LocalizedError, Sendable {

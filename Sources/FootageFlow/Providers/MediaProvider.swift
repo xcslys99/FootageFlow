@@ -4,11 +4,17 @@ protocol MediaProvider: Sendable {
     var info: ProviderInfo { get }
     func search(_ request: SearchRequest) async throws -> [MediaAsset]
     func testConnection() async throws
+    func resolveDownload(for asset: MediaAsset) async throws -> URL
 }
 
 extension MediaProvider {
     func testConnection() async throws {
         _ = try await search(SearchRequest(query: "bank", pageSize: 1))
+    }
+
+    func resolveDownload(for asset: MediaAsset) async throws -> URL {
+        guard info.supportsDownload, asset.downloadable else { throw ProviderError.unsupported }
+        return try URLValidator.remote(asset.downloadURL)
     }
 }
 
