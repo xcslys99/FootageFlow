@@ -56,6 +56,28 @@ enum SelfTestRunner {
     check(
       ProviderRuntimeState.from(error: ProviderError.rateLimited(retryAfter: nil)).availability
         == .rateLimited, "Provider rate-limit state")
+    check(
+      ProviderRuntimeState.from(error: ProviderError.temporarilyBlocked(.pexels)).availability
+        == .temporarilyBlocked, "Provider direct-search block state")
+    check(
+      ProviderFactory.make(.pexels, apiKey: "configured").info.mode == .officialAPI,
+      "Pexels official API mode")
+    check(
+      ProviderFactory.make(.pexels, apiKey: "").info.mode == .directSearch,
+      "Pexels direct mode")
+    check(
+      ProviderFactory.make(.pixabay, apiKey: "").info.mode == .directSearch,
+      "Pixabay direct mode")
+    if case .rateLimited = YTDLPService.mapFailure("HTTP Error 429: Too Many Requests") {
+      passed += 1
+    } else {
+      failed.append("yt-dlp rate-limit mapping")
+    }
+    if case .regionalRestriction = YTDLPService.mapFailure("not available in your country") {
+      passed += 1
+    } else {
+      failed.append("yt-dlp regional restriction mapping")
+    }
     let localizationSuite = "FootageFlowSelfTest.\(UUID().uuidString)"
     if let defaults = UserDefaults(suiteName: localizationSuite) {
       defaults.removePersistentDomain(forName: localizationSuite)

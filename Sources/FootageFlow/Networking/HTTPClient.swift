@@ -7,10 +7,14 @@ actor HTTPClient {
   private let decoder: JSONDecoder
 
   init() {
-    let configuration = URLSessionConfiguration.default
+    // Provider credentials must never be persisted by URLSession. FootageFlow's normalized
+    // SearchCache handles provider-required result caching without storing request URLs or keys.
+    let configuration = URLSessionConfiguration.ephemeral
     configuration.timeoutIntervalForRequest = 25
     configuration.timeoutIntervalForResource = 60
-    configuration.requestCachePolicy = .reloadRevalidatingCacheData
+    configuration.requestCachePolicy = .reloadIgnoringLocalCacheData
+    configuration.urlCache = nil
+    configuration.httpCookieStorage = nil
     configuration.httpAdditionalHeaders = [
       "User-Agent": "FootageFlow/0.1.0 (macOS open-source footage discovery app)"
     ]

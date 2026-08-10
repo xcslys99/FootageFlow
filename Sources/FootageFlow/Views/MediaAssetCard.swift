@@ -63,7 +63,7 @@ struct MediaAssetCard: View {
         } label: {
           Image(systemName: store.isFavorite(asset, projectID: projectID) ? "heart.fill" : "heart")
         }.help(tr("media.favorite"))
-        if asset.downloadable && asset.provider != .youtube {
+        if asset.downloadable {
           if let downloadState,
             downloadState.status == .downloading || downloadState.status == .waiting
           {

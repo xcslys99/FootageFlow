@@ -12,6 +12,7 @@ struct SettingsView: View {
   @State private var cacheMessage = ""
   @State private var downloadRoot = AppSettings.downloadRootURL
   @State private var confirmClearHistory = false
+  @State private var editingKeys: Set<ProviderID> = []
 
   var body: some View {
     ScrollView {
@@ -27,19 +28,24 @@ struct SettingsView: View {
           .pickerStyle(.segmented)
           .padding(8)
         }
-        GroupBox(tr("settings.apiSources")) {
-          VStack(spacing: 0) {
-            keyRow(.pexels, key: $pexelsKey, applyURL: "https://www.pexels.com/api/")
+        GroupBox(tr("settings.sourcesProviders")) {
+          VStack(alignment: .leading, spacing: 0) {
+            Text(tr("settings.optionalAPIExplanation"))
+              .font(.callout).foregroundStyle(.secondary).padding(10)
             Divider()
-            keyRow(.pixabay, key: $pixabayKey, applyURL: "https://pixabay.com/api/docs/")
+            providerCard(
+              .pexels, key: $pexelsKey, applyURL: "https://www.pexels.com/api/",
+              noKeyDetail: tr("settings.directSearchDetail"))
             Divider()
-            keyRow(
+            providerCard(
+              .pixabay, key: $pixabayKey, applyURL: "https://pixabay.com/api/docs/",
+              noKeyDetail: tr("settings.directSearchDetail"))
+            Divider()
+            providerCard(
               .youtube, key: $youtubeKey,
-              applyURL: "https://console.cloud.google.com/apis/library/youtube.googleapis.com")
-          }.padding(6)
-        }
-        GroupBox(tr("settings.noKeySources")) {
-          VStack(spacing: 0) {
+              applyURL: "https://console.cloud.google.com/apis/library/youtube.googleapis.com",
+              noKeyDetail: tr("settings.youtubeBestEffortDetail"))
+            Divider()
             noKeyRow(.wikimedia, detail: tr("settings.wikimediaDetail"))
             Divider()
             noKeyRow(.internetArchive, detail: tr("settings.archiveDetail"))
@@ -88,24 +94,60 @@ struct SettingsView: View {
     }
   }
 
-  private func keyRow(_ provider: ProviderID, key: Binding<String>, applyURL: String) -> some View {
-    VStack(alignment: .leading, spacing: 8) {
+  private func providerCard(
+    _ provider: ProviderID, key: Binding<String>, applyURL: String, noKeyDetail: String
+  ) -> some View {
+    let hasKey = !key.wrappedValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    let mode = ProviderFactory.make(provider, apiKey: hasKey ? key.wrappedValue : "").info.mode
+    return VStack(alignment: .leading, spacing: 8) {
       HStack {
         Toggle("", isOn: enabledBinding(provider)).labelsHidden()
-        Text(provider.displayName).font(.headline).frame(width: 110, alignment: .leading)
-        SecureField(tr("settings.apiKey"), text: key).textFieldStyle(.roundedBorder)
-        Button(tr("common.save")) { saveKey(provider, value: key.wrappedValue) }
-        Button(tr("settings.testConnection")) { test(provider, key: key.wrappedValue) }.disabled(
-          key.wrappedValue.trimmingCharacters(in: .whitespaces).isEmpty)
-        Link(tr("welcome.howToApply"), destination: URL(string: applyURL)!)
+        Text(provider.displayName).font(.headline)
+        Spacer()
+        Text(mode.label).font(.caption.bold())
+          .padding(.horizontal, 8).padding(.vertical, 4)
+          .background(modeColor(mode).opacity(0.14), in: Capsule())
+        if hasKey && provider != .youtube {
+          Label(tr("settings.recommended"), systemImage: "checkmark.circle.fill")
+            .font(.caption).foregroundStyle(.green)
+        } else if !hasKey {
+          Text(tr("provider.bestEffort")).font(.caption).foregroundStyle(.blue)
+        }
       }
-      HStack {
-        Text(
-          statuses[provider]
-            ?? (key.wrappedValue.isEmpty ? tr("settings.notConfigured") : tr("settings.configured"))
-        ).foregroundStyle(statusColor(statuses[provider]))
-        if let message = messages[provider] { Text(message).foregroundStyle(.secondary) }
-      }.font(.caption)
+      if hasKey && !editingKeys.contains(provider) {
+        HStack {
+          Text(tr("settings.apiKey")).foregroundStyle(.secondary)
+          Text("••••••••••••").font(.system(.body, design: .monospaced))
+          Button(tr("settings.changeAPIKey")) { editingKeys.insert(provider) }
+          Button(tr("settings.removeAPIKey"), role: .destructive) { removeKey(provider, key: key) }
+          Button(tr("settings.testConnection")) { test(provider, key: key.wrappedValue) }
+          Link(tr("welcome.howToApply"), destination: URL(string: applyURL)!)
+        }
+      } else {
+        Text(hasKey ? tr("settings.replaceKeyDetail") : noKeyDetail)
+          .font(.caption).foregroundStyle(.secondary)
+        HStack {
+          SecureField(tr("settings.apiKeyOptional"), text: key).textFieldStyle(.roundedBorder)
+          Button(hasKey ? tr("common.save") : tr("settings.addAPIKey")) {
+            saveKey(provider, value: key.wrappedValue)
+            editingKeys.remove(provider)
+          }.disabled(key.wrappedValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+          if hasKey {
+            Button(tr("common.cancel")) {
+              key.wrappedValue = KeychainService.read(provider)
+              editingKeys.remove(provider)
+            }
+          }
+          Button(tr("settings.testDirectSearch")) { test(provider, key: "") }
+          Link(tr("welcome.howToApply"), destination: URL(string: applyURL)!)
+        }
+      }
+      if let status = statuses[provider] {
+        HStack {
+          Text(status).foregroundStyle(statusColor(status))
+          if let message = messages[provider] { Text(message).foregroundStyle(.secondary) }
+        }.font(.caption)
+      }
     }.padding(.vertical, 10)
   }
 
@@ -142,18 +184,23 @@ struct SettingsView: View {
       messages[provider] = error.localizedDescription
     }
   }
+  private func removeKey(_ provider: ProviderID, key: Binding<String>) {
+    do {
+      try KeychainService.save("", provider: provider)
+      key.wrappedValue = ""
+      editingKeys.remove(provider)
+      statuses[provider] = tr("settings.notConfigured")
+      messages[provider] = tr("settings.directSearchEnabled")
+    } catch {
+      statuses[provider] = tr("settings.saveFailed")
+      messages[provider] = error.localizedDescription
+    }
+  }
   private func test(_ provider: ProviderID, key: String) {
     statuses[provider] = tr("settings.connecting")
     messages[provider] = nil
     Task {
-      let source: any MediaProvider =
-        switch provider {
-        case .pexels: PexelsProvider(apiKey: key)
-        case .pixabay: PixabayProvider(apiKey: key)
-        case .youtube: YouTubeProvider(apiKey: key)
-        case .wikimedia: WikimediaProvider()
-        case .internetArchive: InternetArchiveProvider()
-        }
+      let source = ProviderFactory.make(provider, apiKey: key)
       do {
         try await source.testConnection()
         await MainActor.run { statuses[provider] = tr("settings.connectionSuccess") }
@@ -177,5 +224,12 @@ struct SettingsView: View {
       ? .green
       : (status == tr("settings.connectionFailed") || status == tr("settings.saveFailed")
         ? .red : .secondary)
+  }
+  private func modeColor(_ mode: ProviderMode) -> Color {
+    switch mode {
+    case .officialAPI: .green
+    case .publicInterface: .teal
+    case .directSearch, .ytDLP: .blue
+    }
   }
 }

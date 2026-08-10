@@ -2,6 +2,7 @@ import SwiftUI
 import Translation
 
 struct QuickSearchView: View {
+  var onManageSources: () -> Void = {}
   @EnvironmentObject private var viewModel: SearchViewModel
   @EnvironmentObject private var store: DataStore
   @EnvironmentObject private var localization: LocalizationManager
@@ -52,7 +53,10 @@ struct QuickSearchView: View {
       }
     }
     .sheet(isPresented: $showHistory) { SearchHistoryView(onUse: useHistory) }
-    .onAppear { viewModel.selectedProviders = AppSettings.enabledProviders }
+    .onAppear {
+      viewModel.selectedProviders = AppSettings.enabledProviders
+      viewModel.refreshProviderConfiguration()
+    }
     .translationTask(translationConfiguration) { session in
       guard !pendingTranslation.isEmpty else { return }
       do {
@@ -158,6 +162,9 @@ struct QuickSearchView: View {
         Picker(tr("filter.license"), selection: $viewModel.licenseFilter) {
           ForEach(LicenseFilter.allCases) { Text($0.label).tag($0) }
         }.id(localization.language).frame(width: 180)
+        Button(tr("settings.manageSources"), systemImage: "slider.horizontal.3") {
+          onManageSources()
+        }.buttonStyle(.link)
       }
     }
   }
@@ -178,7 +185,9 @@ struct QuickSearchView: View {
           .font(.caption)
           .padding(.horizontal, 8).padding(.vertical, 4)
           .background(.quaternary.opacity(0.55), in: Capsule())
-          .help(state.label)
+          .help(
+            "\(viewModel.providerModes[provider]?.label ?? "") · \(state.label)"
+              .trimmingCharacters(in: CharacterSet(charactersIn: " ·")))
         }
       }
     }
@@ -186,9 +195,10 @@ struct QuickSearchView: View {
 
   private func providerColor(_ state: ProviderAvailability) -> Color {
     switch state {
-    case .available: .green
+    case .available, .apiConnected: .green
+    case .bestEffort: .blue
     case .authenticationRequired: .orange
-    case .rateLimited: .yellow
+    case .rateLimited, .temporarilyBlocked: .yellow
     case .unavailable: .red
     case .disabled: .secondary
     }
@@ -206,6 +216,13 @@ struct QuickSearchView: View {
               Text(viewModel.providerErrors[provider]?.errorDescription ?? tr("search.failed"))
                 .lineLimit(1)
               Button(tr("common.retry")) { viewModel.search(only: provider) }.buttonStyle(.link)
+              if shouldOfferDirectSearch(provider) {
+                Button(tr("provider.tryDirectSearch")) { viewModel.tryDirectSearch(provider) }
+                  .buttonStyle(.link)
+              }
+              if shouldOfferAPIKey(provider) {
+                Button(tr("settings.addAPIKey")) { onManageSources() }.buttonStyle(.link)
+              }
             }.padding(.horizontal, 9).padding(.vertical, 5).background(
               .orange.opacity(0.1), in: Capsule())
           }
@@ -218,6 +235,25 @@ struct QuickSearchView: View {
       Text(tr("common.showingCount", viewModel.filteredAssets.count)).foregroundStyle(.secondary)
     }
     .font(.caption).padding(.horizontal, 16).padding(.vertical, 8)
+  }
+
+  private func shouldOfferDirectSearch(_ provider: ProviderID) -> Bool {
+    guard provider == .pexels || provider == .pixabay,
+      viewModel.providerModes[provider] == .officialAPI,
+      let error = viewModel.providerErrors[provider]
+    else { return false }
+    if case .rateLimited = error { return true }
+    return false
+  }
+
+  private func shouldOfferAPIKey(_ provider: ProviderID) -> Bool {
+    guard provider == .pexels || provider == .pixabay,
+      viewModel.providerModes[provider] == .directSearch,
+      let error = viewModel.providerErrors[provider]
+    else { return false }
+    if case .temporarilyBlocked = error { return true }
+    if case .rateLimited = error { return true }
+    return false
   }
 
   private func beginSearch() {

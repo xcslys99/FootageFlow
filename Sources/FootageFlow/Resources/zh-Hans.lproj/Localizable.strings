@@ -49,6 +49,7 @@
 "license.publicDomain" = "Public Domain";
 "license.unknown" = "授权未知";
 "license.restricted" = "受限制";
+"license.knownOnly" = "仅显示授权信息明确的素材";
 
 "filter.type" = "类型";
 "filter.orientation" = "方向";
@@ -91,10 +92,18 @@
 
 "provider.available" = "可用";
 "provider.unavailable" = "不可用";
+"provider.bestEffort" = "尽力提供";
+"provider.apiConnected" = "API 已连接";
 "provider.authenticationRequired" = "需要 API Key";
 "provider.rateLimited" = "请求受限";
+"provider.temporarilyBlocked" = "暂时受限";
 "provider.disabled" = "已停用";
 "provider.missingKey" = "%@：尚未配置 API Key";
+"provider.mode.officialAPI" = "官方 API";
+"provider.mode.publicInterface" = "公共接口";
+"provider.mode.directSearch" = "直接搜索";
+"provider.mode.ytDLP" = "yt-dlp 尽力下载";
+"provider.tryDirectSearch" = "尝试直接搜索";
 
 "error.invalidAPIKey" = "API Key 无效";
 "error.noNetwork" = "网络连接失败，请检查网络连接后重试。";
@@ -102,6 +111,11 @@
 "error.notFound" = "该素材已失效。";
 "error.serverUnavailable" = "素材来源服务器暂时不可用。";
 "error.invalidResponse" = "素材平台返回了 FootageFlow 无法识别的数据。";
+"error.directTemporarilyBlocked" = "%@ 当前暂时限制了直接搜索。你可以稍后重试，或者配置 API Key，以获得更加稳定的搜索体验。";
+"error.externalToolUnavailable" = "本地尽力下载工具当前不可用。";
+"error.videoUnavailable" = "该视频当前不可用。";
+"error.regionalRestriction" = "该视频在当前地区不可用。";
+"error.ytDLPFailed" = "YouTube 未能提供可下载的公开媒体流。请稍后重试或打开来源页面。";
 "error.unsupported" = "当前来源不支持这项操作。";
 "error.cancelled" = "操作已取消。";
 "error.timeout" = "网络请求超时，请重试。";
@@ -112,7 +126,7 @@
 
 "welcome.title" = "欢迎使用 FootageFlow";
 "welcome.subtitle" = "搜索、发现、下载、整理。";
-"welcome.body" = "无需 API Key 即可使用 Wikimedia Commons 和 Internet Archive。Pexels、Pixabay 和 YouTube 的 Key 可以现在填写，也可以稍后在设置中添加。";
+"welcome.body" = "打开后即可直接搜索。API Key 完全可选，如需提高 Pexels 或 Pixabay 的稳定性，可以稍后在设置中添加。";
 "welcome.optional" = "可选";
 "welcome.howToApply" = "如何申请";
 "welcome.security" = "API Key 只保存在操作系统的安全凭据存储中，不会写入配置文件或日志。";
@@ -121,6 +135,19 @@
 
 "settings.apiSources" = "需要 API Key 的素材源";
 "settings.noKeySources" = "无需 API Key";
+"settings.sourcesProviders" = "素材来源";
+"settings.optionalAPIExplanation" = "Pexels 和 Pixabay 使用官方 API 时搜索体验更加稳定。即使不配置 API Key，FootageFlow 仍然可以尝试直接搜索，但这种方式的稳定性较低，有时可能受到平台限制或暂时无法获取结果。配置自己的 API Key 并非强制要求，但如果你经常使用这些素材来源，我们建议配置，以获得更加稳定的搜索体验。";
+"settings.directSearchDetail" = "尚未配置 API Key。仍然可以直接搜索，但搜索稳定性可能受到平台限制。";
+"settings.youtubeBestEffortDetail" = "没有配置 Data API Key 时，YouTube 搜索和下载使用本地尽力提供工具。由于平台限流、地区限制、登录要求或平台变化，部分视频可能暂时无法下载。请只下载你有权使用的内容。";
+"settings.recommended" = "推荐";
+"settings.addAPIKey" = "添加 API Key";
+"settings.changeAPIKey" = "更换 API Key";
+"settings.removeAPIKey" = "移除 API Key";
+"settings.apiKeyOptional" = "可选 API Key";
+"settings.testDirectSearch" = "测试尽力模式";
+"settings.manageSources" = "管理素材来源";
+"settings.replaceKeyDetail" = "更换已保存的 API Key。完整 Key 不会显示或写入日志。";
+"settings.directSearchEnabled" = "已启用直接搜索尽力模式";
 "settings.downloadCache" = "下载与缓存";
 "settings.downloadRoot" = "下载根目录";
 "settings.choose" = "选择…";
@@ -197,6 +224,11 @@
 "download.saveFailed" = "保存文件失败";
 "download.retrying" = "下载中断，正在第 %d 次重试";
 "download.failed" = "下载失败，请稍后重试。";
+"download.rateLimited" = "请求过于频繁，请稍后再试。";
+"download.videoUnavailable" = "该 YouTube 视频当前不可用。";
+"download.regionalRestriction" = "该视频在当前地区不可用。";
+"download.accessRestricted" = "该视频需要额外访问权限，FootageFlow 不会绕过限制。";
+"download.ytDLPUnavailable" = "本地 YouTube 尽力下载工具当前不可用。";
 "download.speed" = "%@/秒";
 "download.saveLocation" = "保存位置：%@";
 "download.status.waiting" = "等待中";

@@ -3,8 +3,11 @@ import Foundation
 struct PixabayProvider: MediaProvider {
   let apiKey: String
   let info = ProviderInfo(
-    id: .pixabay, displayName: "Pixabay", requiresAPIKey: true, supportsVideo: true,
-    supportsImage: true, supportsDownload: true)
+    id: .pixabay, displayName: "Pixabay", mode: .officialAPI, requiresAPIKey: true,
+    capabilities: ProviderCapabilities(
+      search: .supported, preview: .supported, metadata: .supported, license: .supported,
+      download: .supported, supportsVideo: true, supportsImage: true,
+      accessMethods: [.officialAPI, .directSearch]))
 
   func search(_ request: SearchRequest) async throws -> [MediaAsset] {
     guard !apiKey.isEmpty else { throw ProviderError.missingAPIKey(.pixabay) }

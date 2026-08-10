@@ -2,8 +2,12 @@ import Foundation
 
 struct WikimediaProvider: MediaProvider {
   let info = ProviderInfo(
-    id: .wikimedia, displayName: "Wikimedia Commons", requiresAPIKey: false, supportsVideo: true,
-    supportsImage: true, supportsDownload: true)
+    id: .wikimedia, displayName: "Wikimedia Commons", mode: .publicInterface,
+    requiresAPIKey: false,
+    capabilities: ProviderCapabilities(
+      search: .supported, preview: .supported, metadata: .supported, license: .supported,
+      download: .supported, supportsVideo: true, supportsImage: true,
+      accessMethods: [.publicAPI, .publicInterface]))
 
   func search(_ request: SearchRequest) async throws -> [MediaAsset] {
     let effectiveQuery =

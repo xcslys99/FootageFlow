@@ -50,6 +50,7 @@
 "license.publicDomain" = "Public Domain";
 "license.unknown" = "License unknown";
 "license.restricted" = "Restricted";
+"license.knownOnly" = "License known only";
 
 "filter.type" = "Type";
 "filter.orientation" = "Orientation";
@@ -92,10 +93,18 @@
 
 "provider.available" = "Available";
 "provider.unavailable" = "Unavailable";
+"provider.bestEffort" = "Best-effort";
+"provider.apiConnected" = "API connected";
 "provider.authenticationRequired" = "API key required";
 "provider.rateLimited" = "Rate limited";
+"provider.temporarilyBlocked" = "Temporarily blocked";
 "provider.disabled" = "Disabled";
 "provider.missingKey" = "%@ — API key not configured";
+"provider.mode.officialAPI" = "Official API";
+"provider.mode.publicInterface" = "Public interface";
+"provider.mode.directSearch" = "Direct Search";
+"provider.mode.ytDLP" = "yt-dlp Best-effort";
+"provider.tryDirectSearch" = "Try Direct Search";
 
 "error.invalidAPIKey" = "The API key is invalid";
 "error.noNetwork" = "Network connection failed. Please check your internet connection and try again.";
@@ -103,6 +112,11 @@
 "error.notFound" = "This media item is no longer available.";
 "error.serverUnavailable" = "The source server is temporarily unavailable.";
 "error.invalidResponse" = "The source returned data that FootageFlow could not read.";
+"error.directTemporarilyBlocked" = "%@ temporarily blocked direct search. Try again later or add an API key for a more reliable search experience.";
+"error.externalToolUnavailable" = "The local best-effort downloader is unavailable.";
+"error.videoUnavailable" = "This video is unavailable.";
+"error.regionalRestriction" = "This video is unavailable in your region.";
+"error.ytDLPFailed" = "YouTube could not provide a downloadable public stream. Try again later or open the source page.";
 "error.unsupported" = "This source does not support that action.";
 "error.cancelled" = "Operation cancelled.";
 "error.timeout" = "The network request timed out. Please try again.";
@@ -113,7 +127,7 @@
 
 "welcome.title" = "Welcome to FootageFlow";
 "welcome.subtitle" = "Search. Discover. Download. Organize.";
-"welcome.body" = "You can start with Wikimedia Commons and Internet Archive without API keys. Pexels, Pixabay, and YouTube keys can be added now or later in Settings.";
+"welcome.body" = "Start searching immediately. API keys are optional and can be added later in Settings for a more stable Pexels or Pixabay experience.";
 "welcome.optional" = "Optional";
 "welcome.howToApply" = "How to apply";
 "welcome.security" = "API keys stay in the operating system's secure credential store and are never written to configuration files or logs.";
@@ -122,6 +136,19 @@
 
 "settings.apiSources" = "Sources requiring API keys";
 "settings.noKeySources" = "Sources without API keys";
+"settings.sourcesProviders" = "Sources / Providers";
+"settings.optionalAPIExplanation" = "Pexels and Pixabay work best with their official APIs. FootageFlow can still attempt direct searches without an API key, but direct search may be less reliable and can occasionally be limited or blocked by the provider. Adding your own API key is optional, but recommended for a more stable search experience.";
+"settings.directSearchDetail" = "No API key configured. Direct search is available on a best-effort basis, but reliability may vary.";
+"settings.youtubeBestEffortDetail" = "YouTube search and downloading use a best-effort local tool when no Data API key is configured. Some videos may fail because of rate limits, regional restrictions, login requirements, or platform changes. Only download material you have permission to use.";
+"settings.recommended" = "Recommended";
+"settings.addAPIKey" = "Add API Key";
+"settings.changeAPIKey" = "Change API Key";
+"settings.removeAPIKey" = "Remove API Key";
+"settings.apiKeyOptional" = "Optional API Key";
+"settings.testDirectSearch" = "Test Best-effort";
+"settings.manageSources" = "Manage Sources";
+"settings.replaceKeyDetail" = "Replace the saved API key. The full key is never displayed or logged.";
+"settings.directSearchEnabled" = "Direct Search best-effort mode is now active";
 "settings.downloadCache" = "Downloads and Cache";
 "settings.downloadRoot" = "Download folder";
 "settings.choose" = "Choose…";
@@ -198,6 +225,11 @@
 "download.saveFailed" = "Could not save the downloaded file";
 "download.retrying" = "Download interrupted; retrying (%d of 2)";
 "download.failed" = "Download failed. Try again later.";
+"download.rateLimited" = "Too many requests. Please try again later.";
+"download.videoUnavailable" = "This YouTube video is unavailable.";
+"download.regionalRestriction" = "This video is unavailable in your region.";
+"download.accessRestricted" = "This video requires access that FootageFlow will not bypass.";
+"download.ytDLPUnavailable" = "The local YouTube best-effort downloader is unavailable.";
 "download.speed" = "%@/s";
 "download.saveLocation" = "Save location: %@";
 "download.status.waiting" = "Waiting";

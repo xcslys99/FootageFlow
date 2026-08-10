@@ -8,17 +8,21 @@ CONTENTS_DIR="$APP_DIR/Contents"
 MACOS_DIR="$CONTENTS_DIR/MacOS"
 RESOURCES_DIR="$CONTENTS_DIR/Resources"
 ICONSET_DIR="$PROJECT_DIR/.build/FootageFlow.iconset"
+TOOLS_DIR="$RESOURCES_DIR/Tools"
 
 cd "$PROJECT_DIR"
 swift build -c release
 BIN_DIR="$(swift build -c release --show-bin-path)"
 
 rm -rf "$APP_DIR" "$ICONSET_DIR"
-mkdir -p "$MACOS_DIR" "$RESOURCES_DIR" "$ICONSET_DIR"
+mkdir -p "$MACOS_DIR" "$RESOURCES_DIR" "$ICONSET_DIR" "$TOOLS_DIR"
 cp "$BIN_DIR/FootageFlow" "$MACOS_DIR/FootageFlow"
 cp "$PROJECT_DIR/Resources/Info.plist" "$CONTENTS_DIR/Info.plist"
 cp -R "$PROJECT_DIR/Sources/FootageFlow/Resources/en.lproj" "$RESOURCES_DIR/"
 cp -R "$PROJECT_DIR/Sources/FootageFlow/Resources/zh-Hans.lproj" "$RESOURCES_DIR/"
+YT_DLP_PATH="$("$PROJECT_DIR/scripts/fetch_yt_dlp.sh")"
+cp "$YT_DLP_PATH" "$TOOLS_DIR/yt-dlp"
+chmod 755 "$TOOLS_DIR/yt-dlp"
 
 swiftc "$PROJECT_DIR/Tools/IconMaker.swift" -o "$PROJECT_DIR/.build/IconMaker" -framework AppKit
 "$PROJECT_DIR/.build/IconMaker" "$PROJECT_DIR/.build/icon-1024.png"

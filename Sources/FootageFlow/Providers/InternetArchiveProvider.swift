@@ -2,8 +2,12 @@ import Foundation
 
 struct InternetArchiveProvider: MediaProvider {
   let info = ProviderInfo(
-    id: .internetArchive, displayName: "Internet Archive", requiresAPIKey: false,
-    supportsVideo: true, supportsImage: true, supportsDownload: true)
+    id: .internetArchive, displayName: "Internet Archive", mode: .publicInterface,
+    requiresAPIKey: false,
+    capabilities: ProviderCapabilities(
+      search: .supported, preview: .supported, metadata: .supported, license: .bestEffort,
+      download: .bestEffort, supportsVideo: true, supportsImage: true,
+      accessMethods: [.publicAPI, .publicInterface]))
 
   func search(_ request: SearchRequest) async throws -> [MediaAsset] {
     let mediaClause: String

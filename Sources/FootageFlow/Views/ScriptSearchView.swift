@@ -200,12 +200,9 @@ struct ScriptSearchView: View {
 
 enum BatchSearchService {
   static func search(_ keyword: String) async -> [MediaAsset] {
-    let providers: [any MediaProvider] = [
-      PexelsProvider(apiKey: KeychainService.read(.pexels)),
-      PixabayProvider(apiKey: KeychainService.read(.pixabay)), WikimediaProvider(),
-      InternetArchiveProvider(), YouTubeProvider(apiKey: KeychainService.read(.youtube)),
-    ]
-    .filter { AppSettings.enabledProviders.contains($0.info.id) }
+    let providers = ProviderFactory.currentProviders().filter {
+      AppSettings.enabledProviders.contains($0.info.id)
+    }
     let request = SearchRequest(query: keyword, mediaType: .video, pageSize: 5)
     let batches = await withTaskGroup(of: [MediaAsset].self, returning: [[MediaAsset]].self) {
       group in

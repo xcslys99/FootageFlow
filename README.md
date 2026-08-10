@@ -17,10 +17,12 @@ The current release is a native **macOS 15+ Apple Silicon** app. Windows support
 - Download queue with progress, speed, cancel, retry, and a maximum of three concurrent downloads
 - A matching `.source.txt` and `.source.json` beside each downloaded file
 - English and Simplified Chinese with English on first launch and a visible language switcher
-- API keys stored in the operating system's secure credential store
+- Optional API keys stored only in the operating system's secure credential store
 - No analytics, advertising, tracking, cloud account, paid LLM, OpenAI API, or Codex dependency
 
-YouTube is used only for official Data API search, thumbnails, metadata, and opening the source page. FootageFlow does not download YouTube videos.
+YouTube search can use the official Data API when configured. FootageFlow also includes a local, best-effort yt-dlp path for public search and downloads. Downloads can fail because of rate limits, regional restrictions, login requirements, rights restrictions, or platform changes. FootageFlow does not import browser cookies, bypass DRM, or promise that every video is downloadable.
+
+The adaptive provider-mode changes described below are currently on the unreleased `main` branch and are intended for the next feature release. The downloadable v0.1.0 package retains its published feature set.
 
 ## Screenshots
 
@@ -38,26 +40,28 @@ No terminal command is required for normal use.
 
 ## Quick start
 
-1. Open FootageFlow. Choose **Set Up Later** if you want to start without API keys.
-2. Wikimedia Commons and Internet Archive work without keys.
-3. For more sources, open **Settings**, enter a Pexels, Pixabay, or YouTube Data API key, select **Save**, then **Test Connection**.
+1. Open FootageFlow and search immediately; API setup is not required on first launch.
+2. Wikimedia Commons and Internet Archive use public interfaces. Pexels and Pixabay attempt direct searches when no key is configured.
+3. For more reliable Pexels or Pixabay results, open **Settings → Sources / Providers**, optionally add your own API key, then select **Test Connection**.
 4. Return to **Quick Search**, enter a topic, review the generated keywords, and select **Search Footage**.
 5. Select a project before favoriting or downloading if you want the asset organized into that project.
 6. Check every asset's license and original source page before publishing.
 
 Default downloads are stored under `~/Movies/FootageFlow/<Project>/`. You can change the root folder in Settings. Removing a database record never deletes the media file unless you explicitly choose **Delete Local File** and confirm.
 
-## Provider setup
+## Provider modes
 
-| Provider | API key | Main use |
-|---|---:|---|
-| [Pexels](https://www.pexels.com/api/) | Required | Modern B-roll video and photos |
-| [Pixabay](https://pixabay.com/api/docs/) | Required | Video and images |
-| [Wikimedia Commons](https://commons.wikimedia.org/wiki/Commons:API) | No | Historical images, maps, people, places, and some video |
-| [Internet Archive](https://archive.org/developers/) | No | Archival films, newsreels, recordings, and public collections |
-| [YouTube Data API](https://developers.google.com/youtube/v3/getting-started) | Required | Research leads and source-page discovery |
+| Provider | Preferred mode | Without a key / fallback | Download capability |
+|---|---|---|---|
+| [Pexels](https://www.pexels.com/api/) | Official API (recommended) | Direct search (best-effort) | When a direct media URL is supplied |
+| [Pixabay](https://pixabay.com/api/docs/) | Official API (recommended) | Direct search (best-effort) | When a direct media URL is supplied |
+| [Wikimedia Commons](https://commons.wikimedia.org/wiki/Commons:API) | Public MediaWiki API | Public API | According to item metadata |
+| [Internet Archive](https://archive.org/developers/) | Public search and metadata interfaces | Public interface | According to each item's files and rights |
+| [YouTube](https://developers.google.com/youtube/v3/getting-started) | Data API search when configured | yt-dlp search (best-effort) | yt-dlp best-effort; not guaranteed |
 
-API keys are credentials, not platform logins. Availability, quotas, and provider terms remain controlled by each provider.
+API keys are optional. FootageFlow works without requiring Pexels or Pixabay API keys. However, direct searches can occasionally be limited by the provider. Users who frequently search these services can optionally add their own API keys for a more reliable experience.
+
+API keys are credentials, not platform logins. They remain on this device, are masked in the UI, and can be replaced, tested, or removed under **Settings → Sources / Providers**. Availability, quotas, and provider terms remain controlled by each provider.
 
 ## License and source safety
 
@@ -82,7 +86,7 @@ Architecture and provider extension instructions are in [DEVELOPMENT.md](DEVELOP
 
 ## Troubleshooting
 
-- **API key required**: add the key in Settings or disable that provider.
+- **Pexels/Pixabay direct search unavailable**: retry later or optionally add that provider's API key for a more reliable mode.
 - **Too many requests**: wait and retry; FootageFlow does not bypass provider limits.
 - **One provider failed**: other successful provider results remain available.
 - **No preview**: use **Open Source Page** when the provider does not expose a compatible stream.

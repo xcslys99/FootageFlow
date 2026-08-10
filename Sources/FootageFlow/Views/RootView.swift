@@ -38,7 +38,7 @@ struct RootView: View {
       .navigationSplitViewColumnWidth(min: 180, ideal: 210)
     } detail: {
       switch selection ?? .quickSearch {
-      case .quickSearch: QuickSearchView()
+      case .quickSearch: QuickSearchView { selection = .settings }
       case .scriptSearch: ScriptSearchView()
       case .projects: ProjectsView()
       case .favorites: FavoritesView()

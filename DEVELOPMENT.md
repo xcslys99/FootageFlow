@@ -8,7 +8,7 @@
 - AppKit and AVKit only inside macOS integration points
 - Security.framework-backed credential store on macOS
 - Apple Translation where available, with a rule-based fallback
-- No third-party runtime dependencies
+- A checksum-pinned yt-dlp macOS executable is bundled for local, best-effort YouTube interoperability; no FFmpeg binary is bundled
 
 The current release target is Apple Silicon macOS. Swift itself supports Windows, but SwiftUI, AppKit, AVKit, Apple Translation, and Security.framework do not. The future Windows app will share the core package and provide a Windows-specific UI and platform adapters.
 
@@ -29,7 +29,9 @@ Business logic must not import AppKit, SwiftUI, AVKit, Security, or Translation.
 
 ## Provider contract
 
-`MediaProvider` exposes provider metadata, search, connection testing, detail lookup, and download resolution. Every provider maps its response into `MediaAsset`; unknown fields remain `nil`, and an absent license is always `UNKNOWN`.
+`MediaProvider` exposes provider metadata, search, connection testing, detail lookup, and download resolution. `ProviderInfo` contains a `ProviderMode` and explicit `ProviderCapabilities` for search, preview, metadata, license, download, media type, and access methods. Capabilities can be supported, unavailable, or best-effort. Every provider maps its response into `MediaAsset`; unknown fields remain `nil`, and an absent license is always `UNKNOWN`.
+
+`ProviderFactory` makes the automatic per-provider decision. A non-empty Pexels or Pixabay key selects the official API; an empty key selects a direct-search provider. An API failure does not silently downgrade. The user may explicitly try direct search after a rate-limit error. YouTube similarly uses Data API search when configured and the local yt-dlp adapter when not configured. Provider searches remain independent tasks, so a timeout or block never discards successful results from other sources.
 
 Current official interfaces:
 
@@ -37,16 +39,18 @@ Current official interfaces:
 - Pixabay: `GET /api/videos/` and `GET /api/`; Pixabay search responses are cached for 24 hours.
 - Wikimedia Commons: MediaWiki Action API using `generator=search`, `imageinfo`, and `extmetadata`.
 - Internet Archive: Advanced Search plus `/metadata/{identifier}` for item files and rights fields.
-- YouTube Data API v3: `search.list`, `part=snippet`, `type=video`. YouTube is source discovery only and is never marked downloadable.
+- YouTube Data API v3: `search.list`, `part=snippet`, `type=video`; yt-dlp is an external-tool adapter for best-effort public search and downloading. It runs with `--ignore-config`, never imports browser cookies, uses bounded retries, and maps rate limits, unavailable videos, regional restrictions, and login-gated content into user-facing provider errors.
+- Pexels/Pixabay direct mode reads only ordinary public result pages with a short timeout and no authentication, cookie import, CAPTCHA handling, Cloudflare bypass, or anti-bot parameter fabrication. A 403 is treated as a temporary block and suggests the optional official API mode.
 
 To add a provider:
 
 1. Add a type conforming to `MediaProvider` under `Providers/`.
 2. Validate every remote URL with `URLValidator`.
 3. Map only provider-supplied metadata; do not infer licenses.
-4. Register the provider in `SearchViewModel`, script batch search, Settings, and localization resources.
-5. Add fixed JSON fixtures, XCTest parsing coverage, and an offline self-test where practical.
-6. Document quota, attribution, caching, and download restrictions.
+4. Register its selection rules in `ProviderFactory`, script batch search, Settings, and localization resources.
+5. Declare its real capabilities and access methods; discovery-only providers do not need download support.
+6. Add fixed fixtures, XCTest parsing coverage, and an offline self-test where practical.
+7. Document quota, attribution, caching, and download restrictions.
 
 ## Persistence and privacy
 
@@ -73,13 +77,13 @@ dist/FootageFlow.app/Contents/MacOS/FootageFlow --self-test
 dist/FootageFlow.app/Contents/MacOS/FootageFlow --live-smoke
 ```
 
-`--self-test` is fully offline. `--live-smoke` searches Wikimedia Commons and Internet Archive and verifies missing-key behavior. `--acceptance-test <directory>` additionally downloads a small Public Domain fixture, creates both sidecars, checks persistence, and simulates a friendly network error.
+`--self-test` is fully offline. `--live-smoke` searches Wikimedia Commons and Internet Archive and verifies no-key direct mode, including graceful direct-search blocking. `--acceptance-test <directory>` additionally downloads a small Public Domain fixture, creates both sidecars, checks persistence, and simulates a friendly network error.
 
 This Mac currently has Command Line Tools rather than full Xcode. Release builds and offline self-tests work locally, while `swift test` reports that XCTest is unavailable. GitHub Actions runs XCTest on a full Xcode image.
 
 ## Packaging
 
-`scripts/build_app.sh` builds a Release executable, creates the `.app`, copies localized resources without embedding a developer path, generates the original FootageFlow icon, and performs Ad Hoc signing. `scripts/binary_privacy_scan.sh` rejects personal build paths and credential-like strings. `scripts/build_dmg.sh` creates the drag-to-Applications DMG and SHA-256 checksum. No Developer ID certificate or notarization is claimed for v0.1.0.
+`scripts/build_app.sh` builds a Release executable, downloads the fixed yt-dlp release only when it is not already cached, verifies its SHA-256, creates the `.app`, copies localized resources without embedding a developer path, generates the original FootageFlow icon, and performs Ad Hoc signing. `scripts/binary_privacy_scan.sh` scans the app executable and bundled tool for credential-like strings. `scripts/build_dmg.sh` creates the drag-to-Applications DMG and SHA-256 checksum. No Developer ID certificate or notarization is claimed for v0.1.0.
 
 ## Windows direction
 

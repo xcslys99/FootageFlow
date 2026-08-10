@@ -95,12 +95,10 @@ enum AcceptanceRunner {
       }
     } catch { result(false, "friendly network error") }
 
-    do {
-      _ = try await PixabayProvider(apiKey: "").search(SearchRequest(query: "bank"))
-      result(false, "missing API key")
-    } catch ProviderError.missingAPIKey { result(true, "missing API key") } catch {
-      result(false, "missing API key")
-    }
+    let pixabayWithoutKey = ProviderFactory.make(.pixabay, apiKey: "")
+    result(
+      pixabayWithoutKey.info.mode == .directSearch && !pixabayWithoutKey.info.requiresAPIKey,
+      "optional API key mode")
 
     print("ACCEPTANCE passed=\(passed) failed=\(failures.count)")
     for failure in failures { print("FAIL \(failure)") }

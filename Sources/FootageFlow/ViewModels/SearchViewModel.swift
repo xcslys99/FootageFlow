@@ -16,6 +16,7 @@ final class SearchViewModel: ObservableObject {
   @Published private(set) var providerErrors: [ProviderID: ProviderError] = [:]
   @Published private(set) var providerCounts: [ProviderID: Int] = [:]
   @Published private(set) var providerStates: [ProviderID: ProviderRuntimeState] = [:]
+  @Published private(set) var providerModes: [ProviderID: ProviderMode] = [:]
   @Published private(set) var isSearching = false
   @Published private(set) var status: SearchStatus = .initial
 
@@ -45,6 +46,20 @@ final class SearchViewModel: ObservableObject {
 
   func configure(store: DataStore) { self.store = store }
 
+  func refreshProviderConfiguration() {
+    let providers = makeProviders(directOverrides: [])
+    for id in ProviderID.allCases {
+      guard selectedProviders.contains(id),
+        let provider = providers.first(where: { $0.info.id == id })
+      else {
+        providerModes[id] = nil
+        providerStates[id] = ProviderRuntimeState(availability: .disabled, message: nil)
+        continue
+      }
+      setInitialState(for: provider)
+    }
+  }
+
   func prepareKeywords(translated: String? = nil) {
     keywords = KeywordEngine.keywords(for: query, translated: translated)
   }
@@ -54,7 +69,10 @@ final class SearchViewModel: ObservableObject {
   func addKeyword() { keywords.append(SearchKeyword(text: "")) }
   func removeKeyword(_ id: UUID) { keywords.removeAll { $0.id == id } }
 
-  func search(forceRefresh: Bool = false, only providerID: ProviderID? = nil) {
+  func search(
+    forceRefresh: Bool = false, only providerID: ProviderID? = nil,
+    directOverrides: Set<ProviderID> = []
+  ) {
     let active = keywords.filter {
       $0.isEnabled && !$0.text.trimmingCharacters(in: .whitespaces).isEmpty
     }.map(\.text)
@@ -64,23 +82,23 @@ final class SearchViewModel: ObservableObject {
         status = .enterQuery
         return
       }
-      search(forceRefresh: forceRefresh, only: providerID)
+      search(
+        forceRefresh: forceRefresh, only: providerID, directOverrides: directOverrides)
       return
     }
     task?.cancel()
     isSearching = true
     providerErrors = [:]
     providerCounts = [:]
+    providerModes = [:]
     status = .searchingProviders(selectedProviders.count)
     let filterSnapshot = (mediaType, orientation, resolution, duration)
     let providerSet = providerID.map { Set([$0]) } ?? selectedProviders
-    let providers = makeProviders().filter { providerSet.contains($0.info.id) }
-    for id in ProviderID.allCases {
-      providerStates[id] =
-        selectedProviders.contains(id)
-        ? ProviderRuntimeState(availability: .available, message: nil)
-        : ProviderRuntimeState(availability: .disabled, message: nil)
+    let providers = makeProviders(directOverrides: directOverrides).filter {
+      providerSet.contains($0.info.id)
     }
+    refreshProviderConfiguration()
+    for provider in providers { setInitialState(for: provider) }
     for provider in providers
     where provider.info.requiresAPIKey && KeychainService.read(provider.info.id).isEmpty {
       providerStates[provider.info.id] = ProviderRuntimeState(
@@ -114,7 +132,8 @@ final class SearchViewModel: ObservableObject {
                 }
               }
               return ProviderSearchResult(
-                provider: provider.info.id, assets: combined, error: nil, state: nil)
+                provider: provider.info.id, assets: combined, error: nil, state: nil,
+                mode: provider.info.mode)
             } catch {
               await AppLogger.shared.write(
                 provider: provider.info.id, requestType: "search", error: error)
@@ -122,7 +141,7 @@ final class SearchViewModel: ObservableObject {
                 error as? ProviderError ?? ProviderError.message(error.localizedDescription)
               return ProviderSearchResult(
                 provider: provider.info.id, assets: combined, error: providerError,
-                state: ProviderRuntimeState.from(error: error))
+                state: ProviderRuntimeState.from(error: error), mode: provider.info.mode)
             }
           }
         }
@@ -152,25 +171,37 @@ final class SearchViewModel: ObservableObject {
     status = .stopped
   }
 
-  private func makeProviders() -> [any MediaProvider] {
-    [
-      PexelsProvider(apiKey: KeychainService.read(.pexels)),
-      PixabayProvider(apiKey: KeychainService.read(.pixabay)),
-      WikimediaProvider(), InternetArchiveProvider(),
-      YouTubeProvider(apiKey: KeychainService.read(.youtube)),
-    ]
+  func tryDirectSearch(_ providerID: ProviderID) {
+    guard providerID == .pexels || providerID == .pixabay else { return }
+    search(forceRefresh: true, only: providerID, directOverrides: [providerID])
+  }
+
+  private func makeProviders(directOverrides: Set<ProviderID>) -> [any MediaProvider] {
+    ProviderID.allCases.map { id in
+      ProviderFactory.make(id, apiKey: directOverrides.contains(id) ? "" : KeychainService.read(id))
+    }
   }
 
   private func apply(_ batch: ProviderSearchResult) {
+    providerModes[batch.provider] = batch.mode
     providerCounts[batch.provider] = batch.assets.count
     if let error = batch.error {
       providerErrors[batch.provider] = error
-      providerStates[batch.provider] =
+      var state =
         batch.state
         ?? ProviderRuntimeState(availability: .unavailable, message: error.errorDescription)
+      state.mode = batch.mode
+      providerStates[batch.provider] = state
     } else {
       providerErrors[batch.provider] = nil
-      providerStates[batch.provider] = ProviderRuntimeState(availability: .available, message: nil)
+      let availability: ProviderAvailability =
+        switch batch.mode {
+        case .officialAPI: .apiConnected
+        case .directSearch, .ytDLP: .bestEffort
+        case .publicInterface: .available
+        }
+      providerStates[batch.provider] = ProviderRuntimeState(
+        availability: availability, message: nil, mode: batch.mode)
     }
     assets += batch.assets
     assets = SearchDeduplicator.apply(assets).prefix(300).map { $0 }
@@ -180,6 +211,17 @@ final class SearchViewModel: ObservableObject {
   private func score(_ asset: MediaAsset) -> Double {
     asset.relevanceScore + (asset.downloadable ? 0.08 : 0) + (asset.height ?? 0 >= 1080 ? 0.04 : 0)
       + (asset.creator != nil ? 0.01 : 0) + (asset.licenseStatus != .unknown ? 0.03 : 0)
+  }
+
+  private func setInitialState(for provider: any MediaProvider) {
+    providerModes[provider.info.id] = provider.info.mode
+    let availability: ProviderAvailability =
+      switch provider.info.mode {
+      case .officialAPI, .publicInterface: .available
+      case .directSearch, .ytDLP: .bestEffort
+      }
+    providerStates[provider.info.id] = ProviderRuntimeState(
+      availability: availability, message: nil, mode: provider.info.mode)
   }
 
   private func saveHistory(active: [String]) {

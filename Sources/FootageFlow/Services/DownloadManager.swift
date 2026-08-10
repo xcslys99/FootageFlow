@@ -63,6 +63,9 @@ final class DownloadManager: NSObject, ObservableObject, URLSessionDownloadDeleg
   private var recoverableContexts: [String: DownloadContext] = [:]
   private var speedSamples: [Int: DownloadSpeedSample] = [:]
   private var pending: [DownloadContext] = []
+  private var externalPending: [DownloadContext] = []
+  private var externalTasks: [String: Task<Void, Never>] = [:]
+  private var externalActive = false
   private var activeCount = 0
   private var finishedTasks = Set<Int>()
   private let lock = NSLock()
@@ -117,7 +120,11 @@ final class DownloadManager: NSObject, ObservableObject, URLSessionDownloadDeleg
     lock.lock()
     recoverableContexts[asset.stableID] = context
     lock.unlock()
-    enqueue(context, validatedURL: url)
+    if asset.effectiveDownloadStrategy == .ytDLP {
+      enqueueExternal(context)
+    } else {
+      enqueue(context, validatedURL: url)
+    }
   }
 
   @MainActor
@@ -145,7 +152,11 @@ final class DownloadManager: NSObject, ObservableObject, URLSessionDownloadDeleg
     lock.lock()
     recoverableContexts[stableID] = context
     lock.unlock()
-    enqueue(context, validatedURL: url)
+    if context.asset.effectiveDownloadStrategy == .ytDLP {
+      enqueueExternal(context)
+    } else {
+      enqueue(context, validatedURL: url)
+    }
   }
 
   @MainActor
@@ -177,7 +188,17 @@ final class DownloadManager: NSObject, ObservableObject, URLSessionDownloadDeleg
     }
   }
 
-  func cancel(stableID: String) {
+  @MainActor func cancel(stableID: String) {
+    if let task = externalTasks.removeValue(forKey: stableID) {
+      task.cancel()
+      states[stableID] = states[stableID].map { progress(from: $0, status: .cancelled) }
+      return
+    }
+    if let index = externalPending.firstIndex(where: { $0.asset.stableID == stableID }) {
+      externalPending.remove(at: index)
+      states[stableID] = states[stableID].map { progress(from: $0, status: .cancelled) }
+      return
+    }
     lock.lock()
     pending.removeAll { $0.asset.stableID == stableID }
     lock.unlock()
@@ -192,6 +213,92 @@ final class DownloadManager: NSObject, ObservableObject, URLSessionDownloadDeleg
       self.lock.unlock()
       for task in tasks where ids.contains(task.taskIdentifier) { task.cancel() }
     }
+  }
+
+  @MainActor private func enqueueExternal(_ context: DownloadContext) {
+    if externalActive {
+      externalPending.append(context)
+      states[context.asset.stableID] = progress(context: context, status: .waiting)
+      return
+    }
+    externalActive = true
+    runExternal(context)
+  }
+
+  @MainActor private func runExternal(_ context: DownloadContext) {
+    states[context.asset.stableID] = progress(context: context, status: .downloading)
+    let sourceURL = context.asset.sourcePageURL
+    let directory = context.destination.deletingLastPathComponent()
+    let stem = context.destination.deletingPathExtension().lastPathComponent
+    let task = Task { [weak self] in
+      guard let self else { return }
+      do {
+        let savedURL = try await YTDLPService().download(
+          sourceURL: sourceURL, directory: directory, fileStem: stem)
+        do {
+          try SourceSidecar.write(
+            asset: context.asset, mediaURL: savedURL, projectName: context.projectName,
+            segmentIndex: context.segmentIndex)
+        } catch {
+          try? FileManager.default.removeItem(at: savedURL)
+          throw error
+        }
+        finishExternal(context: context, savedURL: savedURL, error: nil)
+      } catch {
+        finishExternal(context: context, savedURL: nil, error: error)
+      }
+    }
+    externalTasks[context.asset.stableID] = task
+  }
+
+  @MainActor private func finishExternal(
+    context: DownloadContext, savedURL: URL?, error: Error?
+  ) {
+    externalTasks.removeValue(forKey: context.asset.stableID)
+    externalActive = false
+    if let savedURL {
+      states[context.asset.stableID] = progress(
+        context: context, value: 1, status: .completed, localURL: savedURL)
+      if let store {
+        store.addDownload(
+          DownloadRecord(asset: context.asset, fileURL: savedURL, projectID: context.projectID))
+      }
+    } else if isCancellation(error) {
+      states[context.asset.stableID] = progress(context: context, status: .cancelled)
+    } else {
+      states[context.asset.stableID] = progress(
+        context: context, status: .failed, detailKey: downloadDetailKey(for: error))
+      Task {
+        await AppLogger.shared.write(
+          provider: .youtube, requestType: "yt-dlp download", error: error)
+      }
+    }
+    startNextExternal()
+  }
+
+  @MainActor private func startNextExternal() {
+    guard !externalActive, !externalPending.isEmpty else { return }
+    externalActive = true
+    runExternal(externalPending.removeFirst())
+  }
+
+  private func downloadDetailKey(for error: Error?) -> String {
+    guard let providerError = error as? ProviderError else { return "download.failed" }
+    return switch providerError {
+    case .rateLimited: "download.rateLimited"
+    case .videoUnavailable: "download.videoUnavailable"
+    case .regionalRestriction: "download.regionalRestriction"
+    case .temporarilyBlocked: "download.accessRestricted"
+    case .externalToolUnavailable: "download.ytDLPUnavailable"
+    default: "download.failed"
+    }
+  }
+
+  private func isCancellation(_ error: Error?) -> Bool {
+    if error is CancellationError { return true }
+    guard let providerError = error as? ProviderError else { return false }
+    if case .cancelled = providerError { return true }
+    return false
   }
 
   nonisolated func urlSession(

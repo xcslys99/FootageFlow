@@ -3,8 +3,11 @@ import Foundation
 struct YouTubeProvider: MediaProvider {
   let apiKey: String
   let info = ProviderInfo(
-    id: .youtube, displayName: "YouTube", requiresAPIKey: true, supportsVideo: true,
-    supportsImage: false, supportsDownload: false)
+    id: .youtube, displayName: "YouTube", mode: .officialAPI, requiresAPIKey: true,
+    capabilities: ProviderCapabilities(
+      search: .supported, preview: .bestEffort, metadata: .supported, license: .bestEffort,
+      download: .bestEffort, supportsVideo: true, supportsImage: false,
+      accessMethods: [.officialAPI, .externalTool]))
 
   func search(_ request: SearchRequest) async throws -> [MediaAsset] {
     guard !apiKey.isEmpty else { throw ProviderError.missingAPIKey(.youtube) }
@@ -31,12 +34,12 @@ struct YouTubeProvider: MediaProvider {
       return MediaAsset(
         id: videoID, provider: .youtube, title: item.snippet.title,
         description: item.snippet.description, thumbnailURL: URLValidator.remote(thumb?.url),
-        previewURL: nil, downloadURL: nil, sourcePageURL: page, creator: item.snippet.channelTitle,
+        previewURL: nil, downloadURL: page, sourcePageURL: page, creator: item.snippet.channelTitle,
         license: nil, licenseURL: nil, licenseStatus: .unknown, width: thumb?.width,
         height: thumb?.height, duration: nil, fileType: "YouTube", mediaType: .video,
-        publishedDate: ProviderUtilities.parseDate(item.snippet.publishedAt), downloadable: false,
+        publishedDate: ProviderUtilities.parseDate(item.snippet.publishedAt), downloadable: true,
         originalMetadata: ["channelID": item.snippet.channelId], searchKeyword: request.query,
-        relevanceScore: 1 - Double(index) * 0.01)
+        relevanceScore: 1 - Double(index) * 0.01, downloadStrategy: .ytDLP)
     }
   }
 }

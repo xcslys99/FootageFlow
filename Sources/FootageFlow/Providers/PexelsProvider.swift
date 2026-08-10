@@ -3,8 +3,11 @@ import Foundation
 struct PexelsProvider: MediaProvider {
   let apiKey: String
   let info = ProviderInfo(
-    id: .pexels, displayName: "Pexels", requiresAPIKey: true, supportsVideo: true,
-    supportsImage: true, supportsDownload: true)
+    id: .pexels, displayName: "Pexels", mode: .officialAPI, requiresAPIKey: true,
+    capabilities: ProviderCapabilities(
+      search: .supported, preview: .supported, metadata: .supported, license: .supported,
+      download: .supported, supportsVideo: true, supportsImage: true,
+      accessMethods: [.officialAPI, .directSearch]))
 
   func search(_ request: SearchRequest) async throws -> [MediaAsset] {
     guard !apiKey.isEmpty else { throw ProviderError.missingAPIKey(.pexels) }

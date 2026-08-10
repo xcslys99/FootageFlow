@@ -107,6 +107,11 @@ enum LicenseStatus: String, Codable, CaseIterable, Identifiable, Sendable {
   }
 }
 
+enum AssetDownloadStrategy: String, Codable, Sendable {
+  case directURL
+  case ytDLP
+}
+
 struct MediaAsset: Identifiable, Codable, Hashable, Sendable {
   let id: String
   let provider: ProviderID
@@ -130,8 +135,10 @@ struct MediaAsset: Identifiable, Codable, Hashable, Sendable {
   var originalMetadata: [String: String]
   var searchKeyword: String
   var relevanceScore: Double
+  var downloadStrategy: AssetDownloadStrategy? = nil
 
   var stableID: String { "\(provider.rawValue):\(id)" }
+  var effectiveDownloadStrategy: AssetDownloadStrategy { downloadStrategy ?? .directURL }
   var orientation: AssetOrientation {
     guard let width, let height, width > 0, height > 0 else { return .unknown }
     if abs(Double(width - height)) / Double(max(width, height)) < 0.08 { return .square }

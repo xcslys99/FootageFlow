@@ -2,6 +2,22 @@
 
 All notable FootageFlow changes are documented here.
 
+## [Unreleased]
+
+### Added
+
+- Optional official API mode for Pexels and Pixabay, selected automatically when a local key exists
+- Best-effort direct search for Pexels and Pixabay when no API key is configured
+- Explicit provider modes, capabilities, connection status, and a Sources / Providers settings section
+- Local yt-dlp best-effort YouTube search and download with bounded retries and friendly failure states
+- License-known-only filtering and direct-search license uncertainty handling
+
+### Changed
+
+- First launch now opens directly into FootageFlow without requiring API configuration
+- Provider failures remain isolated and present rate limits, temporary blocks, unavailable videos, and regional restrictions in user-friendly language
+- API keys can be added, replaced, tested, and removed without displaying or logging their full value
+
 ## [0.1.0] - 2026-08-10
 
 ### Added
@@ -26,6 +42,6 @@ All notable FootageFlow changes are documented here.
 
 - v0.1.0 is Ad Hoc signed and not notarized.
 - The current release is Apple Silicon only.
-- YouTube videos are not downloadable through FootageFlow.
+- YouTube downloading was not included in v0.1.0; best-effort support is under development for the next feature release.
 - Embedded preview depends on the source exposing a compatible stream.
 - Windows support is planned after macOS v0.1.0 stabilizes.

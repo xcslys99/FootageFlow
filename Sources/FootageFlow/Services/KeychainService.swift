@@ -54,6 +54,12 @@ enum KeychainService {
       ]
       if value.isEmpty {
         SecItemDelete(base as CFDictionary)
+        let legacy: [String: Any] = [
+          kSecClass as String: kSecClassGenericPassword,
+          kSecAttrService as String: legacyService,
+          kSecAttrAccount as String: provider.rawValue,
+        ]
+        SecItemDelete(legacy as CFDictionary)
         return
       }
       let data = Data(value.utf8)

@@ -10,7 +10,7 @@ FootageFlow stores projects, scripts, favorites, search history, download metada
 
 ## Data sent to providers
 
-When a provider is enabled, FootageFlow sends the search terms and normal request metadata needed by that provider. Pexels, Pixabay, and YouTube requests include the API key configured for that provider. Wikimedia Commons and Internet Archive searches do not require an API key.
+When a provider is enabled, FootageFlow sends the search terms and normal request metadata needed by that provider. If a Pexels, Pixabay, or YouTube API key is configured, it is sent only to that provider's official API. Without a key, Pexels and Pixabay direct mode requests their ordinary public search pages. Wikimedia Commons and Internet Archive searches do not require an API key.
 
 Those services process requests under their own policies:
 
@@ -21,7 +21,7 @@ Those services process requests under their own policies:
 - [Google Privacy Policy](https://policies.google.com/privacy)
 - [YouTube API Services Terms](https://developers.google.com/youtube/terms/api-services-terms-of-service)
 
-FootageFlow uses YouTube API Services only to search public video metadata, show thumbnails, and open the public YouTube page. It does not use Google OAuth, access a user's private YouTube account, modify YouTube data, or download YouTube videos.
+FootageFlow uses YouTube API Services only to search public video metadata and show thumbnails when the user configures a Data API key. Its separate local yt-dlp adapter can attempt public search and download. It runs with user configuration disabled and does not import browser cookies, use Google OAuth, access a private YouTube account, modify YouTube data, bypass DRM, or bypass login and access controls.
 
 ## User controls
 

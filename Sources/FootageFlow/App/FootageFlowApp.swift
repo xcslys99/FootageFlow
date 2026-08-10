@@ -8,7 +8,6 @@ struct FootageFlowApp: App {
   @StateObject private var search = SearchViewModel()
   @StateObject private var downloads = DownloadManager.shared
   @StateObject private var localization = LocalizationManager.shared
-  @AppStorage("didFinishWelcome") private var didFinishWelcome = false
 
   init() {
     AppSettings.migrateLegacySettingsIfNeeded()
@@ -43,12 +42,6 @@ struct FootageFlowApp: App {
         .onAppear {
           search.configure(store: store)
           downloads.configure(store: store)
-        }
-        .sheet(
-          isPresented: Binding(
-            get: { !didFinishWelcome }, set: { if !$0 { didFinishWelcome = true } })
-        ) {
-          WelcomeView { didFinishWelcome = true }
         }
     }
     .windowStyle(.automatic)

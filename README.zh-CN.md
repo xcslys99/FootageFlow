@@ -17,10 +17,12 @@ FootageFlow 是一款注重隐私的桌面素材搜索与管理软件，可一�
 - 下载队列、进度、速度、取消、重试，最多同时下载 3 个素材
 - 每个下载文件自动生成同名 `.source.txt` 和 `.source.json`
 - English / 简体中文；首次启动默认 English，右上角始终有醒目的语言切换
-- API Key 保存在操作系统安全凭据存储中
+- 可选 API Key 只保存在操作系统安全凭据存储中
 - 不含分析、广告、跟踪、云端账号、付费大模型，也不依赖 OpenAI API、Codex 或终端脚本
 
-YouTube 只通过官方 Data API 提供搜索、缩略图、元数据和打开来源页，不提供 YouTube 视频下载。
+配置 Key 后，YouTube 搜索可使用官方 Data API。FootageFlow 还内置本地 yt-dlp，用于尽力搜索和下载公开内容。由于平台限流、地区限制、登录要求、版权限制或平台接口变化，部分 YouTube 视频可能暂时无法下载。FootageFlow 不读取浏览器 Cookie、不绕过 DRM，也不承诺每个视频都能下载。
+
+以下 Provider 模式升级目前位于尚未发布的 `main` 分支，计划随下一个功能版本交付。现有 v0.1.0 下载包仍保持其发布时的功能范围。
 
 ## 界面截图
 
@@ -38,26 +40,28 @@ YouTube 只通过官方 Data API 提供搜索、缩略图、元数据和打开�
 
 ## 第一次使用
 
-1. 打开 FootageFlow；暂时没有 API Key 时可点 **Set Up Later**。
-2. Wikimedia Commons 和 Internet Archive 无需 Key，可以直接搜索。
-3. 如需更多来源，进入 **Settings**，填写 Pexels、Pixabay 或 YouTube Data API Key，点 **Save**，再点 **Test Connection**。
+1. 打开 FootageFlow 后可立即搜索；首次启动不要求配置 API Key。
+2. Wikimedia Commons 和 Internet Archive 使用公共接口；Pexels 和 Pixabay 未配置 Key 时会尝试直接搜索。
+3. 如果经常使用 Pexels 或 Pixabay，可进入 **设置 → 素材来源**，选择添加自己的 API Key，再点 **测试连接**，以获得更稳定的搜索体验。
 4. 回到 **Quick Search**，输入题材，检查自动生成的关键词，然后点 **Search Footage**。
 5. 如需按项目整理，请先选择项目，再收藏或下载素材。
 6. 发布前务必查看每个素材的 License 和原始来源页。
 
 默认下载目录为 `~/Movies/FootageFlow/<项目名>/`，可在设置中修改。只删除下载记录不会删除原素材；只有明确点击“删除本地文件”并再次确认后，应用才会删除文件。
 
-## Provider 配置
+## Provider 模式
 
-| Provider | API Key | 主要用途 |
-|---|---:|---|
-| [Pexels](https://www.pexels.com/api/) | 需要 | 现代 B-roll 视频和图片 |
-| [Pixabay](https://pixabay.com/api/docs/) | 需要 | 视频和图片 |
-| [Wikimedia Commons](https://commons.wikimedia.org/wiki/Commons:API) | 不需要 | 历史图片、地图、人物、地点和部分视频 |
-| [Internet Archive](https://archive.org/developers/) | 不需要 | 历史电影、新闻胶片、录音和公共档案 |
-| [YouTube Data API](https://developers.google.com/youtube/v3/getting-started) | 需要 | 寻找研究线索和原始来源页 |
+| Provider | 推荐模式 | 无 Key / 备用模式 | 下载能力 |
+|---|---|---|---|
+| [Pexels](https://www.pexels.com/api/) | 官方 API（推荐） | 直接搜索（尽力提供） | 来源提供直接媒体地址时可下载 |
+| [Pixabay](https://pixabay.com/api/docs/) | 官方 API（推荐） | 直接搜索（尽力提供） | 来源提供直接媒体地址时可下载 |
+| [Wikimedia Commons](https://commons.wikimedia.org/wiki/Commons:API) | 公共 MediaWiki API | 公共 API | 按素材元数据决定 |
+| [Internet Archive](https://archive.org/developers/) | 公共搜索与元数据接口 | 公共接口 | 按每个项目的文件与授权决定 |
+| [YouTube](https://developers.google.com/youtube/v3/getting-started) | 配置后使用 Data API 搜索 | yt-dlp 尽力搜索 | yt-dlp 尽力下载，不保证成功 |
 
-API Key 是开发接口凭据，不等同于登录账号。免费额度、配额和平台规则由各 Provider 决定。
+API Key 并非强制要求。即使没有配置 Pexels 或 Pixabay API Key，FootageFlow 仍然可以尝试搜索这些平台。不过直接搜索偶尔可能受到平台限制。如果你经常使用这些素材来源，可以选择配置自己的 API Key，以获得更加稳定的搜索体验。
+
+API Key 是开发接口凭据，不等同于登录账号。Key 只留在本机、界面默认隐藏，并可在 **设置 → 素材来源** 中添加、替换、测试或删除。免费额度、配额和平台规则由各 Provider 决定。
 
 ## License 与来源安全
 
@@ -82,7 +86,7 @@ scripts/verify_app.sh
 
 ## 常见问题
 
-- **提示需要 API Key**：在设置中填写，或关闭该 Provider。
+- **Pexels/Pixabay 直接搜索暂不可用**：稍后重试，或选择添加对应 API Key，切换到更稳定的模式。
 - **请求次数过多**：稍后重试；FootageFlow 不会绕过平台限制。
 - **一个 Provider 失败**：其他来源的成功结果仍然可以使用。
 - **无法预览**：Provider 没有兼容预览流时，请点“打开来源”。
