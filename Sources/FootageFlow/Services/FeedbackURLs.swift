@@ -15,9 +15,14 @@ struct FeedbackContext: Sendable {
     #else
       let platform = "macOS"
     #endif
+    #if canImport(Combine)
+      let language = LocalizationManager.shared.language.rawValue
+    #else
+      let language = CoreLocalization.language.rawValue
+    #endif
     return FeedbackContext(
       platform: platform, osVersion: ProcessInfo.processInfo.operatingSystemVersionString,
-      language: LocalizationManager.shared.language.rawValue)
+      language: language)
   }
 }
 

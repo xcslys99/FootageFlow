@@ -119,7 +119,7 @@ final class LinkDownloaderViewModel: ObservableObject {
     statusKey = "search.stopped"
   }
 
-  static func errorKey(_ error: Error) -> String {
+  nonisolated static func errorKey(_ error: Error) -> String {
     guard let value = error as? ProviderError else { return "link.downloadUnavailable" }
     switch value {
     case .unsupported: return "link.unsupportedURL"

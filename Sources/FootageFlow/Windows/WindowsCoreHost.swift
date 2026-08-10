@@ -120,8 +120,9 @@
           })
       case "feedbackURL":
         guard let destination = request.feedbackDestination else {
-          return failure(
-            request, code: "invalidRequest", message: "A feedback destination is required.")
+          return WindowsCoreResponse(
+            id: request.id, success: false, errorCode: "invalidRequest",
+            errorMessage: "A feedback destination is required.")
         }
         return WindowsCoreResponse(
           id: request.id, success: true,
