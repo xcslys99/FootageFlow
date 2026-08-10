@@ -49,15 +49,15 @@ jobs:
       - name: Check out source
         uses: actions/checkout@v4
 
-      - name: Install official Swift toolchain
+      - name: Install official Swift 6.3.3 toolchain
+        uses: compnerd/gha-setup-swift@eeda069c5bc95ac8a9ac5cea7d4f588ae5420ca5
+        with:
+          swift-version: swift-6.3.3-release
+          swift-build: 6.3.3-RELEASE
+
+      - name: Show Windows Swift toolchain
         shell: pwsh
-        run: |
-          if (-not (Get-Command swift -ErrorAction SilentlyContinue)) {
-            winget install --id Swift.Toolchain --exact --silent --accept-package-agreements --accept-source-agreements --source winget
-            $env:Path = [Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [Environment]::GetEnvironmentVariable("Path", "User")
-          }
-          swift --version
-          Split-Path (Get-Command swift).Source | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+        run: swift --version
 
       - name: Build shared core for Windows x64
         shell: pwsh
