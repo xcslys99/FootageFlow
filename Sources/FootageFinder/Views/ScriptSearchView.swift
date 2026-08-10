@@ -1,0 +1,130 @@
+import SwiftUI
+
+private struct DraftSegment: Identifiable {
+    let id = UUID()
+    var index: Int
+    var text: String
+    var keyword: String
+    var results: [MediaAsset] = []
+    var status = "等待搜索"
+}
+
+struct ScriptSearchView: View {
+    @EnvironmentObject private var store: DataStore
+    @State private var script = ""
+    @State private var projectID: UUID?
+    @State private var segments: [DraftSegment] = []
+    @State private var batchTask: Task<Void, Never>?
+    @State private var isSearching = false
+    @State private var progress = 0
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack { Text("文稿搜素材").font(.largeTitle.bold()); Spacer(); Picker("所属项目", selection: $projectID) { Text("未分类").tag(Optional<UUID>.none); ForEach(store.projects) { Text($0.name).tag(Optional($0.id)) } }.frame(width: 220) }.padding()
+            Divider()
+            if segments.isEmpty { editor }
+            else { segmentList }
+        }
+        .onDisappear { batchTask?.cancel() }
+    }
+
+    private var editor: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("粘贴完整文稿").font(.headline)
+            TextEditor(text: $script).font(.body).padding(10).background(.quaternary.opacity(0.35), in: RoundedRectangle(cornerRadius: 9))
+            Text("程序按段落、句号和长度拆成约 5～15 秒的镜头段，不调用任何云端 AI。").font(.caption).foregroundStyle(.secondary)
+            HStack { Spacer(); Button("分析文稿") { analyze() }.buttonStyle(.borderedProminent).disabled(script.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty) }
+        }.padding(24)
+    }
+
+    private var segmentList: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Button("返回编辑") { batchTask?.cancel(); segments = []; isSearching = false }
+                Text("已拆分 \(segments.count) 个镜头").foregroundStyle(.secondary)
+                Spacer()
+                if isSearching { ProgressView(value: Double(progress), total: Double(max(segments.count, 1))).frame(width: 180); Text("正在搜索 \(progress) / \(segments.count)"); Button("停止搜索") { batchTask?.cancel(); isSearching = false } }
+                else { Button("搜索全部镜头") { searchAll() }.buttonStyle(.borderedProminent) }
+            }.padding()
+            Divider()
+            ScrollView {
+                LazyVStack(spacing: 14) {
+                    ForEach($segments) { $segment in
+                        VStack(alignment: .leading, spacing: 10) {
+                            HStack { Text("镜头 \(String(format: "%02d", segment.index))").font(.headline); Spacer(); Text(segment.status).font(.caption).foregroundStyle(.secondary); Button("搜索素材") { searchOne(segment.id) } }
+                            TextEditor(text: $segment.text).frame(height: 62).padding(6).background(.quaternary.opacity(0.3), in: RoundedRectangle(cornerRadius: 6))
+                            HStack { Text("搜索词：").foregroundStyle(.secondary); TextField("英文或中文关键词", text: $segment.keyword).textFieldStyle(.roundedBorder) }
+                            if !segment.results.isEmpty {
+                                ScrollView(.horizontal, showsIndicators: false) {
+                                    HStack(spacing: 12) { ForEach(segment.results.prefix(6)) { asset in MediaAssetCard(asset: asset, projectID: projectID, segmentIndex: segment.index) { PreviewWindowManager.shared.show($0) }.frame(width: 270) } }
+                                }
+                            }
+                        }.padding(14).background(.background, in: RoundedRectangle(cornerRadius: 10)).overlay(RoundedRectangle(cornerRadius: 10).stroke(.separator))
+                    }
+                }.padding(16)
+            }
+        }
+    }
+
+    private func analyze() {
+        let parts = KeywordEngine.splitScript(script)
+        segments = parts.enumerated().map { index, text in
+            let keyword = KeywordEngine.keywords(for: text).first(where: { !KeywordEngine.containsChinese($0.text) })?.text ?? KeywordEngine.keywords(for: text).first?.text ?? text
+            return DraftSegment(index: index + 1, text: text, keyword: keyword)
+        }
+        if let projectID, let project = store.projects.first(where: { $0.id == projectID }) {
+            var updated = project; updated.script = script; store.updateProject(updated)
+        }
+        persistSegments()
+    }
+
+    private func searchOne(_ id: UUID) {
+        guard let index = segments.firstIndex(where: { $0.id == id }) else { return }
+        let keyword = segments[index].keyword; segments[index].status = "正在搜索…"
+        Task {
+            let found = await BatchSearchService.search(keyword)
+            await MainActor.run { if let current = segments.firstIndex(where: { $0.id == id }) { segments[current].results = found; segments[current].status = "找到 \(found.count) 条" } }
+        }
+    }
+
+    private func searchAll() {
+        batchTask?.cancel(); isSearching = true; progress = 0
+        let snapshots = segments.enumerated().map { ($0.offset, $0.element.id, $0.element.keyword) }
+        batchTask = Task {
+            await withTaskGroup(of: (Int, UUID, [MediaAsset]).self) { group in
+                var next = 0
+                func addNext() {
+                    guard next < snapshots.count else { return }
+                    let item = snapshots[next]; next += 1
+                    group.addTask { (item.0, item.1, await BatchSearchService.search(item.2)) }
+                }
+                for _ in 0..<min(3, snapshots.count) { addNext() }
+                for await (_, id, assets) in group {
+                    if Task.isCancelled { group.cancelAll(); break }
+                    await MainActor.run { if let current = segments.firstIndex(where: { $0.id == id }) { segments[current].results = assets; segments[current].status = "找到 \(assets.count) 条" }; progress += 1 }
+                    addNext()
+                }
+            }
+            await MainActor.run { isSearching = false; persistSegments() }
+        }
+    }
+
+    private func persistSegments() {
+        let values = segments.map { ScriptSegmentRecord(projectID: projectID, index: $0.index, text: $0.text, keywords: [SearchKeyword(text: $0.keyword)]) }
+        store.replaceSegments(projectID: projectID, values: values)
+    }
+}
+
+enum BatchSearchService {
+    static func search(_ keyword: String) async -> [MediaAsset] {
+        let providers: [any MediaProvider] = [PexelsProvider(apiKey: KeychainService.read(.pexels)), PixabayProvider(apiKey: KeychainService.read(.pixabay)), WikimediaProvider(), InternetArchiveProvider(), YouTubeProvider(apiKey: KeychainService.read(.youtube))]
+            .filter { AppSettings.enabledProviders.contains($0.info.id) }
+        let request = SearchRequest(query: keyword, mediaType: .video, pageSize: 5)
+        let batches = await withTaskGroup(of: [MediaAsset].self, returning: [[MediaAsset]].self) { group in
+            for provider in providers { group.addTask { (try? await provider.search(request)) ?? [] } }
+            var values: [[MediaAsset]] = []; for await result in group { values.append(result) }; return values
+        }
+        var seen = Set<String>()
+        return batches.flatMap { $0 }.filter { seen.insert($0.stableID).inserted }.prefix(24).map { $0 }
+    }
+}
