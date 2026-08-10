@@ -41,6 +41,12 @@ public sealed class MainViewModel : ObservableObject
         ResultsView = CollectionViewSource.GetDefaultView(Results);
         ResultsView.Filter = value => value is MediaAsset asset && MatchesFilters(asset);
         ApplySort();
+        FavoritesView = CollectionViewSource.GetDefaultView(Favorites);
+        FavoritesView.Filter = value => value is SavedAssetRecord record && MatchesProject(record.ProjectID);
+        HistoryView = CollectionViewSource.GetDefaultView(History);
+        HistoryView.Filter = value => value is SearchHistoryRecord record && MatchesProject(record.ProjectID);
+        DownloadRecordsView = CollectionViewSource.GetDefaultView(DownloadRecords);
+        DownloadRecordsView.Filter = value => value is DownloadRecord record && MatchesProject(record.ProjectID);
         Providers = new ObservableCollection<ProviderOption>(new[]
         {
             NewProvider("pexels", "Pexels"), NewProvider("pixabay", "Pixabay"),
@@ -63,6 +69,7 @@ public sealed class MainViewModel : ObservableObject
         FavoriteCommand = new AsyncRelayCommand(asset => ToggleFavoriteAsync(asset as MediaAsset));
         DownloadCommand = new RelayCommand(asset => EnqueueDownload(asset as MediaAsset));
         CreateProjectCommand = new AsyncRelayCommand(_ => CreateProjectAsync());
+        ClearProjectCommand = new RelayCommand(_ => CurrentProject = null);
         SaveProjectCommand = new AsyncRelayCommand(_ => SaveProjectAsync(), _ => CurrentProject is not null);
         DeleteProjectCommand = new AsyncRelayCommand(project => DeleteProjectAsync(project as ProjectRecord));
         SearchHistoryCommand = new AsyncRelayCommand(history => SearchHistoryAsync(history as SearchHistoryRecord));
@@ -101,6 +108,9 @@ public sealed class MainViewModel : ObservableObject
     public ObservableCollection<SavedAssetRecord> Favorites { get; } = [];
     public ObservableCollection<SearchHistoryRecord> History { get; } = [];
     public ObservableCollection<DownloadRecord> DownloadRecords { get; } = [];
+    public ICollectionView FavoritesView { get; }
+    public ICollectionView HistoryView { get; }
+    public ICollectionView DownloadRecordsView { get; }
     public ObservableCollection<string> ScriptSegments { get; } = [];
 
     public ICommand NavigateCommand { get; }
@@ -111,6 +121,7 @@ public sealed class MainViewModel : ObservableObject
     public ICommand FavoriteCommand { get; }
     public ICommand DownloadCommand { get; }
     public ICommand CreateProjectCommand { get; }
+    public ICommand ClearProjectCommand { get; }
     public ICommand SaveProjectCommand { get; }
     public ICommand DeleteProjectCommand { get; }
     public ICommand SearchHistoryCommand { get; }
@@ -179,6 +190,9 @@ public sealed class MainViewModel : ObservableObject
             ProjectEditName = value?.Name ?? "";
             ScriptText = value?.Script ?? "";
             (SaveProjectCommand as AsyncRelayCommand)?.RaiseCanExecuteChanged();
+            FavoritesView.Refresh();
+            HistoryView.Refresh();
+            DownloadRecordsView.Refresh();
         }
     }
     public string NewProjectName { get => _newProjectName; set => Set(ref _newProjectName, value); }
@@ -207,6 +221,7 @@ public sealed class MainViewModel : ObservableObject
     public string LicenseTitle => T("filter.license");
     public string SortTitle => T("filter.sort");
     public string ProjectTitle => T("common.project");
+    public string ProjectAllText => T("project.all");
     public string ScriptTitle => T("script.title");
     public string ScriptHelp => T("script.help");
     public string ScriptAnalyze => T("script.analyze");
@@ -540,6 +555,8 @@ public sealed class MainViewModel : ObservableObject
         target.Clear();
         foreach (var value in values) target.Add(value);
     }
+
+    private bool MatchesProject(Guid? projectId) => CurrentProject is null || projectId == CurrentProject.Id;
 
     private bool MatchesFilters(MediaAsset asset)
     {
