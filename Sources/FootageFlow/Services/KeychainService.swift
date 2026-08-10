@@ -2,9 +2,17 @@ import Foundation
 import Security
 
 enum KeychainService {
-    private static let service = "com.footagefinder.api-keys"
+    private static let service = "app.footageflow.api-keys"
+    private static let legacyService = "com.footagefinder.api-keys"
 
     static func read(_ provider: ProviderID) -> String {
+        if let value = read(provider, service: service) { return value }
+        guard let legacy = read(provider, service: legacyService) else { return "" }
+        try? save(legacy, provider: provider)
+        return legacy
+    }
+
+    private static func read(_ provider: ProviderID, service: String) -> String? {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
@@ -15,7 +23,7 @@ enum KeychainService {
         var result: CFTypeRef?
         guard SecItemCopyMatching(query as CFDictionary, &result) == errSecSuccess,
               let data = result as? Data,
-              let value = String(data: data, encoding: .utf8) else { return "" }
+              let value = String(data: data, encoding: .utf8) else { return nil }
         return value
     }
 

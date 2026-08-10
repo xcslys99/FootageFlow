@@ -3,6 +3,17 @@ import Foundation
 enum AppSettings {
     static let enabledProvidersKey = "enabledProviders"
     static let downloadRootKey = "downloadRoot"
+    private static let migrationKey = "didMigrateFootageFinderSettings"
+
+    static func migrateLegacySettingsIfNeeded() {
+        guard !UserDefaults.standard.bool(forKey: migrationKey) else { return }
+        if let legacy = UserDefaults(suiteName: "com.footagefinder.macos") {
+            for key in [enabledProvidersKey, downloadRootKey, "didFinishWelcome"] where UserDefaults.standard.object(forKey: key) == nil {
+                if let value = legacy.object(forKey: key) { UserDefaults.standard.set(value, forKey: key) }
+            }
+        }
+        UserDefaults.standard.set(true, forKey: migrationKey)
+    }
 
     static var enabledProviders: Set<ProviderID> {
         get {
@@ -16,7 +27,7 @@ enum AppSettings {
         get {
             if let path = UserDefaults.standard.string(forKey: downloadRootKey), !path.isEmpty { return URL(fileURLWithPath: path, isDirectory: true) }
             let movies = FileManager.default.urls(for: .moviesDirectory, in: .userDomainMask).first!
-            return movies.appendingPathComponent("FootageFinder", isDirectory: true)
+            return movies.appendingPathComponent("FootageFlow", isDirectory: true)
         }
         set { UserDefaults.standard.set(newValue.path, forKey: downloadRootKey) }
     }

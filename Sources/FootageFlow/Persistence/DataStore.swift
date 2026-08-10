@@ -16,11 +16,20 @@ final class DataStore: ObservableObject {
         else if let fileURL { self.fileURL = fileURL }
         else {
             let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-            let directory = support.appendingPathComponent("FootageFinder", isDirectory: true)
+            let directory = support.appendingPathComponent("FootageFlow", isDirectory: true)
             try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-            self.fileURL = directory.appendingPathComponent("FootageFinder.database.json")
+            let current = directory.appendingPathComponent("FootageFlow.database.json")
+            let legacy = support.appendingPathComponent("FootageFinder/FootageFinder.database.json")
+            Self.migrateDatabaseIfNeeded(current: current, legacy: legacy)
+            self.fileURL = current
         }
         load()
+    }
+
+    static func migrateDatabaseIfNeeded(current: URL, legacy: URL) {
+        guard !FileManager.default.fileExists(atPath: current.path) else { return }
+        guard FileManager.default.fileExists(atPath: legacy.path) else { return }
+        try? FileManager.default.copyItem(at: legacy, to: current)
     }
 
     @discardableResult func addProject(name: String) -> ProjectRecord {

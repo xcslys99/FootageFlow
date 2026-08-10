@@ -12,7 +12,7 @@ actor HTTPClient {
         configuration.timeoutIntervalForResource = 60
         configuration.requestCachePolicy = .reloadRevalidatingCacheData
         configuration.httpAdditionalHeaders = [
-            "User-Agent": "FootageFinder/1.0 (macOS native media research app)"
+            "User-Agent": "FootageFlow/0.1.0 (macOS open-source footage discovery app)"
         ]
         session = URLSession(configuration: configuration)
         decoder = JSONDecoder()

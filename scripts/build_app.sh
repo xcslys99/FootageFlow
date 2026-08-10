@@ -3,11 +3,11 @@ set -euo pipefail
 
 PROJECT_DIR="${0:A:h:h}"
 OUTPUT_DIR="${1:-$PROJECT_DIR/dist}"
-APP_DIR="$OUTPUT_DIR/FootageFinder.app"
+APP_DIR="$OUTPUT_DIR/FootageFlow.app"
 CONTENTS_DIR="$APP_DIR/Contents"
 MACOS_DIR="$CONTENTS_DIR/MacOS"
 RESOURCES_DIR="$CONTENTS_DIR/Resources"
-ICONSET_DIR="$PROJECT_DIR/.build/FootageFinder.iconset"
+ICONSET_DIR="$PROJECT_DIR/.build/FootageFlow.iconset"
 
 cd "$PROJECT_DIR"
 swift build -c release
@@ -15,7 +15,7 @@ BIN_DIR="$(swift build -c release --show-bin-path)"
 
 rm -rf "$APP_DIR" "$ICONSET_DIR"
 mkdir -p "$MACOS_DIR" "$RESOURCES_DIR" "$ICONSET_DIR"
-cp "$BIN_DIR/FootageFinder" "$MACOS_DIR/FootageFinder"
+cp "$BIN_DIR/FootageFlow" "$MACOS_DIR/FootageFlow"
 cp "$PROJECT_DIR/Resources/Info.plist" "$CONTENTS_DIR/Info.plist"
 
 swiftc "$PROJECT_DIR/Tools/IconMaker.swift" -o "$PROJECT_DIR/.build/IconMaker" -framework AppKit

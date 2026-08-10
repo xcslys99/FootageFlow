@@ -7,7 +7,7 @@ actor SearchCache {
 
     init() {
         let base = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first!
-        directory = base.appendingPathComponent("FootageFinder/SearchResults", isDirectory: true)
+        directory = base.appendingPathComponent("FootageFlow/SearchResults", isDirectory: true)
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
     }
 

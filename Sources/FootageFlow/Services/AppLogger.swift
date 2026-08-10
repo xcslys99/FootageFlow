@@ -6,9 +6,9 @@ actor AppLogger {
 
     init() {
         let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-        let directory = support.appendingPathComponent("FootageFinder/Logs", isDirectory: true)
+        let directory = support.appendingPathComponent("FootageFlow/Logs", isDirectory: true)
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        logURL = directory.appendingPathComponent("FootageFinder.log")
+        logURL = directory.appendingPathComponent("FootageFlow.log")
     }
 
     func write(provider: ProviderID?, requestType: String, status: Int? = nil, error: Error? = nil, detail: String? = nil) {

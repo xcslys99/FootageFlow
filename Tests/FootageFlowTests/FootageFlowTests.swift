@@ -1,8 +1,8 @@
 import Foundation
 import XCTest
-@testable import FootageFinder
+@testable import FootageFlow
 
-final class FootageFinderTests: XCTestCase {
+final class FootageFlowTests: XCTestCase {
     private func fixture(_ name: String) throws -> Data {
         let url = try XCTUnwrap(Bundle.module.url(forResource: name, withExtension: "json"))
         return try Data(contentsOf: url)
@@ -58,6 +58,18 @@ final class FootageFinderTests: XCTestCase {
         XCTAssertThrowsError(try URLValidator.remote(URL(string: "http://example.com/file.mp4")))
         XCTAssertThrowsError(try URLValidator.remote(URL(string: "https://user:secret@example.com/file.mp4")))
         XCTAssertFalse(AppLogger.redact("Authorization: Bearer secret-token-value").contains("secret-token-value"))
+    }
+
+    func testLegacyDatabaseMigrationPreservesSource() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let legacy = directory.appendingPathComponent("legacy.json")
+        let current = directory.appendingPathComponent("current.json")
+        try Data("legacy-data".utf8).write(to: legacy)
+        DataStore.migrateDatabaseIfNeeded(current: current, legacy: legacy)
+        XCTAssertEqual(try String(contentsOf: current, encoding: .utf8), "legacy-data")
+        XCTAssertTrue(FileManager.default.fileExists(atPath: legacy.path))
     }
 
     @MainActor func testProjectCRUDAndPersistence() throws {

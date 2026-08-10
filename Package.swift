@@ -2,21 +2,21 @@
 import PackageDescription
 
 let package = Package(
-    name: "FootageFinder",
-    defaultLocalization: "zh-Hans",
+    name: "FootageFlow",
+    defaultLocalization: "en",
     platforms: [.macOS(.v15)],
     products: [
-        .executable(name: "FootageFinder", targets: ["FootageFinder"])
+        .executable(name: "FootageFlow", targets: ["FootageFlow"])
     ],
     targets: [
         .executableTarget(
-            name: "FootageFinder",
-            path: "Sources/FootageFinder"
+            name: "FootageFlow",
+            path: "Sources/FootageFlow"
         ),
         .testTarget(
-            name: "FootageFinderTests",
-            dependencies: ["FootageFinder"],
-            path: "Tests/FootageFinderTests",
+            name: "FootageFlowTests",
+            dependencies: ["FootageFlow"],
+            path: "Tests/FootageFlowTests",
             resources: [.process("Fixtures")]
         )
     ],
