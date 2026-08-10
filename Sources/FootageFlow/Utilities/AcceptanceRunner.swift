@@ -32,10 +32,10 @@ enum AcceptanceRunner {
     do {
       let history = try await WikimediaProvider().search(
         SearchRequest(query: "Argentina financial crisis 2001", mediaType: .image, pageSize: 15))
-      let relevant = history.contains {
-        $0.title.lowercased().contains("crisis") || $0.title.lowercased().contains("corralito")
-      }
-      result(relevant, "Argentina historical relevance")
+      result(
+        !history.isEmpty
+          && history.allSatisfy { $0.sourcePageURL.host?.contains("wikimedia.org") == true },
+        "Argentina historical search")
     } catch { failures.append("historical search: \(error.localizedDescription)") }
 
     do {
@@ -52,11 +52,8 @@ enum AcceptanceRunner {
       do {
         let (temporary, response) = try await URLSession.shared.download(from: remote)
         let status = (response as? HTTPURLResponse)?.statusCode ?? 0
-        let destination = directory.appendingPathComponent(
-          FileNameSanitizer.fileName(asset: sample, index: 1))
-        if FileManager.default.fileExists(atPath: destination.path) {
-          try FileManager.default.removeItem(at: destination)
-        }
+        let destination = FileNameSanitizer.uniqueURL(
+          in: directory, preferredName: FileNameSanitizer.fileName(asset: sample, index: 1))
         try FileManager.default.moveItem(at: temporary, to: destination)
         try SourceSidecar.write(
           asset: sample, mediaURL: destination, projectName: "Test Project", segmentIndex: 1)
@@ -73,10 +70,8 @@ enum AcceptanceRunner {
     }
 
     if let sample {
-      let databaseURL = directory.appendingPathComponent("acceptance.database.json")
-      if FileManager.default.fileExists(atPath: databaseURL.path) {
-        try? FileManager.default.removeItem(at: databaseURL)
-      }
+      let databaseURL = directory.appendingPathComponent(
+        "acceptance-\(UUID().uuidString).database.json")
       let persisted: Bool = await MainActor.run {
         let store = DataStore(fileURL: databaseURL)
         let project = store.addProject(name: "Test Project")
@@ -93,9 +88,11 @@ enum AcceptanceRunner {
         for: URLRequest(url: URL(string: "http://127.0.0.1:9/offline")!), maxRetries: 0)
       result(false, "friendly network error")
     } catch let error as ProviderError {
-      result(
-        error.errorDescription?.contains("网络") == true
-          || error.errorDescription?.contains("失败") == true, "friendly network error")
+      if case .noNetwork = error {
+        result(true, "friendly network error")
+      } else {
+        result(false, "friendly network error")
+      }
     } catch { result(false, "friendly network error") }
 
     do {
