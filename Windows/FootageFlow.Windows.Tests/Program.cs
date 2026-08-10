@@ -191,6 +191,7 @@ if (OperatingSystem.IsWindows())
                 new HttpClient(cancelHandler) { Timeout = Timeout.InfiniteTimeSpan });
             var cancelTask = cancelQueue.Enqueue(cancellable, null, "Test Project");
             await WaitForStateAsync(cancelTask, "downloading", TimeSpan.FromSeconds(5));
+            await WaitForAsync(() => cancelHandler.Attempts == 1, TimeSpan.FromSeconds(5));
             cancelQueue.Cancel(cancelTask);
             await WaitForStateAsync(cancelTask, "cancelled", TimeSpan.FromSeconds(5));
             Check(cancelTask.State == "cancelled", "Download Manager cancellation");
@@ -217,14 +218,22 @@ static async Task WaitForStateAsync(DownloadTaskItem item, string expected, Time
         await Task.Delay(50);
 }
 
+static async Task WaitForAsync(Func<bool> condition, TimeSpan timeout)
+{
+    var deadline = DateTime.UtcNow + timeout;
+    while (!condition() && DateTime.UtcNow < deadline)
+        await Task.Delay(50);
+}
+
 sealed class RetryDownloadHandler : HttpMessageHandler
 {
-    public int Attempts { get; private set; }
+    private int _attempts;
+    public int Attempts => Volatile.Read(ref _attempts);
 
     protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
-        Attempts++;
-        if (Attempts == 1) throw new HttpRequestException("simulated interruption");
+        var attempt = Interlocked.Increment(ref _attempts);
+        if (attempt == 1) throw new HttpRequestException("simulated interruption");
         var response = new HttpResponseMessage(HttpStatusCode.OK)
         {
             Content = new ByteArrayContent("FootageFlow download fixture"u8.ToArray())
@@ -236,13 +245,14 @@ sealed class RetryDownloadHandler : HttpMessageHandler
 
 sealed class CancelThenSuccessHandler : HttpMessageHandler
 {
-    public int Attempts { get; private set; }
+    private int _attempts;
+    public int Attempts => Volatile.Read(ref _attempts);
 
     protected override async Task<HttpResponseMessage> SendAsync(
         HttpRequestMessage request, CancellationToken cancellationToken)
     {
-        Attempts++;
-        if (Attempts == 1) await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+        var attempt = Interlocked.Increment(ref _attempts);
+        if (attempt == 1) await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
         var response = new HttpResponseMessage(HttpStatusCode.OK)
         {
             Content = new ByteArrayContent("FootageFlow retry fixture"u8.ToArray())
