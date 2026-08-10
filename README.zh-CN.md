@@ -25,13 +25,15 @@ FootageFlow v0.4.0 正式支持 **macOS 15+ Apple Silicon** 和 **Windows 11 x64
 
 ## 界面截图
 
-![FootageFlow 主搜索](docs/images/main-search.png)
+以下截图来自 macOS 版 FootageFlow v0.4.0，展示当前 9 来源搜索、可选 API 建议、高级筛选、批量操作、Provider 模式和 10 种语言界面。Windows 版采用相同产品结构，并使用符合 Windows 习惯的原生控件。
 
-![FootageFlow 高级筛选](docs/images/advanced-filters.png)
+![FootageFlow v0.4.0 九来源搜索与可选 API 建议](docs/images/main-search.png)
 
-![FootageFlow 多选和批量下载](docs/images/multi-select-batch-download.png)
+![FootageFlow v0.4.0 高级筛选](docs/images/advanced-filters.png)
 
-![FootageFlow 素材来源设置](docs/images/provider-settings.png)
+![FootageFlow v0.4.0 多选和批量下载](docs/images/multi-select-batch-download.png)
+
+![FootageFlow v0.4.0 Provider 模式与 10 种语言设置](docs/images/provider-settings.png)
 
 ## 在 macOS 安装
 
