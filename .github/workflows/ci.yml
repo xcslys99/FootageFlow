@@ -53,6 +53,7 @@ jobs:
             $env:Path = [Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [Environment]::GetEnvironmentVariable("Path", "User")
           }
           swift --version
+          Split-Path (Get-Command swift).Source | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
       - name: Build shared core for Windows x64
         shell: pwsh
