@@ -36,7 +36,7 @@ struct SettingsView: View {
                         Text("日志只记录来源、请求类型、HTTP 状态和错误类型，不记录 API Key。Pixabay 搜索结果按官方要求缓存 24 小时。").font(.caption).foregroundStyle(.secondary)
                     }.padding(8)
                 }
-                GroupBox("隐私") { Text("素材猎手不含分析、跟踪或广告 SDK。除向所选素材平台发出必要请求外，不上传你的项目、文稿、收藏或下载记录。API Key 只保存在 macOS Keychain。") .font(.callout).padding(8) }
+                GroupBox("隐私") { Text("FootageFlow 不含分析、跟踪或广告 SDK。除向所选素材平台发出必要请求外，不上传你的项目、文稿、收藏或下载记录。API Key 只保存在 macOS Keychain。") .font(.callout).padding(8) }
             }.padding(24).frame(maxWidth: 900, alignment: .leading)
         }
         .onAppear { pexelsKey = KeychainService.read(.pexels); pixabayKey = KeychainService.read(.pixabay); youtubeKey = KeychainService.read(.youtube) }

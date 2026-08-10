@@ -8,7 +8,7 @@ struct WelcomeView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
-            HStack(spacing: 14) { Image(systemName: "film.stack").font(.system(size: 42)).foregroundStyle(.tint); VStack(alignment: .leading) { Text("欢迎使用素材猎手").font(.largeTitle.bold()); Text("一次搜索多个真实素材库") .foregroundStyle(.secondary) } }
+            HStack(spacing: 14) { Image(systemName: "film.stack").font(.system(size: 42)).foregroundStyle(.tint); VStack(alignment: .leading) { Text("欢迎使用 FootageFlow").font(.largeTitle.bold()); Text("搜索、发现、下载和整理视频素材") .foregroundStyle(.secondary) } }
             Text("无需 API Key 也可以先使用 Wikimedia Commons 和 Internet Archive。其他平台的 Key 可现在填写，也可以稍后在“设置”中填写。")
             keyField("Pexels", value: $pexels, link: "https://www.pexels.com/api/")
             keyField("Pixabay", value: $pixabay, link: "https://pixabay.com/api/docs/")

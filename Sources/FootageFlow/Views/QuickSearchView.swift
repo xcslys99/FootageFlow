@@ -16,13 +16,18 @@ struct QuickSearchView: View {
             Divider()
             if viewModel.isSearching { ProgressView().progressViewStyle(.linear) }
             statusArea
-            ScrollView {
-                LazyVGrid(columns: columns, alignment: .leading, spacing: 14) {
-                    ForEach(viewModel.filteredAssets) { asset in
-                        MediaAssetCard(asset: asset, projectID: viewModel.currentProjectID, segmentIndex: nil) { PreviewWindowManager.shared.show($0) }
+            if !viewModel.isSearching && !viewModel.query.isEmpty && viewModel.filteredAssets.isEmpty {
+                ContentUnavailableView("没有找到相关素材", systemImage: "film.stack", description: Text("可以尝试更换关键词或启用更多素材来源。"))
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                ScrollView {
+                    LazyVGrid(columns: columns, alignment: .leading, spacing: 14) {
+                        ForEach(viewModel.filteredAssets) { asset in
+                            MediaAssetCard(asset: asset, projectID: viewModel.currentProjectID, segmentIndex: nil) { PreviewWindowManager.shared.show($0) }
+                        }
                     }
+                    .padding(16)
                 }
-                .padding(16)
             }
         }
         .navigationTitle("快速搜索")
@@ -72,6 +77,7 @@ struct QuickSearchView: View {
                 }
             }
             filters
+            providerStatusRow
         }
         .padding(16)
     }
@@ -98,6 +104,34 @@ struct QuickSearchView: View {
                 Divider().frame(height: 18)
                 Picker("授权", selection: $viewModel.licenseFilter) { ForEach(LicenseFilter.allCases) { Text($0.label).tag($0) } }.frame(width: 180)
             }
+        }
+    }
+
+    private var providerStatusRow: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(ProviderID.allCases.filter { viewModel.selectedProviders.contains($0) }) { provider in
+                    let state = viewModel.providerStates[provider]?.availability ?? .available
+                    HStack(spacing: 5) {
+                        Circle().fill(providerColor(state)).frame(width: 7, height: 7)
+                        Text(provider.displayName)
+                        if let count = viewModel.providerCounts[provider] { Text("\(count)").foregroundStyle(.secondary) }
+                    }
+                    .font(.caption)
+                    .padding(.horizontal, 8).padding(.vertical, 4)
+                    .background(.quaternary.opacity(0.55), in: Capsule())
+                }
+            }
+        }
+    }
+
+    private func providerColor(_ state: ProviderAvailability) -> Color {
+        switch state {
+        case .available: .green
+        case .authenticationRequired: .orange
+        case .rateLimited: .yellow
+        case .unavailable: .red
+        case .disabled: .secondary
         }
     }
 

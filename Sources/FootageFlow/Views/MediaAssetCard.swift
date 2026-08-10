@@ -21,13 +21,18 @@ struct MediaAssetCard: View {
                 }
             }
             .frame(height: 150).clipped().background(.quaternary)
-            .overlay(alignment: .topLeading) { Text(asset.provider.displayName).font(.caption2.bold()).padding(5).background(.ultraThickMaterial, in: RoundedRectangle(cornerRadius: 5)).padding(7) }
+            .overlay(alignment: .topLeading) {
+                Label(asset.provider.displayName, systemImage: asset.mediaType == .video ? "film" : "photo")
+                    .font(.caption2.bold()).padding(5)
+                    .background(.ultraThickMaterial, in: RoundedRectangle(cornerRadius: 5)).padding(7)
+            }
             VStack(alignment: .leading, spacing: 5) {
                 Text(asset.title).font(.headline).lineLimit(2).frame(minHeight: 38, alignment: .topLeading)
                 LabeledContent("规格", value: "\(asset.resolutionText) · \(asset.orientation.label)")
                 if asset.mediaType == .video { LabeledContent("时长", value: asset.durationText) }
                 LabeledContent("授权", value: asset.licenseText)
                     .foregroundStyle(asset.licenseStatus == .unknown ? .orange : .secondary)
+                    .help(asset.licenseStatus == .unknown ? "未能获取明确许可信息，请在使用前查看原始来源。" : asset.licenseText)
                 if let creator = asset.creator { LabeledContent("作者", value: creator).lineLimit(1) }
             }.font(.caption).foregroundStyle(.secondary)
             if let downloadState {

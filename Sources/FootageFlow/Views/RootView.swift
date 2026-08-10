@@ -19,7 +19,7 @@ struct RootView: View {
             List(AppSection.allCases, selection: $selection) { section in
                 Label(section.label, systemImage: section.icon).tag(section)
             }
-            .navigationTitle("素材猎手")
+            .navigationTitle("FootageFlow")
             .navigationSplitViewColumnWidth(min: 180, ideal: 210)
         } detail: {
             switch selection ?? .quickSearch {
