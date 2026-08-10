@@ -129,14 +129,16 @@ final class DownloadManager: NSObject, ObservableObject, URLSessionDownloadDeleg
 
   @MainActor
   func retry(stableID: String) {
-    if let current = states[stableID], current.status == .waiting || current.status == .downloading
+    if let current = states[stableID],
+      current.status == .waiting || current.status == .downloading
     {
       return
     }
     lock.lock()
     let storedContext = recoverableContexts[stableID]
     lock.unlock()
-    guard var context = storedContext, let url = try? URLValidator.remote(context.asset.downloadURL)
+    guard var context = storedContext,
+      let url = try? URLValidator.remote(context.asset.downloadURL)
     else { return }
     context.retryCount = 0
     if FileManager.default.fileExists(atPath: context.destination.path) {
@@ -412,7 +414,8 @@ final class DownloadManager: NSObject, ObservableObject, URLSessionDownloadDeleg
       lock.unlock()
       DispatchQueue.main.async { [weak self] in
         guard let self else { return }
-        self.states[context.asset.stableID] = self.progress(context: context, status: .downloading)
+        self.states[context.asset.stableID] = self.progress(
+          context: context, status: .downloading)
       }
       retry.resume()
     } else {
@@ -461,7 +464,8 @@ final class DownloadManager: NSObject, ObservableObject, URLSessionDownloadDeleg
   }
 
   private func progress(
-    asset: MediaAsset, projectID: UUID?, projectName: String?, destination: URL?, value: Double = 0,
+    asset: MediaAsset, projectID: UUID?, projectName: String?, destination: URL?,
+    value: Double = 0,
     status: DownloadStatus, speed: Double = 0, retryCount: Int = 0, detailKey: String? = nil,
     localURL: URL? = nil
   ) -> DownloadProgress {
@@ -471,62 +475,14 @@ final class DownloadManager: NSObject, ObservableObject, URLSessionDownloadDeleg
       retryCount: retryCount, detailKey: detailKey, localURL: localURL)
   }
 
-  private func progress(from current: DownloadProgress, status: DownloadStatus) -> DownloadProgress
+  private func progress(from current: DownloadProgress, status: DownloadStatus)
+    -> DownloadProgress
   {
     DownloadProgress(
       id: current.id, asset: current.asset, projectID: current.projectID,
       projectName: current.projectName, destination: current.destination,
-      progress: current.progress, status: status, bytesPerSecond: 0, retryCount: current.retryCount,
+      progress: current.progress, status: status, bytesPerSecond: 0,
+      retryCount: current.retryCount,
       detailKey: nil, localURL: current.localURL)
-  }
-}
-
-private struct Sidecar: Codable {
-  let title, assetID, provider, creator, sourcePage, originalFileURL: String
-  let licenseName, licenseURL, licenseStatus, searchKeyword, downloadDate, projectName,
-    segment: String
-}
-
-enum SourceSidecar {
-  static func write(asset: MediaAsset, mediaURL: URL, projectName: String?, segmentIndex: Int?)
-    throws
-  {
-    let formatter = ISO8601DateFormatter()
-    let status =
-      asset.licenseStatus == .unknown
-      ? tr("sidecar.authorizationUnknown") : asset.licenseStatus.label
-    let sidecar = Sidecar(
-      title: asset.title, assetID: asset.id, provider: asset.provider.displayName,
-      creator: asset.creator ?? tr("common.unknown"),
-      sourcePage: asset.sourcePageURL.absoluteString,
-      originalFileURL: asset.downloadURL?.absoluteString ?? tr("common.unknown"),
-      licenseName: asset.license ?? tr("common.unknown"),
-      licenseURL: asset.licenseURL?.absoluteString ?? tr("common.unknown"), licenseStatus: status,
-      searchKeyword: asset.searchKeyword, downloadDate: formatter.string(from: .now),
-      projectName: projectName ?? tr("common.uncategorized"),
-      segment: segmentIndex.map(String.init) ?? tr("common.notSpecified"))
-    let base = mediaURL.deletingPathExtension()
-    let jsonURL = base.appendingPathExtension("source.json")
-    let textURL = base.appendingPathExtension("source.txt")
-    let encoder = JSONEncoder()
-    encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-    encoder.dateEncodingStrategy = .iso8601
-    try encoder.encode(sidecar).write(to: jsonURL, options: .atomic)
-    let text = """
-      \(tr("sidecar.title")): \(sidecar.title)
-      \(tr("sidecar.assetID")): \(sidecar.assetID)
-      \(tr("sidecar.provider")): \(sidecar.provider)
-      \(tr("sidecar.creator")): \(sidecar.creator)
-      \(tr("sidecar.sourcePage")): \(sidecar.sourcePage)
-      \(tr("sidecar.originalFile")): \(sidecar.originalFileURL)
-      \(tr("sidecar.licenseName")): \(sidecar.licenseName)
-      \(tr("sidecar.licenseURL")): \(sidecar.licenseURL)
-      \(tr("sidecar.licenseStatus")): \(sidecar.licenseStatus)
-      \(tr("sidecar.searchKeyword")): \(sidecar.searchKeyword)
-      \(tr("sidecar.downloadDate")): \(sidecar.downloadDate)
-      \(tr("sidecar.projectName")): \(sidecar.projectName)
-      \(tr("sidecar.segment")): \(sidecar.segment)
-      """
-    try Data(text.utf8).write(to: textURL, options: .atomic)
   }
 }

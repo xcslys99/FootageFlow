@@ -14,6 +14,10 @@ struct YouTubeYTDLPProvider: MediaProvider {
   func search(_ request: SearchRequest) async throws -> [MediaAsset] {
     guard request.mediaType != .image else { return [] }
     let values = try await service.search(query: request.query, limit: min(request.pageSize, 12))
+    return Self.assets(from: values, query: request.query)
+  }
+
+  static func assets(from values: [YTDLPSearchItem], query: String) -> [MediaAsset] {
     return values.enumerated().compactMap { index, item in
       // Flat-playlist results commonly expose `url` as a bare video ID. Prefer an actual
       // webpage URL and always keep the canonical watch-page fallback.
@@ -35,8 +39,17 @@ struct YouTubeYTDLPProvider: MediaProvider {
         height: thumbnail?.height, duration: item.duration, fileType: "video",
         mediaType: .video, publishedDate: nil, downloadable: true,
         originalMetadata: ["accessMode": ProviderMode.ytDLP.rawValue],
-        searchKeyword: request.query, relevanceScore: 0.9 - Double(index) * 0.01,
+        searchKeyword: query, relevanceScore: 0.9 - Double(index) * 0.01,
         downloadStrategy: .ytDLP)
+    }
+  }
+
+  static func assets(fromJSON data: Data, query: String) throws -> [MediaAsset] {
+    do {
+      let response = try JSONDecoder().decode(YTDLPSearchResponse.self, from: data)
+      return assets(from: response.entries, query: query)
+    } catch {
+      throw ProviderError.invalidResponse
     }
   }
 }

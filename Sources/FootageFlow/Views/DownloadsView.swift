@@ -80,8 +80,9 @@ struct DownloadsView: View {
           Text(item.statusLabel).font(.caption.bold()).foregroundStyle(statusColor(item.status))
         }
         Text(
-          [item.asset.provider.displayName, item.projectName ?? tr("common.uncategorized")].joined(
-            separator: " · ")
+          [item.asset.provider.displayName, item.projectName ?? tr("common.uncategorized")]
+            .joined(
+              separator: " · ")
         )
         .font(.caption).foregroundStyle(.secondary)
         if item.status == .downloading || item.status == .waiting {
@@ -137,7 +138,9 @@ struct DownloadsView: View {
         DesktopPlatform.shared.open(URL(fileURLWithPath: record.localPath))
       }
       Button(tr("media.openSource")) {
-        if let url = URLValidator.remote(record.sourcePageURL) { DesktopPlatform.shared.open(url) }
+        if let url = URLValidator.remote(record.sourcePageURL) {
+          DesktopPlatform.shared.open(url)
+        }
       }
       Menu {
         Button(tr("download.removeRecord")) { store.deleteDownloadRecord(id: record.id) }

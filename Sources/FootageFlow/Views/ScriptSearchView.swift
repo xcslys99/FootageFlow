@@ -124,7 +124,8 @@ struct ScriptSearchView: View {
     let parts = KeywordEngine.splitScript(script)
     segments = parts.enumerated().map { index, text in
       let keyword =
-        KeywordEngine.keywords(for: text).first(where: { !KeywordEngine.containsChinese($0.text) })?
+        KeywordEngine.keywords(for: text).first(where: { !KeywordEngine.containsChinese($0.text) }
+        )?
         .text ?? KeywordEngine.keywords(for: text).first?.text ?? text
       return DraftSegment(index: index + 1, text: text, keyword: keyword)
     }
@@ -212,6 +213,8 @@ enum BatchSearchService {
       return values
     }
     var seen = Set<String>()
-    return batches.flatMap { $0 }.filter { seen.insert($0.stableID).inserted }.prefix(24).map { $0 }
+    return batches.flatMap { $0 }.filter { seen.insert($0.stableID).inserted }.prefix(24).map {
+      $0
+    }
   }
 }

@@ -94,7 +94,7 @@ final class FootageFlowTests: XCTestCase {
     let legacy = directory.appendingPathComponent("legacy.json")
     let current = directory.appendingPathComponent("current.json")
     try Data("legacy-data".utf8).write(to: legacy)
-    DataStore.migrateDatabaseIfNeeded(current: current, legacy: legacy)
+    PersistentStore.migrateDatabaseIfNeeded(current: current, legacy: legacy)
     XCTAssertEqual(try String(contentsOf: current, encoding: .utf8), "legacy-data")
     XCTAssertTrue(FileManager.default.fileExists(atPath: legacy.path))
   }
@@ -224,25 +224,36 @@ final class FootageFlowTests: XCTestCase {
   }
 
   func testLocalizationDefaultSwitchPersistenceAndFallback() throws {
-    let suite = "FootageFlowTests.\(UUID().uuidString)"
-    let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
-    defer { defaults.removePersistentDomain(forName: suite) }
-    let localization = LocalizationManager(defaults: defaults)
-    XCTAssertEqual(localization.language, .english)
-    XCTAssertEqual(localization.text("nav.quickSearch"), "Quick Search")
-    localization.setLanguage(.simplifiedChinese)
-    XCTAssertEqual(localization.text("nav.quickSearch"), "快速搜索")
-    XCTAssertEqual(localization.text("localization.fallbackProbe"), "English fallback")
-    XCTAssertEqual(LocalizationManager(defaults: defaults).language, .simplifiedChinese)
+    #if canImport(Combine)
+      let suite = "FootageFlowTests.\(UUID().uuidString)"
+      let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+      defer { defaults.removePersistentDomain(forName: suite) }
+      let localization = LocalizationManager(defaults: defaults)
+      XCTAssertEqual(localization.language, .english)
+      XCTAssertEqual(localization.text("nav.quickSearch"), "Quick Search")
+      localization.setLanguage(.simplifiedChinese)
+      XCTAssertEqual(localization.text("nav.quickSearch"), "快速搜索")
+      XCTAssertEqual(localization.text("localization.fallbackProbe"), "English fallback")
+      XCTAssertEqual(LocalizationManager(defaults: defaults).language, .simplifiedChinese)
+    #else
+      let catalog = LocalizationCatalog()
+      XCTAssertEqual(
+        catalog.text("nav.quickSearch", language: .english, arguments: []), "Quick Search")
+      XCTAssertEqual(
+        catalog.text("nav.quickSearch", language: .simplifiedChinese, arguments: []), "快速搜索")
+      XCTAssertEqual(
+        catalog.text("localization.fallbackProbe", language: .simplifiedChinese, arguments: []),
+        "English fallback")
+    #endif
   }
 
-  @MainActor func testProjectCRUDAndPersistence() throws {
+  func testProjectCRUDAndPersistence() throws {
     let directory = FileManager.default.temporaryDirectory.appendingPathComponent(
       UUID().uuidString, isDirectory: true)
     try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
     defer { try? FileManager.default.removeItem(at: directory) }
     let databaseURL = directory.appendingPathComponent("database.json")
-    let first = DataStore(fileURL: databaseURL)
+    let first = PersistentStore(fileURL: databaseURL)
     let project = first.addProject(name: "Test Project")
     first.toggleFavorite(asset: sampleAsset(), projectID: project.id)
     first.addHistory(
@@ -253,7 +264,7 @@ final class FootageFlowTests: XCTestCase {
       DownloadRecord(
         asset: sampleAsset(), fileURL: directory.appendingPathComponent("test.mp4"),
         projectID: project.id))
-    let reopened = DataStore(fileURL: databaseURL)
+    let reopened = PersistentStore(fileURL: databaseURL)
     XCTAssertEqual(reopened.projects.first?.name, "Test Project")
     XCTAssertEqual(reopened.favorites.count, 1)
     reopened.deleteProject(id: project.id)
@@ -290,11 +301,17 @@ final class FootageFlowTests: XCTestCase {
   }
 
   private func executableFixture() throws -> URL {
-    let url = FileManager.default.temporaryDirectory.appendingPathComponent(
-      "FootageFlow-test-tool-\(UUID().uuidString)")
+    #if os(Windows)
+      let fileName = "FootageFlow-test-tool-\(UUID().uuidString).exe"
+    #else
+      let fileName = "FootageFlow-test-tool-\(UUID().uuidString)"
+    #endif
+    let url = FileManager.default.temporaryDirectory.appendingPathComponent(fileName)
     XCTAssertTrue(FileManager.default.createFile(atPath: url.path, contents: Data()))
-    try FileManager.default.setAttributes(
-      [.posixPermissions: NSNumber(value: Int16(0o755))], ofItemAtPath: url.path)
+    #if !os(Windows)
+      try FileManager.default.setAttributes(
+        [.posixPermissions: NSNumber(value: Int16(0o755))], ofItemAtPath: url.path)
+    #endif
     addTeardownBlock { try? FileManager.default.removeItem(at: url) }
     return url
   }

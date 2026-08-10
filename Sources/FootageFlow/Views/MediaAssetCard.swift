@@ -30,14 +30,18 @@ struct MediaAssetCard: View {
       }
       .frame(height: 150).clipped().background(.quaternary)
       .overlay(alignment: .topLeading) {
-        Label(asset.provider.displayName, systemImage: asset.mediaType == .video ? "film" : "photo")
-          .font(.caption2.bold()).padding(5)
-          .background(.ultraThickMaterial, in: RoundedRectangle(cornerRadius: 5)).padding(7)
+        Label(
+          asset.provider.displayName, systemImage: asset.mediaType == .video ? "film" : "photo"
+        )
+        .font(.caption2.bold()).padding(5)
+        .background(.ultraThickMaterial, in: RoundedRectangle(cornerRadius: 5)).padding(7)
       }
       VStack(alignment: .leading, spacing: 5) {
-        Text(asset.title).font(.headline).lineLimit(2).frame(minHeight: 38, alignment: .topLeading)
+        Text(asset.title).font(.headline).lineLimit(2).frame(
+          minHeight: 38, alignment: .topLeading)
         LabeledContent(
-          tr("media.specifications"), value: "\(asset.resolutionText) · \(asset.orientation.label)")
+          tr("media.specifications"),
+          value: "\(asset.resolutionText) · \(asset.orientation.label)")
         if asset.mediaType == .video {
           LabeledContent(tr("media.duration"), value: asset.durationText)
         }
@@ -61,7 +65,8 @@ struct MediaAssetCard: View {
         Button {
           store.toggleFavorite(asset: asset, projectID: projectID, segmentIndex: segmentIndex)
         } label: {
-          Image(systemName: store.isFavorite(asset, projectID: projectID) ? "heart.fill" : "heart")
+          Image(
+            systemName: store.isFavorite(asset, projectID: projectID) ? "heart.fill" : "heart")
         }.help(tr("media.favorite"))
         if asset.downloadable {
           if let downloadState,

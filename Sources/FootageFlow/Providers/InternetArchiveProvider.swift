@@ -1,5 +1,9 @@
 import Foundation
 
+#if canImport(FoundationNetworking)
+  import FoundationNetworking
+#endif
+
 struct InternetArchiveProvider: MediaProvider {
   let info = ProviderInfo(
     id: .internetArchive, displayName: "Internet Archive", mode: .publicInterface,

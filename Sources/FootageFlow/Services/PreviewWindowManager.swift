@@ -35,7 +35,8 @@ private final class PreviewWindowController: NSWindowController, NSWindowDelegat
     self.onClose = onClose
     let window = NSWindow(
       contentRect: NSRect(x: 0, y: 0, width: 900, height: 620),
-      styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false
+      styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered,
+      defer: false
     )
     window.title = asset.title
     window.minSize = NSSize(width: 680, height: 460)

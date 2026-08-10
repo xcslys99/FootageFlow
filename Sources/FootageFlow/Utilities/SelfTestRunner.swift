@@ -23,7 +23,8 @@ enum SelfTestRunner {
       !URLValidator.isSafeRemote(URL(string: "http://example.com/media.mp4")),
       "Unsafe URL rejection")
     check(
-      !AppLogger.redact("Authorization: Bearer secret-token-value").contains("secret-token-value"),
+      !AppLogger.redact("Authorization: Bearer secret-token-value").contains(
+        "secret-token-value"),
       "Log redaction")
     let safetyRoot = FileManager.default.temporaryDirectory.appendingPathComponent(
       UUID().uuidString, isDirectory: true)
@@ -33,7 +34,8 @@ enum SelfTestRunner {
       "Download path containment")
     check(
       !DownloadPathSafety.isContained(
-        safetyRoot.deletingLastPathComponent().appendingPathComponent("outside.mp4"), in: safetyRoot
+        safetyRoot.deletingLastPathComponent().appendingPathComponent("outside.mp4"),
+        in: safetyRoot
       ), "Download path traversal rejection")
     check(
       !DownloadPathSafety.projectDirectory(projectName: "../../escape", root: safetyRoot).path
@@ -101,7 +103,8 @@ enum SelfTestRunner {
       id: "1", provider: .wikimedia, title: "Test", description: nil, thumbnailURL: nil,
       previewURL: nil, downloadURL: URL(string: "https://example.com/a.mp4"),
       sourcePageURL: URL(string: "https://example.com/item")!, creator: "A", license: "CC BY",
-      licenseURL: nil, licenseStatus: .attributionRequired, width: 1920, height: 1080, duration: 10,
+      licenseURL: nil, licenseStatus: .attributionRequired, width: 1920, height: 1080,
+      duration: 10,
       fileType: "video/mp4", mediaType: .video, publishedDate: nil, downloadable: true,
       originalMetadata: [:], searchKeyword: "test", relevanceScore: 1)
     let duplicate = sample
@@ -134,19 +137,22 @@ enum SelfTestRunner {
       "{\"videos\":[{\"id\":7,\"width\":1920,\"height\":1080,\"duration\":8,\"url\":\"https://pexels.com/v/7\",\"image\":\"https://img/7.jpg\",\"user\":{\"name\":\"Creator\",\"url\":\"https://pexels.com/u\"},\"video_files\":[{\"width\":1920,\"height\":1080,\"link\":\"https://cdn/7.mp4\",\"file_type\":\"video/mp4\"}]}]}"
         .utf8)
     check(
-      (try? JSONDecoder().decode(PexelsVideoResponse.self, from: pexelsJSON).videos.first?.id) == 7,
+      (try? JSONDecoder().decode(PexelsVideoResponse.self, from: pexelsJSON).videos.first?.id)
+        == 7,
       "Pexels fixture parse")
     let pixabayJSON = Data(
       "{\"hits\":[{\"id\":8,\"pageURL\":\"https://pixabay.com/videos/8\",\"videos\":{\"medium\":{\"url\":\"https://cdn/8.mp4\",\"width\":1920,\"height\":1080}}}]}"
         .utf8)
     check(
-      (try? JSONDecoder().decode(PixabayVideoResponse.self, from: pixabayJSON).hits.first?.id) == 8,
+      (try? JSONDecoder().decode(PixabayVideoResponse.self, from: pixabayJSON).hits.first?.id)
+        == 8,
       "Pixabay fixture parse")
     let wikiJSON = Data(
       "{\"query\":{\"pages\":[{\"pageid\":9,\"title\":\"File:Test.jpg\",\"imageinfo\":[{\"url\":\"https://upload/test.jpg\",\"width\":100,\"height\":80}]}]}}"
         .utf8)
     check(
-      (try? JSONDecoder().decode(WikimediaResponse.self, from: wikiJSON).query?.pages.first?.pageid)
+      (try? JSONDecoder().decode(WikimediaResponse.self, from: wikiJSON).query?.pages.first?
+        .pageid)
         == 9, "Wikimedia fixture parse")
     let youtubeJSON = Data(
       "{\"items\":[{\"id\":{\"videoId\":\"abc\"},\"snippet\":{\"publishedAt\":\"2020-01-01T00:00:00Z\",\"channelId\":\"c\",\"title\":\"T\",\"description\":\"D\",\"channelTitle\":\"C\",\"thumbnails\":{}}}]}"
@@ -158,7 +164,8 @@ enum SelfTestRunner {
       "{\"response\":{\"docs\":[{\"identifier\":\"item1\",\"title\":\"Archive\"}]}}".utf8)
     let archiveRoot = try? JSONSerialization.jsonObject(with: archiveJSON) as? [String: Any]
     let archiveDocs = (archiveRoot?["response"] as? [String: Any])?["docs"] as? [[String: Any]]
-    check(archiveDocs?.first?["identifier"] as? String == "item1", "Internet Archive fixture parse")
+    check(
+      archiveDocs?.first?["identifier"] as? String == "item1", "Internet Archive fixture parse")
 
     print("SELF_TEST passed=\(passed) failed=\(failed.count)")
     for name in failed { print("FAIL \(name)") }

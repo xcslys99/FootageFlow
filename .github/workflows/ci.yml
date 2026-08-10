@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, windows-v0.2.0]
   pull_request:
 
 permissions:
@@ -37,3 +37,48 @@ jobs:
           scripts/binary_privacy_scan.sh
           codesign --verify --deep --strict dist/FootageFlow.app
           dist/FootageFlow.app/Contents/MacOS/FootageFlow --self-test
+
+  windows-core:
+    runs-on: windows-2025
+    timeout-minutes: 45
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Install official Swift toolchain
+        shell: pwsh
+        run: |
+          if (-not (Get-Command swift -ErrorAction SilentlyContinue)) {
+            winget install --id Swift.Toolchain --exact --silent --accept-package-agreements --accept-source-agreements --source winget
+            $env:Path = [Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [Environment]::GetEnvironmentVariable("Path", "User")
+          }
+          swift --version
+
+      - name: Build shared core for Windows x64
+        shell: pwsh
+        run: swift build -c release
+
+      - name: Run Windows core health check
+        shell: pwsh
+        run: |
+          $binary = Join-Path (swift build -c release --show-bin-path) "FootageFlow.exe"
+          $request = '{"id":"ci-health","action":"health","providerIDs":["wikimedia","internetArchive"],"language":"en"}'
+          $response = $request | & $binary --core-request | ConvertFrom-Json
+          if (-not $response.success -or $response.platform -ne "windows") {
+            throw "Windows core health check failed"
+          }
+
+      - name: Run cross-platform unit and provider tests
+        shell: pwsh
+        run: swift test
+
+      - name: Scan tracked files for secrets
+        shell: pwsh
+        run: |
+          $tracked = git ls-files
+          $patterns = 'AIza[0-9A-Za-z_-]{20,}|sk-[A-Za-z0-9_-]{20,}|(?i)(api[_ -]?key|token|secret)\s*[:=]\s*["'']?[A-Za-z0-9._-]{16,}'
+          $matches = Select-String -Path $tracked -Pattern $patterns -ErrorAction SilentlyContinue
+          if ($matches) {
+            $matches | ForEach-Object { Write-Host "$($_.Path):$($_.LineNumber)" }
+            throw "Potential secret found"
+          }

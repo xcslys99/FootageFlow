@@ -1,5 +1,9 @@
 import Foundation
 
+#if canImport(FoundationNetworking)
+  import FoundationNetworking
+#endif
+
 protocol DirectSearchPageLoading: Sendable {
   func load(_ url: URL, provider: ProviderID) async throws -> String
 }

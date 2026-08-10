@@ -14,7 +14,11 @@ struct YTDLPService: Sendable {
 
   var isAvailable: Bool {
     guard let executableURL else { return false }
-    return FileManager.default.isExecutableFile(atPath: executableURL.path)
+    #if os(Windows)
+      return FileManager.default.fileExists(atPath: executableURL.path)
+    #else
+      return FileManager.default.isExecutableFile(atPath: executableURL.path)
+    #endif
   }
 
   func search(query: String, limit: Int) async throws -> [YTDLPSearchItem] {
@@ -92,7 +96,7 @@ enum YTDLPBinaryLocator {
       let bundledName = "yt-dlp"
     #endif
     if let bundled = Bundle.main.resourceURL?.appendingPathComponent("Tools/\(bundledName)"),
-      fileManager.isExecutableFile(atPath: bundled.path)
+      isExecutable(bundled, fileManager: fileManager)
     {
       return bundled
     }
@@ -103,6 +107,14 @@ enum YTDLPBinaryLocator {
       }
     #endif
     return nil
+  }
+
+  private static func isExecutable(_ url: URL, fileManager: FileManager) -> Bool {
+    #if os(Windows)
+      fileManager.fileExists(atPath: url.path)
+    #else
+      fileManager.isExecutableFile(atPath: url.path)
+    #endif
   }
 }
 
