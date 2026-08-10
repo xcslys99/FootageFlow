@@ -8,9 +8,9 @@ public partial class App : Application
 {
     protected override void OnStartup(StartupEventArgs e)
     {
+        base.OnStartup(e);
         if (e.Args.Contains("--health-check", StringComparer.OrdinalIgnoreCase))
         {
-            StartupUri = null;
             var exitCode = RunInstalledHealthCheck();
             Shutdown(exitCode);
             return;
@@ -22,7 +22,8 @@ public partial class App : Application
                 "FootageFlow", MessageBoxButton.OK, MessageBoxImage.Error);
             args.Handled = true;
         };
-        base.OnStartup(e);
+        MainWindow = new MainWindow();
+        MainWindow.Show();
     }
 
     private static int RunInstalledHealthCheck()
