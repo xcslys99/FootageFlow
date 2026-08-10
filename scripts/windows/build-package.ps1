@@ -77,6 +77,6 @@ try {
     if (Test-Path $archive) { Remove-Item $archive -Force }
     Compress-Archive -Path (Join-Path $stage "*") -DestinationPath $archive -CompressionLevel Optimal
     (Get-FileHash $archive -Algorithm SHA256).Hash.ToLowerInvariant() + "  " + (Split-Path $archive -Leaf) |
-        Set-Content ($archive + ".sha256") -Encoding ascii
+        Set-Content ($archive + ".sha256") -Encoding ascii -NoNewline
     Write-Output $stage
 } finally { Pop-Location }

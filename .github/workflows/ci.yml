@@ -149,7 +149,23 @@ jobs:
           $signature = Get-AuthenticodeSignature $installer
           Write-Host "Installer signature status: $($signature.Status) (unsigned development build expected)"
           (Get-FileHash $installer -Algorithm SHA256).Hash.ToLowerInvariant() + "  " + (Split-Path $installer -Leaf) |
-            Set-Content ($installer + ".sha256") -Encoding ascii
+            Set-Content ($installer + ".sha256") -Encoding ascii -NoNewline
+          $checksumFiles = @(
+            Join-Path $output "FootageFlow-0.2.0-Windows-x64-portable.zip.sha256"
+            $installer + ".sha256"
+          )
+          foreach ($checksumFile in $checksumFiles) {
+            $checksumText = Get-Content $checksumFile -Raw
+            if ($checksumText -notmatch '^[0-9a-f]{64}  [^\r\n]+$') {
+              throw "Checksum file is not portable SHA-256 format: $checksumFile"
+            }
+            $checksumParts = $checksumText -split '  ', 2
+            $checkedFile = Join-Path $output $checksumParts[1]
+            $actualChecksum = (Get-FileHash $checkedFile -Algorithm SHA256).Hash.ToLowerInvariant()
+            if ($actualChecksum -ne $checksumParts[0]) {
+              throw "Checksum verification failed: $checkedFile"
+            }
+          }
 
       - name: Clean install, launch, and uninstall test
         shell: pwsh
