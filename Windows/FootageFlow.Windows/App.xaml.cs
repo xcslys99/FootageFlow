@@ -22,8 +22,16 @@ public partial class App : Application
                 "FootageFlow", MessageBoxButton.OK, MessageBoxImage.Error);
             args.Handled = true;
         };
-        MainWindow = new MainWindow();
-        MainWindow.Show();
+        try
+        {
+            MainWindow = new MainWindow();
+            MainWindow.Show();
+        }
+        catch (Exception error)
+        {
+            WriteStartupFailure(error);
+            Shutdown(1);
+        }
     }
 
     private static int RunInstalledHealthCheck()
@@ -37,5 +45,16 @@ public partial class App : Application
             return response.Success && response.Platform == "windows" ? 0 : 1;
         }
         catch { return 1; }
+    }
+
+    private static void WriteStartupFailure(Exception error)
+    {
+        try
+        {
+            Directory.CreateDirectory(AppPaths.LogDirectory);
+            var report = $"{DateTimeOffset.UtcNow:O} | {error.GetType().FullName}{Environment.NewLine}{error}{Environment.NewLine}";
+            File.AppendAllText(Path.Combine(AppPaths.LogDirectory, "startup.log"), report);
+        }
+        catch { }
     }
 }

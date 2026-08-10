@@ -171,7 +171,11 @@ jobs:
           }
           $process = Start-Process $app -PassThru
           Start-Sleep -Seconds 5
-          if ($process.HasExited) { throw "The installed Windows GUI exited during startup." }
+          if ($process.HasExited) {
+            $startupLog = Join-Path $env:LOCALAPPDATA "FootageFlow\Logs\startup.log"
+            if (Test-Path $startupLog) { Get-Content $startupLog }
+            throw "The installed Windows GUI exited during startup."
+          }
           Stop-Process -Id $process.Id -Force
           $uninstaller = Join-Path $installRoot "unins000.exe"
           $uninstall = Start-Process $uninstaller -ArgumentList @(
