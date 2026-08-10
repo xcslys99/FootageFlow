@@ -28,7 +28,7 @@ final class DataStore: ObservableObject {
     load()
   }
 
-  static func migrateDatabaseIfNeeded(current: URL, legacy: URL) {
+  nonisolated static func migrateDatabaseIfNeeded(current: URL, legacy: URL) {
     guard !FileManager.default.fileExists(atPath: current.path) else { return }
     guard FileManager.default.fileExists(atPath: legacy.path) else { return }
     try? FileManager.default.copyItem(at: legacy, to: current)
