@@ -6,7 +6,7 @@ Search. Discover. Download. Organize.
 
 FootageFlow is a privacy-friendly desktop app for finding real video and image assets across several media libraries at once. It is designed for documentary, history, country profile, finance, science, and social-video research.
 
-The current release is a native **macOS 15+ Apple Silicon** app. Windows support is planned after the macOS v0.1.0 release is stable; it is not included in this release.
+FootageFlow v0.2.0 supports **macOS 15+ on Apple Silicon** and **Windows 11 x64**. Both editions use the same provider, metadata, license, keyword, source-sidecar, and project-persistence core.
 
 ## What works
 
@@ -22,8 +22,6 @@ The current release is a native **macOS 15+ Apple Silicon** app. Windows support
 
 YouTube search can use the official Data API when configured. FootageFlow also includes a local, best-effort yt-dlp path for public search and downloads. Downloads can fail because of rate limits, regional restrictions, login requirements, rights restrictions, or platform changes. FootageFlow does not import browser cookies, bypass DRM, or promise that every video is downloadable.
 
-The adaptive provider-mode changes described below are currently on the unreleased `main` branch and are intended for the next feature release. The downloadable v0.1.0 package retains its published feature set.
-
 ## Screenshots
 
 ![FootageFlow search](docs/images/search.png)
@@ -32,11 +30,19 @@ The adaptive provider-mode changes described below are currently on the unreleas
 
 ## Install on macOS
 
-1. Download `FootageFlow-0.1.0-macOS-arm64.dmg` from Releases.
+1. Download `FootageFlow-0.2.0-macOS-arm64.dmg` from Releases.
 2. Open the DMG and drag FootageFlow to Applications.
-3. Open FootageFlow. The v0.1.0 build is Ad Hoc signed, not notarized; if macOS blocks the first launch, use **System Settings → Privacy & Security → Open Anyway**.
+3. Open FootageFlow. The v0.2.0 build is Ad Hoc signed, not notarized; if macOS blocks the first launch, use **System Settings → Privacy & Security → Open Anyway**.
 
 No terminal command is required for normal use.
+
+## Install on Windows
+
+1. On a Windows 11 x64 PC, download `FootageFlow-Setup-0.2.0-Windows-x64.exe` from Releases.
+2. Verify it against the attached `.sha256` file, then double-click the installer.
+3. Complete the setup wizard and open FootageFlow from the Start menu.
+
+The installer is self-contained: ordinary users do not need Python, Node.js, Swift, .NET, yt-dlp, or FFmpeg. It is not code-signed yet, so Microsoft Defender SmartScreen may display an unrecognized-app warning. Only continue when the installer came from this repository's official Release and its checksum matches.
 
 ## Quick start
 
@@ -47,7 +53,7 @@ No terminal command is required for normal use.
 5. Select a project before favoriting or downloading if you want the asset organized into that project.
 6. Check every asset's license and original source page before publishing.
 
-Default downloads are stored under `~/Movies/FootageFlow/<Project>/`. You can change the root folder in Settings. Removing a database record never deletes the media file unless you explicitly choose **Delete Local File** and confirm.
+Default downloads are stored under `~/Movies/FootageFlow/<Project>/` on macOS and `%USERPROFILE%\Videos\FootageFlow\<Project>\` on Windows. You can change the root folder in Settings. Removing a database record does not delete the downloaded media file.
 
 ## Provider modes
 
@@ -73,7 +79,7 @@ FootageFlow source code is released under the [MIT License](LICENSE). Media foun
 
 ## Build from source
 
-Requirements: macOS 15+, Swift 6, and Xcode for XCTest.
+Normal users should install a Release package and do not need development tools. Contributors need Swift 6 and full Xcode on macOS. Windows development uses Swift 6.3.3, .NET 10, the Visual Studio 2022 C++ environment, and Inno Setup 7.
 
 ```bash
 swift build -c release
@@ -81,6 +87,8 @@ swift test
 scripts/build_app.sh
 scripts/verify_app.sh
 ```
+
+Windows packaging and clean-install validation run on the repository's Windows 11 x64 GitHub Actions runner. See [DEVELOPMENT.md](DEVELOPMENT.md) for the exact commands and platform split.
 
 Architecture and provider extension instructions are in [DEVELOPMENT.md](DEVELOPMENT.md). Contributions are welcome through [CONTRIBUTING.md](CONTRIBUTING.md).
 

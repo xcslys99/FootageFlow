@@ -1,5 +1,9 @@
 import Foundation
 
+#if canImport(FoundationNetworking)
+  import FoundationNetworking
+#endif
+
 struct WikimediaProvider: MediaProvider {
   let info = ProviderInfo(
     id: .wikimedia, displayName: "Wikimedia Commons", mode: .publicInterface,

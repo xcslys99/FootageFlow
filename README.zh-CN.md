@@ -6,7 +6,7 @@
 
 FootageFlow 是一款注重隐私的桌面素材搜索与管理软件，可一次搜索多个真实视频和图片素材库，适合历史、国家、财经、人物、科普、纪录片和短视频创作。
 
-当前版本是原生 **macOS 15+ Apple Silicon** 应用。Windows 版会在 macOS v0.1.0 稳定后开发，本次发布尚不包含 Windows 版本。
+FootageFlow v0.2.0 正式支持 **macOS 15+ Apple Silicon** 和 **Windows 11 x64**。两个版本共用 Provider、Metadata、License、关键词、来源 Sidecar 和项目持久化核心。
 
 ## 已实现功能
 
@@ -22,8 +22,6 @@ FootageFlow 是一款注重隐私的桌面素材搜索与管理软件，可一�
 
 配置 Key 后，YouTube 搜索可使用官方 Data API。FootageFlow 还内置本地 yt-dlp，用于尽力搜索和下载公开内容。由于平台限流、地区限制、登录要求、版权限制或平台接口变化，部分 YouTube 视频可能暂时无法下载。FootageFlow 不读取浏览器 Cookie、不绕过 DRM，也不承诺每个视频都能下载。
 
-以下 Provider 模式升级目前位于尚未发布的 `main` 分支，计划随下一个功能版本交付。现有 v0.1.0 下载包仍保持其发布时的功能范围。
-
 ## 界面截图
 
 ![FootageFlow 搜索](docs/images/search.png)
@@ -32,11 +30,19 @@ FootageFlow 是一款注重隐私的桌面素材搜索与管理软件，可一�
 
 ## 在 macOS 安装
 
-1. 从 Releases 下载 `FootageFlow-0.1.0-macOS-arm64.dmg`。
+1. 从 Releases 下载 `FootageFlow-0.2.0-macOS-arm64.dmg`。
 2. 打开 DMG，把 FootageFlow 拖入“应用程序”。
-3. 打开 FootageFlow。v0.1.0 使用 Ad Hoc 签名，尚未公证；如果首次启动被 macOS 拦截，请前往“系统设置 → 隐私与安全性 → 仍要打开”。
+3. 打开 FootageFlow。v0.2.0 使用 Ad Hoc 签名，尚未公证；如果首次启动被 macOS 拦截，请前往“系统设置 → 隐私与安全性 → 仍要打开”。
 
 日常使用不需要打开终端。
+
+## 在 Windows 安装
+
+1. 在 Windows 11 x64 电脑上，从 Releases 下载 `FootageFlow-Setup-0.2.0-Windows-x64.exe`。
+2. 使用同时提供的 `.sha256` 文件核对安装包，然后双击安装。
+3. 完成安装向导，从“开始”菜单打开 FootageFlow。
+
+安装包已包含运行所需组件，普通用户不需要安装 Python、Node.js、Swift、.NET、yt-dlp 或 FFmpeg。Windows 安装包目前没有代码签名，因此 Microsoft Defender SmartScreen 可能显示“无法识别的应用”。请只使用本仓库正式 Release 中的安装包，并在校验值一致后继续。
 
 ## 第一次使用
 
@@ -47,7 +53,7 @@ FootageFlow 是一款注重隐私的桌面素材搜索与管理软件，可一�
 5. 如需按项目整理，请先选择项目，再收藏或下载素材。
 6. 发布前务必查看每个素材的 License 和原始来源页。
 
-默认下载目录为 `~/Movies/FootageFlow/<项目名>/`，可在设置中修改。只删除下载记录不会删除原素材；只有明确点击“删除本地文件”并再次确认后，应用才会删除文件。
+macOS 默认下载目录为 `~/Movies/FootageFlow/<项目名>/`，Windows 默认为 `%USERPROFILE%\Videos\FootageFlow\<项目名>\`，均可在设置中修改。删除数据库中的下载记录不会删除已经下载的素材文件。
 
 ## Provider 模式
 
@@ -73,7 +79,7 @@ FootageFlow 源代码采用 [MIT License](LICENSE)。通过软件找到的媒体
 
 ## 从源码构建
 
-需要 macOS 15+、Swift 6；运行 XCTest 需要完整 Xcode。
+普通用户应直接安装 Release，无需开发环境。macOS 开发需要 Swift 6 和完整 Xcode；Windows 开发需要 Swift 6.3.3、.NET 10、Visual Studio 2022 C++ 环境和 Inno Setup 7。
 
 ```bash
 swift build -c release
@@ -81,6 +87,8 @@ swift test
 scripts/build_app.sh
 scripts/verify_app.sh
 ```
+
+Windows 打包、干净安装与卸载验收由仓库的 Windows 11 x64 GitHub Actions 执行，具体命令和平台分层见 [DEVELOPMENT.md](DEVELOPMENT.md)。
 
 架构和新增 Provider 方法见 [DEVELOPMENT.md](DEVELOPMENT.md)，参与贡献请阅读 [CONTRIBUTING.md](CONTRIBUTING.md)。
 

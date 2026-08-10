@@ -9,141 +9,79 @@ final class DataStore: ObservableObject {
   @Published private(set) var history: [SearchHistoryRecord] = []
   @Published private(set) var downloads: [DownloadRecord] = []
 
-  private let fileURL: URL?
+  private let repository: PersistentStore
 
   init(inMemory: Bool = false, fileURL: URL? = nil) {
-    if inMemory {
-      self.fileURL = nil
-    } else if let fileURL {
-      self.fileURL = fileURL
-    } else {
-      let directory = PlatformPaths.applicationData
-      try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-      let current = directory.appendingPathComponent("FootageFlow.database.json")
-      let legacy = directory.deletingLastPathComponent().appendingPathComponent(
-        "FootageFinder/FootageFinder.database.json")
-      Self.migrateDatabaseIfNeeded(current: current, legacy: legacy)
-      self.fileURL = current
-    }
-    load()
+    repository = PersistentStore(inMemory: inMemory, fileURL: fileURL)
+    synchronize()
   }
 
   nonisolated static func migrateDatabaseIfNeeded(current: URL, legacy: URL) {
-    guard !FileManager.default.fileExists(atPath: current.path) else { return }
-    guard FileManager.default.fileExists(atPath: legacy.path) else { return }
-    try? FileManager.default.copyItem(at: legacy, to: current)
+    PersistentStore.migrateDatabaseIfNeeded(current: current, legacy: legacy)
   }
 
   @discardableResult func addProject(name: String) -> ProjectRecord {
-    let clean = name.trimmingCharacters(in: .whitespacesAndNewlines)
-    let project = ProjectRecord(name: clean.isEmpty ? tr("project.untitled") : clean)
-    projects.append(project)
-    save()
+    let project = repository.addProject(name: name)
+    synchronize()
     return project
   }
+
   func deleteProject(id: UUID) {
-    projects.removeAll { $0.id == id }
-    segments.removeAll { $0.projectID == id }
-    favorites = favorites.map { item in
-      var value = item
-      if value.projectID == id { value.projectID = nil }
-      return value
-    }
-    history = history.map { item in
-      var value = item
-      if value.projectID == id { value.projectID = nil }
-      return value
-    }
-    downloads = downloads.map { item in
-      var value = item
-      if value.projectID == id { value.projectID = nil }
-      return value
-    }
-    save()
+    repository.deleteProject(id: id)
+    synchronize()
   }
+
   func updateProject(_ project: ProjectRecord) {
-    guard let index = projects.firstIndex(where: { $0.id == project.id }) else { return }
-    var updated = project
-    updated.updatedAt = .now
-    projects[index] = updated
-    save()
+    repository.updateProject(project)
+    synchronize()
   }
+
   func replaceSegments(projectID: UUID?, values: [ScriptSegmentRecord]) {
-    segments.removeAll { $0.projectID == projectID }
-    segments += values
-    touchProject(projectID)
-    save()
+    repository.replaceSegments(projectID: projectID, values: values)
+    synchronize()
   }
+
   func toggleFavorite(asset: MediaAsset, projectID: UUID?, segmentIndex: Int? = nil) {
-    if let index = favorites.firstIndex(where: {
-      $0.stableID == asset.stableID && $0.projectID == projectID
-    }) {
-      favorites.remove(at: index)
-    } else {
-      favorites.append(
-        SavedAssetRecord(asset: asset, projectID: projectID, segmentIndex: segmentIndex))
-    }
-    touchProject(projectID)
-    save()
+    repository.toggleFavorite(asset: asset, projectID: projectID, segmentIndex: segmentIndex)
+    synchronize()
   }
+
   func isFavorite(_ asset: MediaAsset, projectID: UUID?) -> Bool {
-    favorites.contains { $0.stableID == asset.stableID && $0.projectID == projectID }
+    repository.isFavorite(asset, projectID: projectID)
   }
+
   func addHistory(_ record: SearchHistoryRecord) {
-    history.insert(record, at: 0)
-    if history.count > 300 { history.removeLast(history.count - 300) }
-    touchProject(record.projectID)
-    save()
+    repository.addHistory(record)
+    synchronize()
   }
+
   func deleteHistory(id: UUID) {
-    history.removeAll { $0.id == id }
-    save()
+    repository.deleteHistory(id: id)
+    synchronize()
   }
+
   func clearHistory() {
-    history = []
-    save()
+    repository.clearHistory()
+    synchronize()
   }
+
   func addDownload(_ record: DownloadRecord) {
-    guard !downloads.contains(where: { $0.localPath == record.localPath }) else { return }
-    downloads.insert(record, at: 0)
-    touchProject(record.projectID)
-    save()
+    repository.addDownload(record)
+    synchronize()
   }
+
   func deleteDownloadRecord(id: UUID) {
-    downloads.removeAll { $0.id == id }
-    save()
+    repository.deleteDownloadRecord(id: id)
+    synchronize()
   }
 
-  func forceSave() { save() }
+  func forceSave() { repository.forceSave() }
 
-  private func touchProject(_ projectID: UUID?) {
-    guard let projectID, let index = projects.firstIndex(where: { $0.id == projectID }) else {
-      return
-    }
-    projects[index].updatedAt = .now
-  }
-
-  private func load() {
-    let decoder = JSONDecoder()
-    decoder.dateDecodingStrategy = .iso8601
-    guard let fileURL, let data = try? Data(contentsOf: fileURL),
-      let database = try? decoder.decode(PersistentDatabase.self, from: data)
-    else { return }
-    projects = database.projects
-    segments = database.segments
-    favorites = database.favorites
-    history = database.history
-    downloads = database.downloads
-  }
-  private func save() {
-    guard let fileURL else { return }
-    let database = PersistentDatabase(
-      projects: projects, segments: segments, favorites: favorites, history: history,
-      downloads: downloads)
-    let encoder = JSONEncoder()
-    encoder.dateEncodingStrategy = .iso8601
-    encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-    guard let data = try? encoder.encode(database) else { return }
-    try? data.write(to: fileURL, options: .atomic)
+  private func synchronize() {
+    projects = repository.projects
+    segments = repository.segments
+    favorites = repository.favorites
+    history = repository.history
+    downloads = repository.downloads
   }
 }

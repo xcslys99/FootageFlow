@@ -113,7 +113,8 @@ final class SearchViewModel: ObservableObject {
           group.addTask {
             var combined: [MediaAsset] = []
             do {
-              let providerKeywords = provider.info.id == .youtube ? Array(active.prefix(2)) : active
+              let providerKeywords =
+                provider.info.id == .youtube ? Array(active.prefix(2)) : active
               for keyword in providerKeywords {
                 try Task.checkCancellation()
                 let request = SearchRequest(
@@ -178,7 +179,8 @@ final class SearchViewModel: ObservableObject {
 
   private func makeProviders(directOverrides: Set<ProviderID>) -> [any MediaProvider] {
     ProviderID.allCases.map { id in
-      ProviderFactory.make(id, apiKey: directOverrides.contains(id) ? "" : KeychainService.read(id))
+      ProviderFactory.make(
+        id, apiKey: directOverrides.contains(id) ? "" : KeychainService.read(id))
     }
   }
 
@@ -209,7 +211,8 @@ final class SearchViewModel: ObservableObject {
   }
 
   private func score(_ asset: MediaAsset) -> Double {
-    asset.relevanceScore + (asset.downloadable ? 0.08 : 0) + (asset.height ?? 0 >= 1080 ? 0.04 : 0)
+    asset.relevanceScore + (asset.downloadable ? 0.08 : 0)
+      + (asset.height ?? 0 >= 1080 ? 0.04 : 0)
       + (asset.creator != nil ? 0.01 : 0) + (asset.licenseStatus != .unknown ? 0.03 : 0)
   }
 

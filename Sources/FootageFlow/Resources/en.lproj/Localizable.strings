@@ -41,6 +41,11 @@
 "media.favorite" = "Favorite";
 "media.download" = "Download";
 "media.openSource" = "Open Source Page";
+"media.play" = "Play";
+"media.pause" = "Pause";
+"media.mute" = "Mute";
+"media.unmute" = "Unmute";
+"media.previewUnavailable" = "This source does not provide an embedded preview. Open the original source page instead.";
 "media.thumbnailUnavailable" = "Thumbnail unavailable";
 "media.noDescription" = "No description is available. Check the original source before publishing or reuse.";
 "media.licenseUnavailable" = "License information unavailable — verify with the original source before reuse.";

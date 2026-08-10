@@ -2,11 +2,14 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, windows-v0.2.0]
   pull_request:
 
 permissions:
   contents: read
+
+env:
+  DOTNET_CLI_TELEMETRY_OPTOUT: "1"
 
 jobs:
   test-and-build:
@@ -37,3 +40,158 @@ jobs:
           scripts/binary_privacy_scan.sh
           codesign --verify --deep --strict dist/FootageFlow.app
           dist/FootageFlow.app/Contents/MacOS/FootageFlow --self-test
+
+  windows-core:
+    # Swift 6.3 currently requires the Visual Studio 2022 C++ environment.
+    runs-on: windows-2022
+    timeout-minutes: 45
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Install official Swift 6.3.3 toolchain
+        uses: compnerd/gha-setup-swift@eeda069c5bc95ac8a9ac5cea7d4f588ae5420ca5
+        with:
+          swift-version: swift-6.3.3-release
+          swift-build: 6.3.3-RELEASE
+
+      - name: Show Windows Swift toolchain
+        shell: pwsh
+        run: swift --version
+
+      - name: Build shared core for Windows x64
+        shell: pwsh
+        run: |
+          New-Item -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\AppModelUnlock" -Force | Out-Null
+          New-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\AppModelUnlock" -Name "AllowDevelopmentWithoutDevLicense" -PropertyType DWord -Value 1 -Force | Out-Null
+          . scripts/windows/enter-dev-shell.ps1
+          swift build -c release -v
+
+      - name: Run Windows core health check
+        shell: pwsh
+        run: |
+          . scripts/windows/enter-dev-shell.ps1
+          $binary = Join-Path (swift build -c release --show-bin-path) "FootageFlow.exe"
+          $request = '{"id":"ci-health","action":"health","providerIDs":["wikimedia","internetArchive"],"language":"en"}'
+          $response = $request | & $binary --core-request | ConvertFrom-Json
+          if (-not $response.success -or $response.platform -ne "windows") {
+            throw "Windows core health check failed"
+          }
+
+      - name: Run cross-platform unit and provider tests
+        shell: pwsh
+        run: |
+          . scripts/windows/enter-dev-shell.ps1
+          swift test
+
+      - name: Install .NET 10 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.302
+
+      - name: Build native Windows interface
+        shell: pwsh
+        run: dotnet build Windows/FootageFlow.Windows/FootageFlow.Windows.csproj -c Release
+
+      - name: Run Windows platform self-tests
+        shell: pwsh
+        run: |
+          . scripts/windows/enter-dev-shell.ps1
+          $env:FOOTAGEFLOW_CORE_PATH = Join-Path (swift build -c release --show-bin-path) "FootageFlow.exe"
+          dotnet run --project Windows/FootageFlow.Windows.Tests/FootageFlow.Windows.Tests.csproj -c Release
+
+      - name: Build self-contained Windows package
+        shell: pwsh
+        run: scripts/windows/build-package.ps1 -Version "0.2.0"
+
+      - name: Verify packaged runtimes
+        shell: pwsh
+        run: |
+          $stage = Join-Path $PWD ".build\windows-stage"
+          $required = @(
+            "FootageFlow.exe",
+            "Core\FootageFlowCore.exe",
+            "Tools\yt-dlp.exe",
+            "Resources\en.lproj\Localizable.strings",
+            "Resources\zh-Hans.lproj\Localizable.strings"
+          )
+          foreach ($relative in $required) {
+            if (-not (Test-Path (Join-Path $stage $relative) -PathType Leaf)) {
+              throw "Packaged file is missing: $relative"
+            }
+          }
+          $healthRequest = '{"id":"packaged-health","action":"health","providerIDs":["wikimedia","internetArchive"],"language":"en"}'
+          $health = $healthRequest | & (Join-Path $stage "Core\FootageFlowCore.exe") --core-request | ConvertFrom-Json
+          if (-not $health.success -or $health.platform -ne "windows") {
+            throw "The packaged Windows core health check failed."
+          }
+          $toolVersion = & (Join-Path $stage "Tools\yt-dlp.exe") --version
+          if ($toolVersion -ne "2026.07.04") { throw "The bundled yt-dlp version is not the pinned release." }
+
+      - name: Run real Windows provider smoke tests
+        shell: pwsh
+        env:
+          PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+          PIXABAY_API_KEY: ${{ secrets.PIXABAY_API_KEY }}
+          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+        run: scripts/windows/live-provider-smoke.ps1
+
+      - name: Compile Windows installer
+        shell: pwsh
+        run: |
+          $compiler = (& scripts/windows/install-inno.ps1 | Select-Object -Last 1)
+          $stage = (Resolve-Path ".build\windows-stage").Path
+          $output = (Resolve-Path "dist\windows").Path
+          & $compiler "/DAppVersion=0.2.0" "/DSourceDirectory=$stage" "/DOutputDirectory=$output" "Windows\Installer\FootageFlow.iss"
+          if ($LASTEXITCODE -ne 0) { throw "The Windows installer could not be compiled." }
+          $installer = Join-Path $output "FootageFlow-Setup-0.2.0-Windows-x64.exe"
+          if (-not (Test-Path $installer -PathType Leaf)) { throw "The Windows installer is missing." }
+          $signature = Get-AuthenticodeSignature $installer
+          Write-Host "Installer signature status: $($signature.Status) (unsigned development build expected)"
+          (Get-FileHash $installer -Algorithm SHA256).Hash.ToLowerInvariant() + "  " + (Split-Path $installer -Leaf) |
+            Set-Content ($installer + ".sha256") -Encoding ascii
+
+      - name: Clean install, launch, and uninstall test
+        shell: pwsh
+        run: |
+          $installer = (Resolve-Path "dist\windows\FootageFlow-Setup-0.2.0-Windows-x64.exe").Path
+          $installRoot = Join-Path $env:RUNNER_TEMP "FootageFlow-Clean-Install"
+          if (Test-Path $installRoot) { Remove-Item $installRoot -Recurse -Force }
+          $install = Start-Process $installer -ArgumentList @(
+            "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/DIR=`"$installRoot`""
+          ) -Wait -PassThru
+          if ($install.ExitCode -ne 0) { throw "Installer exited with code $($install.ExitCode)." }
+          $app = Join-Path $installRoot "FootageFlow.exe"
+          if (-not (Test-Path $app -PathType Leaf)) { throw "Clean installation did not create FootageFlow.exe." }
+          $installedCore = Join-Path $installRoot "Core\FootageFlowCore.exe"
+          $healthRequest = '{"id":"installed-health","action":"health","providerIDs":["wikimedia","internetArchive"],"language":"en"}'
+          $health = $healthRequest | & $installedCore --core-request | ConvertFrom-Json
+          if (-not $health.success -or $health.platform -ne "windows") {
+            throw "The installed Windows core health check failed."
+          }
+          $process = Start-Process $app -PassThru
+          Start-Sleep -Seconds 5
+          if ($process.HasExited) {
+            $startupLog = Join-Path $env:LOCALAPPDATA "FootageFlow\Logs\startup.log"
+            if (Test-Path $startupLog) { Get-Content $startupLog }
+            throw "The installed Windows GUI exited during startup with code $($process.ExitCode)."
+          }
+          Stop-Process -Id $process.Id -Force
+          $uninstaller = Join-Path $installRoot "unins000.exe"
+          $uninstall = Start-Process $uninstaller -ArgumentList @(
+            "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART"
+          ) -Wait -PassThru
+          if ($uninstall.ExitCode -ne 0) { throw "Uninstaller exited with code $($uninstall.ExitCode)." }
+          if (Test-Path $app) { throw "Uninstall left the application executable behind." }
+
+      - name: Upload Windows candidate artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: FootageFlow-0.2.0-Windows-x64
+          path: dist/windows/*
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Scan tracked files for secrets
+        shell: bash
+        run: scripts/secret_scan.sh

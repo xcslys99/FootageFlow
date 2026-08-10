@@ -1,7 +1,7 @@
-#!/bin/zsh
+#!/usr/bin/env bash
 set -euo pipefail
 
-PROJECT_DIR="${0:A:h:h}"
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$PROJECT_DIR"
 
 if [[ ! -d .git ]]; then
@@ -29,15 +29,15 @@ for pattern in "${patterns[@]}"; do
     fi
 done
 
-for path in ${(f)"$(git ls-files)"}; do
-    lower="${path:l}"
+while IFS= read -r path; do
+    lower="$(printf '%s' "$path" | tr '[:upper:]' '[:lower:]')"
     case "$lower" in
         *.env|*.env.*|*cookie*|*credentials*|*private_key*|*.pem|*.p12)
             echo "Potential sensitive filename: $path"
             failed=1
             ;;
     esac
-done
+done < <(git ls-files)
 
 if (( failed )); then
     echo "SECRET_SCAN failed"

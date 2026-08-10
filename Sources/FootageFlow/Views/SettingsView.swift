@@ -72,7 +72,9 @@ struct SettingsView: View {
             }
             Button(tr("settings.clearHistory")) { confirmClearHistory = true }.disabled(
               store.history.isEmpty)
-            Button(tr("settings.openLogs")) { DesktopPlatform.shared.open(AppLogger.shared.logURL) }
+            Button(tr("settings.openLogs")) {
+              DesktopPlatform.shared.open(AppLogger.shared.logURL)
+            }
             Text(tr("settings.logHelp")).font(.caption).foregroundStyle(.secondary)
           }.padding(8)
         }
@@ -119,7 +121,9 @@ struct SettingsView: View {
           Text(tr("settings.apiKey")).foregroundStyle(.secondary)
           Text("••••••••••••").font(.system(.body, design: .monospaced))
           Button(tr("settings.changeAPIKey")) { editingKeys.insert(provider) }
-          Button(tr("settings.removeAPIKey"), role: .destructive) { removeKey(provider, key: key) }
+          Button(tr("settings.removeAPIKey"), role: .destructive) {
+            removeKey(provider, key: key)
+          }
           Button(tr("settings.testConnection")) { test(provider, key: key.wrappedValue) }
           Link(tr("welcome.howToApply"), destination: URL(string: applyURL)!)
         }
@@ -177,7 +181,8 @@ struct SettingsView: View {
     do {
       try KeychainService.save(
         value.trimmingCharacters(in: .whitespacesAndNewlines), provider: provider)
-      statuses[provider] = value.isEmpty ? tr("settings.notConfigured") : tr("settings.configured")
+      statuses[provider] =
+        value.isEmpty ? tr("settings.notConfigured") : tr("settings.configured")
       messages[provider] = tr("settings.savedKeychain")
     } catch {
       statuses[provider] = tr("settings.saveFailed")
@@ -213,7 +218,8 @@ struct SettingsView: View {
     }
   }
   private func chooseFolder() {
-    if let url = DesktopPlatform.shared.chooseDirectory(prompt: tr("settings.chooseDownloadFolder"))
+    if let url = DesktopPlatform.shared.chooseDirectory(
+      prompt: tr("settings.chooseDownloadFolder"))
     {
       downloadRoot = url
       AppSettings.downloadRootURL = url

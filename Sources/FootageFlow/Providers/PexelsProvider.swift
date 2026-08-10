@@ -1,5 +1,9 @@
 import Foundation
 
+#if canImport(FoundationNetworking)
+  import FoundationNetworking
+#endif
+
 struct PexelsProvider: MediaProvider {
   let apiKey: String
   let info = ProviderInfo(

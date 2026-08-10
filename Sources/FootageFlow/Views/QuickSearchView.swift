@@ -29,8 +29,9 @@ struct QuickSearchView: View {
         ScrollView {
           LazyVGrid(columns: columns, alignment: .leading, spacing: 14) {
             ForEach(viewModel.filteredAssets) { asset in
-              MediaAssetCard(asset: asset, projectID: viewModel.currentProjectID, segmentIndex: nil)
-              { PreviewWindowManager.shared.show($0) }
+              MediaAssetCard(
+                asset: asset, projectID: viewModel.currentProjectID, segmentIndex: nil
+              ) { PreviewWindowManager.shared.show($0) }
             }
           }
           .padding(16)
@@ -262,7 +263,8 @@ struct QuickSearchView: View {
       pendingTranslation = viewModel.query
       if translationConfiguration == nil {
         translationConfiguration = TranslationSession.Configuration(
-          source: Locale.Language(identifier: "zh-Hans"), target: Locale.Language(identifier: "en"))
+          source: Locale.Language(identifier: "zh-Hans"),
+          target: Locale.Language(identifier: "en"))
       } else {
         translationConfiguration?.invalidate()
       }

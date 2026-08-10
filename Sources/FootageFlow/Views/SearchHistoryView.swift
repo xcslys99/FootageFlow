@@ -21,11 +21,14 @@ struct SearchHistoryView: View {
         HStack {
           VStack(alignment: .leading, spacing: 4) {
             Text(item.originalQuery).font(.headline)
-            Text(item.keywords.joined(separator: " · ")).font(.caption).foregroundStyle(.secondary)
-              .lineLimit(1)
+            Text(item.keywords.joined(separator: " · ")).font(.caption).foregroundStyle(
+              .secondary
+            )
+            .lineLimit(1)
             Text(
               tr(
-                "history.summary", item.searchedAt.formatted(date: .abbreviated, time: .shortened),
+                "history.summary",
+                item.searchedAt.formatted(date: .abbreviated, time: .shortened),
                 item.resultCount)
             ).font(.caption2).foregroundStyle(.tertiary)
           }

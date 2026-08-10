@@ -1,5 +1,9 @@
 import Foundation
 
+#if canImport(FoundationNetworking)
+  import FoundationNetworking
+#endif
+
 actor HTTPClient {
   static let shared = HTTPClient()
 
@@ -16,7 +20,7 @@ actor HTTPClient {
     configuration.urlCache = nil
     configuration.httpCookieStorage = nil
     configuration.httpAdditionalHeaders = [
-      "User-Agent": "FootageFlow/0.1.0 (macOS open-source footage discovery app)"
+      "User-Agent": "FootageFlow/\(FootageFlowVersion.current) (open-source footage discovery app)"
     ]
     session = URLSession(configuration: configuration)
     decoder = JSONDecoder()

@@ -33,7 +33,8 @@ struct ProjectsView: View {
             Text(project.name)
             Text(
               tr(
-                "project.updated", project.updatedAt.formatted(date: .abbreviated, time: .shortened)
+                "project.updated",
+                project.updatedAt.formatted(date: .abbreviated, time: .shortened)
               )
             ).font(.caption).foregroundStyle(.secondary)
           }.tag(project.id)
@@ -56,8 +57,9 @@ struct ProjectsView: View {
         HStack {
           Spacer()
           Button(tr("common.cancel")) { showNewProject = false }
-          Button(tr("common.create")) { createProject() }.buttonStyle(.borderedProminent).disabled(
-            newName.trimmingCharacters(in: .whitespaces).isEmpty)
+          Button(tr("common.create")) { createProject() }.buttonStyle(.borderedProminent)
+            .disabled(
+              newName.trimmingCharacters(in: .whitespaces).isEmpty)
         }
       }.padding(24).frame(width: 420)
     }
@@ -114,10 +116,12 @@ private struct ProjectDetail: View {
       }
       HStack(spacing: 20) {
         Label(
-          tr("project.favoriteCount", store.favorites.filter { $0.projectID == project.id }.count),
+          tr(
+            "project.favoriteCount", store.favorites.filter { $0.projectID == project.id }.count),
           systemImage: "heart")
         Label(
-          tr("project.downloadCount", store.downloads.filter { $0.projectID == project.id }.count),
+          tr(
+            "project.downloadCount", store.downloads.filter { $0.projectID == project.id }.count),
           systemImage: "arrow.down.circle")
         Label(
           tr("project.searchCount", store.history.filter { $0.projectID == project.id }.count),
