@@ -11,7 +11,7 @@
 - Apple Translation where available, with a rule-based fallback
 - A checksum-pinned yt-dlp macOS executable is bundled for local, best-effort YouTube interoperability; no FFmpeg binary is bundled
 
-FootageFlow v0.3.0 targets Apple Silicon macOS 15+ and Windows 11 x64. SwiftUI, AppKit, AVKit, Apple Translation, and Security.framework remain macOS-only. The Windows WPF layer calls a local Swift Core Host over JSON stdin/stdout so all nine providers, normalized models, rights rules, advanced filters, attribution formatting, keyword rules, sidecars, and the Codable project database remain single-source Swift implementations. Credentials never appear in command-line arguments.
+FootageFlow v0.4.0 targets Apple Silicon macOS 15+ and Windows 11 x64. SwiftUI, AppKit, AVKit, Apple Translation, and Security.framework remain macOS-only. The Windows WPF layer calls a local Swift Core Host over JSON stdin/stdout so all nine providers, normalized models, rights rules, advanced filters, attribution formatting, keyword rules, sidecars, and the Codable project database remain single-source Swift implementations. Credentials never appear in command-line arguments.
 
 ## Source layout
 
@@ -78,7 +78,7 @@ Downloads are restricted to the configured root for app-initiated deletion. A su
 
 ## Localization
 
-English is the fixed first-launch default. `en.lproj` is the fallback for missing translations. Simplified Chinese is in `zh-Hans.lproj`; SwiftPM may normalize that directory to lowercase in the built resource bundle.
+English is the fixed first-launch default. `en.lproj` is the fallback for missing translations. v0.4.0 ships `en`, `zh-Hans`, `zh-Hant`, `es`, `pt-BR`, `ja`, `ko`, `de`, `fr`, and `ru`. SwiftPM may normalize language-directory casing in the built resource bundle, so locale lookup also checks normalized identifiers.
 
 Run `scripts/check_localizations.sh` after changing UI copy. `localization.fallbackProbe` intentionally exists only in English to exercise fallback behavior.
 
@@ -95,13 +95,13 @@ dist/FootageFlow.app/Contents/MacOS/FootageFlow --self-test
 dist/FootageFlow.app/Contents/MacOS/FootageFlow --live-smoke
 ```
 
-`--self-test` is fully offline. `--live-smoke` searches Wikimedia Commons, Internet Archive, NASA, and Library of Congress, and verifies the no-key/limited provider modes. `--acceptance-test <directory>` additionally downloads a small Public Domain fixture, creates both sidecars, checks persistence, and simulates a friendly network error. Fixed JSON fixtures cover all four v0.3.0 discovery providers; the Windows runner also executes Credential Manager, Core Host, download retry, sidecar, packaging, clean-install, GUI-startup, and uninstall tests.
+`--self-test` is fully offline. `--live-smoke` searches Wikimedia Commons, Internet Archive, NASA, and Library of Congress, and verifies the no-key/limited provider modes. `--acceptance-test <directory>` additionally downloads a small Public Domain fixture, creates both sidecars, checks persistence, and simulates a friendly network error. Fixed JSON fixtures cover all four v0.3.0 discovery providers; v0.4.0 adds complete 10-language resource, fallback, persistence, and API-recommendation coverage. The Windows runner also executes Credential Manager, Core Host, download retry, sidecar, packaging, clean-install, GUI-startup, and uninstall tests.
 
 This Mac currently has Command Line Tools rather than full Xcode. Release builds and offline self-tests work locally, while `swift test` reports that XCTest is unavailable. GitHub Actions runs XCTest on a full Xcode image.
 
 ## Packaging
 
-`scripts/build_app.sh` builds a Release executable, downloads the fixed yt-dlp release only when it is not already cached, verifies its SHA-256, creates the `.app`, copies localized resources without embedding a developer path, generates the original FootageFlow icon, and performs Ad Hoc signing. `scripts/binary_privacy_scan.sh` scans the app executable and bundled tool for credential-like strings. `scripts/build_dmg.sh` creates the drag-to-Applications DMG and SHA-256 checksum. No Developer ID certificate or notarization is claimed for v0.3.0.
+`scripts/build_app.sh` builds a Release executable, downloads the fixed yt-dlp release only when it is not already cached, verifies its SHA-256, creates the `.app`, copies localized resources without embedding a developer path, generates the original FootageFlow icon, and performs Ad Hoc signing. `scripts/binary_privacy_scan.sh` scans the app executable and bundled tool for credential-like strings. `scripts/build_dmg.sh` creates the drag-to-Applications DMG and SHA-256 checksum. No Developer ID certificate or notarization is claimed for v0.4.0.
 
 ## Windows architecture
 

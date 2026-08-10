@@ -4,7 +4,7 @@
 
 Security fixes are provided for the latest published FootageFlow release.
 
-FootageFlow v0.3.0 supports macOS 15+ on Apple Silicon and Windows 11 x64.
+FootageFlow v0.4.0 supports macOS 15+ on Apple Silicon and Windows 11 x64.
 
 ## Reporting a vulnerability
 
@@ -21,4 +21,4 @@ Do not include real API keys, private media, or personal file paths. Replace the
 - App-initiated local deletion is restricted to the configured download root and requires explicit confirmation.
 - The repository's secret scan is a safety net, not a substitute for review.
 
-The v0.3.0 macOS build is Ad Hoc signed and not notarized. The v0.3.0 Windows installer is not code-signed. These are distribution limitations, not claims of Apple or Microsoft verification. Release assets include SHA-256 checksums for independent verification.
+The v0.4.0 macOS build is Ad Hoc signed and not notarized. The v0.4.0 Windows installer is not code-signed. These are distribution limitations, not claims of Apple or Microsoft verification. Release assets include SHA-256 checksums for independent verification.

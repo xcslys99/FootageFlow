@@ -6,7 +6,7 @@
 
 FootageFlow is a privacy-friendly desktop app for discovering, downloading, and organizing real video, image, and audio assets. It is built for documentary, history, country profile, finance, science, and social-video research.
 
-FootageFlow v0.3.0 supports **macOS 15+ on Apple Silicon** and **Windows 11 x64**. Both editions share provider behavior, normalized metadata and rights, filters, attribution formatting, keyword rules, source sidecars, and project persistence.
+FootageFlow v0.4.0 supports **macOS 15+ on Apple Silicon** and **Windows 11 x64**. Both editions share provider behavior, normalized metadata and rights, filters, attribution formatting, keyword rules, source sidecars, and project persistence.
 
 ## What works
 
@@ -16,7 +16,8 @@ FootageFlow v0.3.0 supports **macOS 15+ on Apple Silicon** and **Windows 11 x64*
 - Copy Source and Copy Attribution text generated only from provider-supplied metadata
 - Video/image preview, favorites, project library, script segmentation, search history, and download history
 - A matching `.source.txt` and `.source.json` beside every successful download
-- English and Simplified Chinese, with English on first launch and a visible language switcher
+- English, Simplified Chinese, Traditional Chinese, Spanish, Brazilian Portuguese, Japanese, Korean, German, French, and Russian; English remains the first-launch default
+- A concise recommendation below the search field explains that free official APIs improve National Archives, Europeana, and YouTube search, with a direct link to provider settings
 - Optional API keys stored only in macOS Keychain or Windows Credential Manager
 - No analytics, advertising, tracking, cloud account, paid LLM, OpenAI API, or Codex dependency
 
@@ -34,15 +35,15 @@ YouTube search can use the official Data API when configured. FootageFlow also i
 
 ## Install on macOS
 
-1. Download `FootageFlow-0.3.0-macOS-arm64.dmg` from Releases.
+1. Download `FootageFlow-0.4.0-macOS-arm64.dmg` from Releases.
 2. Open the DMG and drag FootageFlow to Applications.
-3. Open FootageFlow. The v0.3.0 build is Ad Hoc signed, not notarized; if macOS blocks the first launch, use **System Settings → Privacy & Security → Open Anyway**.
+3. Open FootageFlow. The v0.4.0 build is Ad Hoc signed, not notarized; if macOS blocks the first launch, use **System Settings → Privacy & Security → Open Anyway**.
 
 No terminal command is required for normal use.
 
 ## Install on Windows
 
-1. On a Windows 11 x64 PC, download `FootageFlow-Setup-0.3.0-Windows-x64.exe` from Releases.
+1. On a Windows 11 x64 PC, download `FootageFlow-Setup-0.4.0-Windows-x64.exe` from Releases.
 2. Verify it against the attached `.sha256` file, then double-click the installer.
 3. Complete the setup wizard and open FootageFlow from the Start menu.
 
@@ -54,7 +55,7 @@ The installer is self-contained: ordinary users do not need Python, Node.js, Swi
 2. Try `Apollo 11` or `World War II`, then open **Advanced Filters** or turn on **Downloadable Only**.
 3. Select result cards to batch download, add them to an existing or new project, or copy source information.
 4. Use **Copy Attribution** or inspect the original page before publishing.
-5. For complete in-app National Archives or Europeana search, add your own key under **Settings → Sources / Providers**.
+5. National Archives, Europeana, and YouTube work better with their free official APIs. Add an optional key under **Settings → Sources / Providers** when you want the improved experience.
 
 Default downloads are stored under `~/Movies/FootageFlow/<Project>/` on macOS and `%USERPROFILE%\Videos\FootageFlow\<Project>\` on Windows. You can change the root folder in Settings. Removing a database record does not delete the downloaded media file.
 

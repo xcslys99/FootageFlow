@@ -157,12 +157,20 @@ struct DiscoveryTests {
   @Test("localizations stay aligned")
   func localization() {
     let catalog = LocalizationCatalog()
+    #expect(AppLanguage.allCases.count == 10)
     #expect(
       catalog.text("filter.downloadableOnly", language: .english, arguments: [])
         == "Downloadable Only")
     #expect(
       catalog.text("filter.downloadableOnly", language: .simplifiedChinese, arguments: [])
         == "仅显示可直接下载")
+    for language in AppLanguage.allCases {
+      let recommendation = catalog.text(
+        "search.apiRecommendation", language: language, arguments: [])
+      #expect(recommendation.contains("National Archives"))
+      #expect(recommendation.contains("Europeana"))
+      #expect(recommendation.contains("YouTube"))
+    }
   }
 
   private func sampleAsset() -> MediaAsset {

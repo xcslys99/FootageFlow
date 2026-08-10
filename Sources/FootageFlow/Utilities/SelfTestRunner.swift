@@ -96,7 +96,17 @@ enum SelfTestRunner {
       defaults.removePersistentDomain(forName: localizationSuite)
       let localization = LocalizationManager(defaults: defaults)
       check(localization.language == .english, "Localization default English")
+      check(AppLanguage.allCases.count == 10, "Ten supported languages")
       check(localization.text("nav.quickSearch") == "Quick Search", "English localization")
+      for language in AppLanguage.allCases {
+        localization.setLanguage(language)
+        let recommendation = localization.text("search.apiRecommendation")
+        check(
+          recommendation.contains("National Archives")
+            && recommendation.contains("Europeana")
+            && recommendation.contains("YouTube"),
+          "\(language.rawValue) API recommendation")
+      }
       localization.setLanguage(.simplifiedChinese)
       check(localization.text("nav.quickSearch") == "快速搜索", "Chinese localization")
       check(

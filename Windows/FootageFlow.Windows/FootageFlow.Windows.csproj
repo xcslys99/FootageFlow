@@ -15,18 +15,15 @@
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <PublishSingleFile>false</PublishSingleFile>
     <PublishReadyToRun>true</PublishReadyToRun>
-    <Version>0.3.0</Version>
+    <Version>0.4.0</Version>
   </PropertyGroup>
 
   <ItemGroup>
-    <Content Include="..\..\Sources\FootageFlow\Resources\en.lproj\Localizable.strings"
-             Link="Resources\en.lproj\Localizable.strings"
-             CopyToOutputDirectory="PreserveNewest"
-             CopyToPublishDirectory="PreserveNewest" />
-    <Content Include="..\..\Sources\FootageFlow\Resources\zh-Hans.lproj\Localizable.strings"
-             Link="Resources\zh-Hans.lproj\Localizable.strings"
-             CopyToOutputDirectory="PreserveNewest"
-             CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="..\..\Sources\FootageFlow\Resources\**\Localizable.strings">
+      <Link>Resources\%(RecursiveDir)Localizable.strings</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
     <Resource Include="Assets\FootageFlow.png" />
     <Resource Include="Assets\FootageFlow.ico" />
   </ItemGroup>

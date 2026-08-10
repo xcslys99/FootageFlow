@@ -65,7 +65,7 @@
             </TextBlock>
             <TextBlock Text="{Binding Creator}" Foreground="{StaticResource SubtleTextBrush}" TextTrimming="CharacterEllipsis" Margin="0,3,0,0" />
             <TextBlock Foreground="{StaticResource SubtleTextBrush}" TextTrimming="CharacterEllipsis" Margin="0,3,0,8">
-              <TextBlock.Text><MultiBinding Converter="{StaticResource LicenseDisplay}"><Binding Path="License" /><Binding Path="LicenseStatus" /><Binding Path="DataContext.LanguageButton" RelativeSource="{RelativeSource AncestorType=Window}" /></MultiBinding></TextBlock.Text>
+              <TextBlock.Text><MultiBinding Converter="{StaticResource LicenseDisplay}"><Binding Path="License" /><Binding Path="LicenseStatus" /><Binding Path="DataContext.LicenseSafeText" RelativeSource="{RelativeSource AncestorType=Window}" /><Binding Path="DataContext.LicenseAttributionText" RelativeSource="{RelativeSource AncestorType=Window}" /><Binding Path="DataContext.LicensePublicDomainText" RelativeSource="{RelativeSource AncestorType=Window}" /><Binding Path="DataContext.LicenseRestrictedText" RelativeSource="{RelativeSource AncestorType=Window}" /><Binding Path="DataContext.LicenseUnknownText" RelativeSource="{RelativeSource AncestorType=Window}" /></MultiBinding></TextBlock.Text>
             </TextBlock>
             <WrapPanel>
               <Button Content="{Binding DataContext.PreviewText, RelativeSource={RelativeSource AncestorType=Window}}" Command="{Binding DataContext.PreviewCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" />
@@ -116,13 +116,17 @@
             <TextBlock Text="{Binding NavSearch}" Style="{StaticResource SectionTitle}" />
             <TextBlock Text="{Binding SearchTagline}" Foreground="{StaticResource SubtleTextBrush}" Margin="0,0,0,12" />
           </StackPanel>
-          <Grid Grid.Row="1">
-            <Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-            <TextBox Text="{Binding Query, UpdateSourceTrigger=PropertyChanged}" FontSize="17" MinHeight="46" ToolTip="{Binding SearchPlaceholder}" />
-            <Button Grid.Column="1" Style="{StaticResource PrimaryButton}" Content="{Binding SearchButtonText}" Command="{Binding SearchCommand}" MinWidth="132" />
-            <Button Grid.Column="2" Content="{Binding StopText}" Command="{Binding StopSearchCommand}" />
-            <CheckBox Grid.Column="3" Content="{Binding DownloadableOnlyText}" IsChecked="{Binding DownloadableOnly}" FontWeight="SemiBold" VerticalAlignment="Center" Margin="14,0,0,0" />
-          </Grid>
+          <StackPanel Grid.Row="1">
+            <Grid>
+              <Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+              <TextBox Text="{Binding Query, UpdateSourceTrigger=PropertyChanged}" FontSize="17" MinHeight="46" ToolTip="{Binding SearchPlaceholder}" />
+              <Button Grid.Column="1" Style="{StaticResource PrimaryButton}" Content="{Binding SearchButtonText}" Command="{Binding SearchCommand}" MinWidth="132" />
+              <Button Grid.Column="2" Content="{Binding StopText}" Command="{Binding StopSearchCommand}" />
+              <CheckBox Grid.Column="3" Content="{Binding DownloadableOnlyText}" IsChecked="{Binding DownloadableOnly}" FontWeight="SemiBold" VerticalAlignment="Center" Margin="14,0,0,0" />
+            </Grid>
+            <TextBlock Text="{Binding SearchApiRecommendation}" Foreground="{StaticResource SubtleTextBrush}"
+                       FontSize="12" TextWrapping="Wrap" Margin="2,7,0,0" />
+          </StackPanel>
           <StackPanel Grid.Row="2" Margin="0,12,0,6">
             <WrapPanel>
               <TextBlock Text="{Binding TypeTitle}" VerticalAlignment="Center" Margin="0,0,6,0" />

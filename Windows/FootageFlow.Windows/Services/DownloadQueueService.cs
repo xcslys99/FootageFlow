@@ -28,7 +28,7 @@ public sealed class DownloadQueueService
         _ytDlp = ytDlp;
         _localization = localization;
         _http = httpClient ?? new HttpClient { Timeout = Timeout.InfiniteTimeSpan };
-        _http.DefaultRequestHeaders.UserAgent.ParseAdd("FootageFlow/0.3.0");
+        _http.DefaultRequestHeaders.UserAgent.ParseAdd("FootageFlow/0.4.0");
     }
 
     public DownloadTaskItem Enqueue(MediaAsset asset, Guid? projectId, string projectName)

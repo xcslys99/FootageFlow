@@ -30,6 +30,14 @@
 "language.menu" = "语言";
 "language.english" = "English";
 "language.chinese" = "简体中文";
+"language.traditionalChinese" = "繁体中文";
+"language.spanish" = "西班牙语";
+"language.brazilianPortuguese" = "巴西葡萄牙语";
+"language.japanese" = "日语";
+"language.korean" = "韩语";
+"language.german" = "德语";
+"language.french" = "法语";
+"language.russian" = "俄语";
 
 "media.landscape" = "横屏";
 "media.portrait" = "竖屏";
@@ -88,6 +96,7 @@
 
 "search.tagline" = "一次搜索多个素材来源。";
 "search.placeholder" = "例如：2001年阿根廷银行挤兑";
+"search.apiRecommendation" = "National Archives、Europeana 和 YouTube 接入官方免费 API 后搜索效果更好。（API Key 需要在“设置”中配置。）";
 "search.button" = "搜索素材";
 "search.currentKeywords" = "当前搜索词：";
 "search.keywordPlaceholder" = "关键词";

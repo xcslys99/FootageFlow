@@ -241,7 +241,8 @@ public sealed class MainViewModel : ObservableObject
     public string ProjectEditName { get => _projectEditName; set => Set(ref _projectEditName, value); }
     public string ScriptText { get => _scriptText; set => Set(ref _scriptText, value); }
     public string DownloadRoot => _settings.Current.DownloadRoot;
-    public string LanguageButton => _localization.Language == "zh-Hans" ? "🌐 简体中文" : "🌐 English";
+    public string LanguageCode => _localization.Language;
+    public string LanguageButton => $"🌐 {_localization.DisplayName}";
 
     public string T(string key) => _localization.Text(key);
     public string NavSearch => T("nav.quickSearch");
@@ -253,6 +254,7 @@ public sealed class MainViewModel : ObservableObject
     public string NavSettings => T("nav.settings");
     public string SearchTagline => T("search.tagline");
     public string SearchPlaceholder => T("search.placeholder");
+    public string SearchApiRecommendation => T("search.apiRecommendation");
     public string SearchButtonText => T("search.button");
     public string StopText => T("common.stop");
     public string KeywordsTitle => T("search.currentKeywords");
@@ -296,6 +298,9 @@ public sealed class MainViewModel : ObservableObject
     public string LicenseOpenText => T("license.openlyLicensed");
     public string LicensePublicDomainText => T("license.publicDomain");
     public string LicenseUnknownText => T("license.unknown");
+    public string LicenseSafeText => T("license.safe");
+    public string LicenseAttributionText => T("license.attribution");
+    public string LicenseRestrictedText => T("license.restricted");
     public string SortRelevanceText => T("sort.relevance");
     public string SortNewestText => T("sort.newest");
     public string SortResolutionText => T("sort.resolution");

@@ -30,6 +30,14 @@
 "language.menu" = "Language";
 "language.english" = "English";
 "language.chinese" = "Simplified Chinese";
+"language.traditionalChinese" = "Traditional Chinese";
+"language.spanish" = "Spanish";
+"language.brazilianPortuguese" = "Brazilian Portuguese";
+"language.japanese" = "Japanese";
+"language.korean" = "Korean";
+"language.german" = "German";
+"language.french" = "French";
+"language.russian" = "Russian";
 "localization.fallbackProbe" = "English fallback";
 
 "media.landscape" = "Landscape";
@@ -89,6 +97,7 @@
 
 "search.tagline" = "Search footage across multiple sources.";
 "search.placeholder" = "For example: Argentina financial crisis 2001";
+"search.apiRecommendation" = "National Archives, Europeana, and YouTube provide better search results with their free official APIs. (Configure API keys in Settings.)";
 "search.button" = "Search Footage";
 "search.currentKeywords" = "Search keywords:";
 "search.keywordPlaceholder" = "Keyword";

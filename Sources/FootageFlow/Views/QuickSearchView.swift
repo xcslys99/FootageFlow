@@ -114,6 +114,18 @@ struct QuickSearchView: View {
       }
       .padding(12).background(.quaternary.opacity(0.45), in: RoundedRectangle(cornerRadius: 10))
 
+      Button(action: onManageSources) {
+        HStack(alignment: .firstTextBaseline, spacing: 6) {
+          Image(systemName: "info.circle")
+          Text(tr("search.apiRecommendation"))
+            .multilineTextAlignment(.leading)
+        }
+        .font(.caption)
+        .foregroundStyle(.secondary)
+      }
+      .buttonStyle(.plain)
+      .help(tr("settings.manageSources"))
+
       HStack(alignment: .top) {
         Text(tr("search.currentKeywords")).foregroundStyle(.secondary).padding(.top, 4)
         VStack(alignment: .leading, spacing: 5) {

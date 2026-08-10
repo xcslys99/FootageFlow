@@ -2,14 +2,31 @@ using System.Text.RegularExpressions;
 
 namespace FootageFlow.Windows.Services;
 
+public sealed record LanguageOption(string Code, string DisplayName);
+
 public sealed partial class LocalizationService
 {
+    public static IReadOnlyList<LanguageOption> SupportedLanguages { get; } =
+    [
+        new("en", "English"),
+        new("zh-Hans", "简体中文"),
+        new("zh-Hant", "繁體中文"),
+        new("es", "Español"),
+        new("pt-BR", "Português (Brasil)"),
+        new("ja", "日本語"),
+        new("ko", "한국어"),
+        new("de", "Deutsch"),
+        new("fr", "Français"),
+        new("ru", "Русский")
+    ];
+
     private readonly SettingsService _settings;
     private readonly Dictionary<string, string> _english;
     private Dictionary<string, string> _current;
 
     public event EventHandler? LanguageChanged;
-    public string Language => _settings.Current.Language;
+    public string Language => Normalize(_settings.Current.Language);
+    public string DisplayName => SupportedLanguages.First(value => value.Code == Language).DisplayName;
 
     public LocalizationService(SettingsService settings)
     {
@@ -40,13 +57,16 @@ public sealed partial class LocalizationService
 
     public void SetLanguage(string language)
     {
-        if (language is not ("en" or "zh-Hans")) language = "en";
+        language = Normalize(language);
         if (_settings.Current.Language == language) return;
         _settings.Current.Language = language;
         _settings.Save();
         _current = Load(language);
         LanguageChanged?.Invoke(this, EventArgs.Empty);
     }
+
+    private static string Normalize(string language) =>
+        SupportedLanguages.Any(value => value.Code == language) ? language : "en";
 
     private static Dictionary<string, string> Load(string language)
     {
