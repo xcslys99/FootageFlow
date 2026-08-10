@@ -174,7 +174,7 @@ jobs:
           if ($process.HasExited) {
             $startupLog = Join-Path $env:LOCALAPPDATA "FootageFlow\Logs\startup.log"
             if (Test-Path $startupLog) { Get-Content $startupLog }
-            throw "The installed Windows GUI exited during startup."
+            throw "The installed Windows GUI exited during startup with code $($process.ExitCode)."
           }
           Stop-Process -Id $process.Id -Force
           $uninstaller = Join-Path $installRoot "unins000.exe"

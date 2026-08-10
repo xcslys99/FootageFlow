@@ -6,9 +6,17 @@ namespace FootageFlow.Windows;
 
 public partial class App : Application
 {
+    public App()
+    {
+        AppDomain.CurrentDomain.UnhandledException += (_, args) =>
+            WriteStartupFailure(args.ExceptionObject as Exception ?? new InvalidOperationException("Unknown startup failure."));
+        WriteStartupMessage("application-created");
+    }
+
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+        WriteStartupMessage("startup-entered");
         if (e.Args.Contains("--health-check", StringComparer.OrdinalIgnoreCase))
         {
             var exitCode = RunInstalledHealthCheck();
@@ -26,6 +34,7 @@ public partial class App : Application
         {
             MainWindow = new MainWindow();
             MainWindow.Show();
+            WriteStartupMessage("main-window-shown");
         }
         catch (Exception error)
         {
@@ -54,6 +63,18 @@ public partial class App : Application
             Directory.CreateDirectory(AppPaths.LogDirectory);
             var report = $"{DateTimeOffset.UtcNow:O} | {error.GetType().FullName}{Environment.NewLine}{error}{Environment.NewLine}";
             File.AppendAllText(Path.Combine(AppPaths.LogDirectory, "startup.log"), report);
+        }
+        catch { }
+    }
+
+    private static void WriteStartupMessage(string message)
+    {
+        try
+        {
+            Directory.CreateDirectory(AppPaths.LogDirectory);
+            File.AppendAllText(
+                Path.Combine(AppPaths.LogDirectory, "startup.log"),
+                $"{DateTimeOffset.UtcNow:O} | {message}{Environment.NewLine}");
         }
         catch { }
     }
