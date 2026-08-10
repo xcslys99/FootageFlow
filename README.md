@@ -25,13 +25,15 @@ YouTube search can use the official Data API when configured. FootageFlow also i
 
 ## Screenshots
 
-![FootageFlow main search](docs/images/main-search.png)
+These screenshots are from FootageFlow v0.4.0 on macOS and show the current nine-source search, optional-API guidance, advanced filters, batch actions, provider modes, and ten-language interface. The Windows edition follows the same product structure with platform-native controls.
 
-![FootageFlow advanced filters](docs/images/advanced-filters.png)
+![FootageFlow v0.4.0 nine-source search with optional API guidance](docs/images/main-search.png)
 
-![FootageFlow multi-select and batch download](docs/images/multi-select-batch-download.png)
+![FootageFlow v0.4.0 advanced filters](docs/images/advanced-filters.png)
 
-![FootageFlow provider settings](docs/images/provider-settings.png)
+![FootageFlow v0.4.0 multi-select and batch download](docs/images/multi-select-batch-download.png)
+
+![FootageFlow v0.4.0 provider modes and ten-language settings](docs/images/provider-settings.png)
 
 ## Install on macOS
 
