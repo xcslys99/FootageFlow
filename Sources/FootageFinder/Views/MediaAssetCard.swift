@@ -41,7 +41,10 @@ struct MediaAssetCard: View {
                     Button("下载") { downloads.start(asset: asset, projectID: projectID, projectName: projectName, segmentIndex: segmentIndex) }
                 }
                 Spacer()
-                Button("打开来源") { NSWorkspace.shared.open(asset.sourcePageURL) }
+                Button("打开来源") {
+                    guard let url = try? URLValidator.remote(asset.sourcePageURL) else { return }
+                    NSWorkspace.shared.open(url)
+                }
             }.controlSize(.small)
         }
         .padding(10).background(.background, in: RoundedRectangle(cornerRadius: 10))

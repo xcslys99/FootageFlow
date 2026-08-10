@@ -1,0 +1,43 @@
+# macOS
+.DS_Store
+._*
+
+# Swift Package Manager / Xcode
+.build/
+.swiftpm/
+DerivedData/
+*.dSYM/
+*.xcuserstate
+xcuserdata/
+
+# Local build and verification artifacts
+dist/
+work/
+*.log
+*.tmp
+*.part
+
+# Local application data and downloaded media
+downloads/
+Downloaded Footage/
+FootageFinder.database.json
+FootageFlow.database.json
+*.source.txt
+*.source.json
+
+# Secrets and private configuration
+.env
+.env.*
+!.env.example
+*.pem
+*.p12
+*.mobileprovision
+Cookies/
+Tokens/
+Secrets/
+
+# Editors
+.idea/
+.vscode/
+*~
+

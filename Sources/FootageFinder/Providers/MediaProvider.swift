@@ -67,7 +67,6 @@ enum ProviderUtilities {
     }
 
     static func safeURL(_ string: String?) -> URL? {
-        guard let string, !string.isEmpty else { return nil }
-        return URL(string: string)
+        URLValidator.remote(string)
     }
 }

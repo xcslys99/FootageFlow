@@ -17,9 +17,9 @@ struct YouTubeProvider: MediaProvider {
         ])
         let response = try await HTTPClient.shared.decode(YouTubeSearchResponse.self, request: URLRequest(url: url), maxRetries: 1)
         return response.items.enumerated().compactMap { index, item in
-            guard let videoID = item.id.videoId, let page = URL(string: "https://www.youtube.com/watch?v=\(videoID)") else { return nil }
+            guard let videoID = item.id.videoId, let page = URLValidator.remote("https://www.youtube.com/watch?v=\(videoID)") else { return nil }
             let thumb = item.snippet.thumbnails.high ?? item.snippet.thumbnails.medium ?? item.snippet.thumbnails.defaultValue
-            return MediaAsset(id: videoID, provider: .youtube, title: item.snippet.title, description: item.snippet.description, thumbnailURL: URL(string: thumb?.url ?? ""), previewURL: nil, downloadURL: nil, sourcePageURL: page, creator: item.snippet.channelTitle, license: nil, licenseURL: nil, licenseStatus: .unknown, width: thumb?.width, height: thumb?.height, duration: nil, fileType: "YouTube", mediaType: .video, publishedDate: ProviderUtilities.parseDate(item.snippet.publishedAt), downloadable: false, originalMetadata: ["channelID": item.snippet.channelId], searchKeyword: request.query, relevanceScore: 1 - Double(index) * 0.01)
+            return MediaAsset(id: videoID, provider: .youtube, title: item.snippet.title, description: item.snippet.description, thumbnailURL: URLValidator.remote(thumb?.url), previewURL: nil, downloadURL: nil, sourcePageURL: page, creator: item.snippet.channelTitle, license: nil, licenseURL: nil, licenseStatus: .unknown, width: thumb?.width, height: thumb?.height, duration: nil, fileType: "YouTube", mediaType: .video, publishedDate: ProviderUtilities.parseDate(item.snippet.publishedAt), downloadable: false, originalMetadata: ["channelID": item.snippet.channelId], searchKeyword: request.query, relevanceScore: 1 - Double(index) * 0.01)
         }
     }
 }

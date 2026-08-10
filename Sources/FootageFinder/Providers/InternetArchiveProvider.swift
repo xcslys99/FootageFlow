@@ -68,7 +68,7 @@ struct InternetArchiveProvider: MediaProvider {
                 return (lhs.size ?? 0) < (rhs.size ?? 0)
             }
             let previewFile = candidates.filter { ["mp4", "m4v", "mov"].contains(URL(fileURLWithPath: $0.name).pathExtension.lowercased()) }.min { ($0.size ?? .max) < ($1.size ?? .max) }
-            let source = URL(string: "https://archive.org/details/\(encoded)")!
+            guard let source = URLValidator.remote("https://archive.org/details/\(encoded)") else { return nil }
             let download = chosen.flatMap { fileURL(identifier: identifier, name: $0.name) }
             let licenseURLText = string(metadata["licenseurl"]) ?? string(doc["licenseurl"])
             let rights = string(metadata["rights"]) ?? string(doc["rights"])
@@ -77,13 +77,13 @@ struct InternetArchiveProvider: MediaProvider {
             let description = ProviderUtilities.cleanHTML(string(metadata["description"]) ?? string(doc["description"]))
             let creator = string(metadata["creator"]) ?? string(doc["creator"])
             let dateText = string(metadata["date"]) ?? string(doc["date"]) ?? string(doc["year"])
-            let thumbnail = URL(string: "https://archive.org/services/img/\(encoded)")
+            let thumbnail = URLValidator.remote("https://archive.org/services/img/\(encoded)")
             let relevanceText = "\(title) \(description ?? "")".lowercased()
             let tokens = request.query.lowercased().split(whereSeparator: { !$0.isLetter && !$0.isNumber }).map(String.init).filter { $0.count > 2 }
             let matches = tokens.filter { relevanceText.contains($0) }.count
             let relevance = tokens.isEmpty ? 0 : Double(matches) / Double(tokens.count)
             let previewURL = type == .video ? previewFile.flatMap { fileURL(identifier: identifier, name: $0.name) } : (download ?? thumbnail)
-            return MediaAsset(id: identifier, provider: .internetArchive, title: title, description: description, thumbnailURL: thumbnail, previewURL: previewURL, downloadURL: download, sourcePageURL: source, creator: creator, license: licenseName, licenseURL: URL(string: licenseURLText ?? ""), licenseStatus: ProviderUtilities.licenseStatus(name: licenseName, url: licenseURLText), width: chosen?.width, height: chosen?.height, duration: chosen?.duration ?? duration(metadata["runtime"]), fileType: chosen.map { URL(fileURLWithPath: $0.name).pathExtension.lowercased() }, mediaType: type, publishedDate: ProviderUtilities.parseDate(dateText), downloadable: download != nil, originalMetadata: ["identifier": identifier, "rights": rights ?? ""], searchKeyword: request.query, relevanceScore: relevance + (1 - Double(rank) * 0.01) * 0.1)
+            return MediaAsset(id: identifier, provider: .internetArchive, title: title, description: description, thumbnailURL: thumbnail, previewURL: previewURL, downloadURL: download, sourcePageURL: source, creator: creator, license: licenseName, licenseURL: URLValidator.remote(licenseURLText), licenseStatus: ProviderUtilities.licenseStatus(name: licenseName, url: licenseURLText), width: chosen?.width, height: chosen?.height, duration: chosen?.duration ?? duration(metadata["runtime"]), fileType: chosen.map { URL(fileURLWithPath: $0.name).pathExtension.lowercased() }, mediaType: type, publishedDate: ProviderUtilities.parseDate(dateText), downloadable: download != nil, originalMetadata: ["identifier": identifier, "rights": rights ?? ""], searchKeyword: request.query, relevanceScore: relevance + (1 - Double(rank) * 0.01) * 0.1)
         } catch { return nil }
     }
 
@@ -91,7 +91,7 @@ struct InternetArchiveProvider: MediaProvider {
         var components = URLComponents()
         components.scheme = "https"; components.host = "archive.org"
         components.path = "/download/\(identifier)/\(name)"
-        return components.url
+        return components.url.flatMap { try? URLValidator.remote($0) }
     }
 }
 

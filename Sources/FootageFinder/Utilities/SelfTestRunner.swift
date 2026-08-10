@@ -13,6 +13,9 @@ enum SelfTestRunner {
         check(!FileNameSanitizer.sanitize("阿根廷/银行:挤兑?.mp4").contains("/"), "Filename sanitization")
         check(KeywordEngine.keywords(for: "2001年阿根廷银行挤兑").count >= 3, "Keyword expansion")
         check(KeywordEngine.splitScript("第一句话。第二句话。\n\n第三段。").count >= 2, "Script segmentation")
+        check(URLValidator.isSafeRemote(URL(string: "https://example.com/media.mp4")), "HTTPS URL validation")
+        check(!URLValidator.isSafeRemote(URL(string: "http://example.com/media.mp4")), "Unsafe URL rejection")
+        check(!AppLogger.redact("Authorization: Bearer secret-token-value").contains("secret-token-value"), "Log redaction")
 
         let sample = MediaAsset(id: "1", provider: .wikimedia, title: "Test", description: nil, thumbnailURL: nil, previewURL: nil, downloadURL: URL(string: "https://example.com/a.mp4"), sourcePageURL: URL(string: "https://example.com/item")!, creator: "A", license: "CC BY", licenseURL: nil, licenseStatus: .attributionRequired, width: 1920, height: 1080, duration: 10, fileType: "video/mp4", mediaType: .video, publishedDate: nil, downloadable: true, originalMetadata: [:], searchKeyword: "test", relevanceScore: 1)
         let duplicate = sample

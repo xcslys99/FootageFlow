@@ -33,11 +33,12 @@ struct PexelsProvider: MediaProvider {
         let url = try URL.endpoint("https://api.pexels.com/v1/videos/search", queryItems: items)
         let response = try await HTTPClient.shared.decode(PexelsVideoResponse.self, request: authorizedRequest(url: url))
         return response.videos.enumerated().compactMap { index, video -> MediaAsset? in
-            guard let source = URL(string: video.url) else { return nil }
+            guard let source = URLValidator.remote(video.url) else { return nil }
             let valid = video.videoFiles.filter { $0.fileType?.contains("video") == true && $0.link.hasPrefix("http") }
             let best = valid.max { ($0.width ?? 0) * ($0.height ?? 0) < ($1.width ?? 0) * ($1.height ?? 0) }
             let preview = valid.min { ($0.width ?? 99999) * ($0.height ?? 99999) < ($1.width ?? 99999) * ($1.height ?? 99999) }
-            return MediaAsset(id: String(video.id), provider: .pexels, title: "\(request.query) · Pexels \(video.id)", description: nil, thumbnailURL: URL(string: video.image), previewURL: URL(string: preview?.link ?? best?.link ?? ""), downloadURL: URL(string: best?.link ?? ""), sourcePageURL: source, creator: video.user.name, license: "Pexels License", licenseURL: URL(string: "https://www.pexels.com/license/"), licenseStatus: .safe, width: best?.width ?? video.width, height: best?.height ?? video.height, duration: Double(video.duration), fileType: best?.fileType ?? "video/mp4", mediaType: .video, publishedDate: nil, downloadable: best != nil, originalMetadata: ["userURL": video.user.url], searchKeyword: request.query, relevanceScore: 1 - Double(index) * 0.01)
+            let download = URLValidator.remote(best?.link)
+            return MediaAsset(id: String(video.id), provider: .pexels, title: "\(request.query) · Pexels \(video.id)", description: nil, thumbnailURL: URLValidator.remote(video.image), previewURL: URLValidator.remote(preview?.link ?? best?.link), downloadURL: download, sourcePageURL: source, creator: video.user.name, license: "Pexels License", licenseURL: URLValidator.remote("https://www.pexels.com/license/"), licenseStatus: .safe, width: best?.width ?? video.width, height: best?.height ?? video.height, duration: Double(video.duration), fileType: best?.fileType ?? "video/mp4", mediaType: .video, publishedDate: nil, downloadable: download != nil, originalMetadata: ["userURL": video.user.url], searchKeyword: request.query, relevanceScore: 1 - Double(index) * 0.01)
         }
     }
 
@@ -45,8 +46,8 @@ struct PexelsProvider: MediaProvider {
         let url = try URL.endpoint("https://api.pexels.com/v1/search", queryItems: commonItems(request))
         let response = try await HTTPClient.shared.decode(PexelsPhotoResponse.self, request: authorizedRequest(url: url))
         return response.photos.enumerated().compactMap { index, photo in
-            guard let source = URL(string: photo.url) else { return nil }
-            return MediaAsset(id: String(photo.id), provider: .pexels, title: photo.alt?.isEmpty == false ? photo.alt! : "Pexels Photo \(photo.id)", description: photo.alt, thumbnailURL: URL(string: photo.src.medium), previewURL: URL(string: photo.src.large), downloadURL: URL(string: photo.src.original), sourcePageURL: source, creator: photo.photographer, license: "Pexels License", licenseURL: URL(string: "https://www.pexels.com/license/"), licenseStatus: .safe, width: photo.width, height: photo.height, duration: nil, fileType: "image/jpeg", mediaType: .image, publishedDate: nil, downloadable: true, originalMetadata: ["photographerURL": photo.photographerURL], searchKeyword: request.query, relevanceScore: 1 - Double(index) * 0.01)
+            guard let source = URLValidator.remote(photo.url), let download = URLValidator.remote(photo.src.original) else { return nil }
+            return MediaAsset(id: String(photo.id), provider: .pexels, title: photo.alt?.isEmpty == false ? photo.alt! : "Pexels Photo \(photo.id)", description: photo.alt, thumbnailURL: URLValidator.remote(photo.src.medium), previewURL: URLValidator.remote(photo.src.large), downloadURL: download, sourcePageURL: source, creator: photo.photographer, license: "Pexels License", licenseURL: URLValidator.remote("https://www.pexels.com/license/"), licenseStatus: .safe, width: photo.width, height: photo.height, duration: nil, fileType: "image/jpeg", mediaType: .image, publishedDate: nil, downloadable: true, originalMetadata: ["photographerURL": photo.photographerURL], searchKeyword: request.query, relevanceScore: 1 - Double(index) * 0.01)
         }
     }
 }

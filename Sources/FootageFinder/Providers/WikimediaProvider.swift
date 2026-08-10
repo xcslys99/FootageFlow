@@ -23,7 +23,7 @@ struct WikimediaProvider: MediaProvider {
         let url = try URL.endpoint("https://commons.wikimedia.org/w/api.php", queryItems: items)
         let response = try await HTTPClient.shared.decode(WikimediaResponse.self, request: URLRequest(url: url))
         return (response.query?.pages ?? []).enumerated().compactMap { index, page in
-            guard let image = page.imageinfo?.first, let original = URL(string: image.url), let source = URL(string: image.descriptionurl ?? "") else { return nil }
+            guard let image = page.imageinfo?.first, let original = URLValidator.remote(image.url), let source = URLValidator.remote(image.descriptionurl) else { return nil }
             let mime = image.mime ?? ""
             let type: MediaType
             if mime.hasPrefix("video/") || mime == "application/ogg" { type = .video }
@@ -37,8 +37,9 @@ struct WikimediaProvider: MediaProvider {
             let creator = ProviderUtilities.cleanHTML(metadata["Artist"]?.value) ?? image.user
             let title = ProviderUtilities.cleanHTML(metadata["ObjectName"]?.value) ?? page.title.replacingOccurrences(of: "File:", with: "")
             let description = ProviderUtilities.cleanHTML(metadata["ImageDescription"]?.value)
-            let playablePreview = type == .video && ["mp4", "m4v", "mov"].contains(original.pathExtension.lowercased()) ? original : (type == .image ? URL(string: image.thumburl ?? image.url) : nil)
-            return MediaAsset(id: String(page.pageid), provider: .wikimedia, title: title, description: description, thumbnailURL: URL(string: image.thumburl ?? image.url), previewURL: playablePreview, downloadURL: original, sourcePageURL: source, creator: creator, license: licenseName, licenseURL: URL(string: licenseURLText ?? ""), licenseStatus: ProviderUtilities.licenseStatus(name: licenseName, url: licenseURLText), width: image.width, height: image.height, duration: nil, fileType: mime.isEmpty ? original.pathExtension : mime, mediaType: type, publishedDate: ProviderUtilities.parseDate(metadata["DateTimeOriginal"]?.value ?? image.timestamp), downloadable: true, originalMetadata: ["credit": ProviderUtilities.cleanHTML(metadata["Credit"]?.value) ?? "", "uploader": image.user ?? ""], searchKeyword: request.query, relevanceScore: 1 - Double(index) * 0.01)
+            let thumbnail = URLValidator.remote(image.thumburl ?? image.url)
+            let playablePreview = type == .video && ["mp4", "m4v", "mov"].contains(original.pathExtension.lowercased()) ? original : (type == .image ? thumbnail : nil)
+            return MediaAsset(id: String(page.pageid), provider: .wikimedia, title: title, description: description, thumbnailURL: thumbnail, previewURL: playablePreview, downloadURL: original, sourcePageURL: source, creator: creator, license: licenseName, licenseURL: URLValidator.remote(licenseURLText), licenseStatus: ProviderUtilities.licenseStatus(name: licenseName, url: licenseURLText), width: image.width, height: image.height, duration: nil, fileType: mime.isEmpty ? original.pathExtension : mime, mediaType: type, publishedDate: ProviderUtilities.parseDate(metadata["DateTimeOriginal"]?.value ?? image.timestamp), downloadable: true, originalMetadata: ["credit": ProviderUtilities.cleanHTML(metadata["Credit"]?.value) ?? "", "uploader": image.user ?? ""], searchKeyword: request.query, relevanceScore: 1 - Double(index) * 0.01)
         }
     }
 }

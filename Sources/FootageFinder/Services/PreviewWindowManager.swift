@@ -45,13 +45,13 @@ private final class PreviewWindowController: NSWindowController, NSWindowDelegat
         let top = NSStackView(views: [header, NSView(), sourceButton]); top.orientation = .horizontal; top.alignment = .centerY; top.spacing = 12
 
         let content: NSView
-        if asset.mediaType == .video, let url = asset.previewURL {
+        if asset.mediaType == .video, let url = try? URLValidator.remote(asset.previewURL) {
             let playerView = AVPlayerView(); playerView.controlsStyle = .floating; playerView.videoGravity = .resizeAspect
             let player = AVPlayer(url: url); playerView.player = player; self.player = player; player.play(); content = playerView
         } else {
             let imageView = NSImageView(); imageView.imageScaling = .scaleProportionallyUpOrDown; imageView.imageAlignment = .alignCenter
             imageView.wantsLayer = true; imageView.layer?.backgroundColor = NSColor.black.cgColor
-            if let url = asset.previewURL ?? asset.thumbnailURL {
+            if let url = try? URLValidator.remote(asset.previewURL ?? asset.thumbnailURL) {
                 imageTask = Task {
                     guard let (data, _) = try? await URLSession.shared.data(from: url), let image = NSImage(data: data), !Task.isCancelled else { return }
                     imageView.image = image
@@ -71,6 +71,9 @@ private final class PreviewWindowController: NSWindowController, NSWindowDelegat
         return root
     }
 
-    @objc private func openSource() { NSWorkspace.shared.open(asset.sourcePageURL) }
+    @objc private func openSource() {
+        guard let url = try? URLValidator.remote(asset.sourcePageURL) else { return }
+        NSWorkspace.shared.open(url)
+    }
     func windowWillClose(_ notification: Notification) { player?.pause(); player = nil; imageTask?.cancel(); onClose(self) }
 }

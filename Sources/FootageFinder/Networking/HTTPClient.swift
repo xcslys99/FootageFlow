@@ -76,9 +76,9 @@ actor HTTPClient {
 
 extension URL {
     static func endpoint(_ base: String, queryItems: [URLQueryItem]) throws -> URL {
-        guard var components = URLComponents(string: base) else { throw ProviderError.invalidResponse }
+        guard var components = URLComponents(string: base), components.scheme == "https", components.host != nil else { throw ProviderError.invalidResponse }
         components.queryItems = queryItems
         guard let url = components.url else { throw ProviderError.invalidResponse }
-        return url
+        return try URLValidator.remote(url)
     }
 }

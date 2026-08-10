@@ -12,12 +12,12 @@ struct DownloadsView: View {
             else {
                 List(store.downloads) { record in
                     HStack(spacing: 12) {
-                        AsyncImage(url: URL(string: record.thumbnailURL ?? "")) { image in image.resizable().scaledToFill() } placeholder: { Color.secondary.opacity(0.1) }.frame(width: 110, height: 64).clipped().cornerRadius(6)
+                        AsyncImage(url: URLValidator.remote(record.thumbnailURL)) { image in image.resizable().scaledToFill() } placeholder: { Color.secondary.opacity(0.1) }.frame(width: 110, height: 64).clipped().cornerRadius(6)
                         VStack(alignment: .leading, spacing: 4) { Text(record.fileName).font(.headline).lineLimit(1); Text("\(ProviderID(rawValue: record.providerRaw)?.displayName ?? record.providerRaw) · \(record.downloadedAt.formatted(date: .abbreviated, time: .shortened))").font(.caption).foregroundStyle(.secondary); Text(record.localPath).font(.caption2).foregroundStyle(.tertiary).lineLimit(1) }
                         Spacer()
                         Button("在Finder中显示") { NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: record.localPath)]) }
                         Button("打开文件") { NSWorkspace.shared.open(URL(fileURLWithPath: record.localPath)) }
-                        Button("打开来源") { if let url = URL(string: record.sourcePageURL) { NSWorkspace.shared.open(url) } }
+                        Button("打开来源") { if let url = URLValidator.remote(record.sourcePageURL) { NSWorkspace.shared.open(url) } }
                         Menu { Button("仅删除记录") { store.deleteDownloadRecord(id: record.id) }; Button("删除本地文件…", role: .destructive) { deleteTarget = record } } label: { Image(systemName: "ellipsis.circle") }
                     }.padding(.vertical, 5)
                 }

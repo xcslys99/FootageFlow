@@ -53,6 +53,13 @@ final class FootageFinderTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(KeywordEngine.splitScript("第一句话。第二句话。\n\n第三段。").count, 2)
     }
 
+    func testURLValidationAndLogRedaction() throws {
+        XCTAssertEqual(try URLValidator.remote(URL(string: "https://example.com/file.mp4")).host, "example.com")
+        XCTAssertThrowsError(try URLValidator.remote(URL(string: "http://example.com/file.mp4")))
+        XCTAssertThrowsError(try URLValidator.remote(URL(string: "https://user:secret@example.com/file.mp4")))
+        XCTAssertFalse(AppLogger.redact("Authorization: Bearer secret-token-value").contains("secret-token-value"))
+    }
+
     @MainActor func testProjectCRUDAndPersistence() throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)

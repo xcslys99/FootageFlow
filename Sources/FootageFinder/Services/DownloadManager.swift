@@ -42,7 +42,7 @@ final class DownloadManager: NSObject, ObservableObject, URLSessionDownloadDeleg
 
     @MainActor
     func start(asset: MediaAsset, projectID: UUID?, projectName: String?, segmentIndex: Int? = nil) {
-        guard let url = asset.downloadURL, asset.downloadable else {
+        guard asset.downloadable, let url = try? URLValidator.remote(asset.downloadURL) else {
             states[asset.stableID] = DownloadProgress(id: asset.stableID, progress: 0, status: .failed, message: "该来源不提供直接下载", localURL: nil)
             return
         }
@@ -128,7 +128,7 @@ final class DownloadManager: NSObject, ObservableObject, URLSessionDownloadDeleg
             startNextAfterTerminalTask()
             return
         }
-        if context.retryCount < 2, let url = context.asset.downloadURL {
+        if context.retryCount < 2, let url = try? URLValidator.remote(context.asset.downloadURL) {
             context.retryCount += 1
             let retry = session.downloadTask(with: url)
             lock.lock(); contexts[retry.taskIdentifier] = context; lock.unlock()
@@ -145,7 +145,7 @@ final class DownloadManager: NSObject, ObservableObject, URLSessionDownloadDeleg
         activeCount = max(0, activeCount - 1)
         guard activeCount < 3, !pending.isEmpty else { lock.unlock(); return }
         let next = pending.removeFirst()
-        guard let url = next.asset.downloadURL else { lock.unlock(); return }
+        guard let url = try? URLValidator.remote(next.asset.downloadURL) else { lock.unlock(); return }
         let task = session.downloadTask(with: url)
         contexts[task.taskIdentifier] = next; activeCount += 1
         lock.unlock()
