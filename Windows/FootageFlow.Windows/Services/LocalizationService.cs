@@ -24,6 +24,20 @@ public sealed partial class LocalizationService
         return _english.TryGetValue(key, out value) ? value : key;
     }
 
+    public string Text(string key, params object[] arguments)
+    {
+        var value = Text(key);
+        foreach (var argument in arguments)
+        {
+            var integer = value.IndexOf("%d", StringComparison.Ordinal);
+            var text = value.IndexOf("%@", StringComparison.Ordinal);
+            var index = integer < 0 ? text : text < 0 ? integer : Math.Min(integer, text);
+            if (index < 0) break;
+            value = string.Concat(value.AsSpan(0, index), argument?.ToString(), value.AsSpan(index + 2));
+        }
+        return value;
+    }
+
     public void SetLanguage(string language)
     {
         if (language is not ("en" or "zh-Hans")) language = "en";

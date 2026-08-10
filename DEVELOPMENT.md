@@ -4,13 +4,14 @@
 
 - Swift 6 / Swift Package Manager
 - SwiftUI application shell for macOS 15+
+- WPF / .NET 10 application shell for Windows 11 x64
 - Foundation, URLSession, Codable, async/await
 - AppKit and AVKit only inside macOS integration points
-- Security.framework-backed credential store on macOS
+- Security.framework-backed credential store on macOS and Windows Credential Manager on Windows
 - Apple Translation where available, with a rule-based fallback
 - A checksum-pinned yt-dlp macOS executable is bundled for local, best-effort YouTube interoperability; no FFmpeg binary is bundled
 
-The current release target is Apple Silicon macOS. Swift itself supports Windows, but SwiftUI, AppKit, AVKit, Apple Translation, and Security.framework do not. The future Windows app will share the core package and provide a Windows-specific UI and platform adapters.
+The current release target is Apple Silicon macOS. Windows 11 x64 is in active development for v0.2.0. SwiftUI, AppKit, AVKit, Apple Translation, and Security.framework remain macOS-only. The Windows WPF layer calls a local Swift Core Host over JSON stdin/stdout so provider behavior, normalized models, license rules, keyword rules, sidecars, and the Codable project database remain single-source Swift implementations. Credentials never appear in command-line arguments.
 
 ## Source layout
 
@@ -24,6 +25,7 @@ The current release target is Apple Silicon macOS. Swift itself supports Windows
 - `Views/`: macOS SwiftUI presentation only.
 - `Utilities/`: keyword rules, file naming, URL safety, acceptance tests, and offline self-tests.
 - `Tests/`: XCTest cases and fixed provider fixtures.
+- `Windows/FootageFlow.Windows/`: WPF views plus Windows-only adapters for Credential Manager, dialogs, folder reveal, MediaElement preview, direct downloads, and yt-dlp process hosting.
 
 Business logic must not import AppKit, SwiftUI, AVKit, Security, or Translation. New platform-specific behavior belongs behind a protocol in `Platform/` or in a clearly named platform implementation.
 
@@ -54,7 +56,7 @@ To add a provider:
 
 ## Persistence and privacy
 
-The Codable database stores metadata and local file paths, never video/image binaries or API keys. Writes are atomic. API keys are accessed through `CredentialStoring`; the macOS implementation uses Keychain and the future Windows implementation must use Windows Credential Manager or an equivalent secure OS facility.
+The Codable database stores metadata and local file paths, never video/image binaries or API keys. Writes are atomic. `PersistentStore` is shared by both platforms. macOS accesses API keys through Keychain; Windows uses generic credentials in Windows Credential Manager through `CredWriteW`, `CredReadW`, and `CredDeleteW`. Windows' ordinary `settings.json` contains language, enabled sources, and download path only.
 
 Downloads are restricted to the configured root for app-initiated deletion. A successful media download is not recorded until matching `.source.txt` and `.source.json` files are written.
 
@@ -85,6 +87,14 @@ This Mac currently has Command Line Tools rather than full Xcode. Release builds
 
 `scripts/build_app.sh` builds a Release executable, downloads the fixed yt-dlp release only when it is not already cached, verifies its SHA-256, creates the `.app`, copies localized resources without embedding a developer path, generates the original FootageFlow icon, and performs Ad Hoc signing. `scripts/binary_privacy_scan.sh` scans the app executable and bundled tool for credential-like strings. `scripts/build_dmg.sh` creates the drag-to-Applications DMG and SHA-256 checksum. No Developer ID certificate or notarization is claimed for v0.1.0.
 
-## Windows direction
+## Windows architecture
 
-The Windows release is intentionally deferred until macOS v0.1.0 stabilizes. It should live in this repository and share models, provider parsers, search orchestration, fixtures, license rules, sidecar schema, and most download logic. Windows-specific work includes UI, credential storage, file dialogs, external opening/reveal, media preview, translation fallback, installer generation, and system paths.
+Windows development remains in this repository on the `windows-v0.2.0` branch until release validation is complete. `Package.swift` excludes macOS presentation files when it is evaluated on Windows, then builds the same Provider and Foundation core as `FootageFlowCore.exe`. The WPF client starts one short-lived Core Host request per provider, allowing results to appear progressively and cancellation to terminate only that provider process. A failed provider returns a normalized batch and cannot fail the aggregate search.
+
+The platform split is deliberate:
+
+- Shared Swift: provider implementations and modes, networking, `MediaAsset`, capabilities, license state, keyword rules, deduplication, filename suggestions, source sidecars, and project/favorite/history/download metadata.
+- macOS: SwiftUI/AppKit/AVKit, Keychain, Apple Translation, Finder integration, and URLSession download presentation.
+- Windows: WPF/MediaElement, Credential Manager, Explorer/file dialogs, a bounded `HttpClient` download queue, and yt-dlp process execution. yt-dlp JSON is mapped back into `MediaAsset` by the shared Swift mapper.
+
+See `docs/WINDOWS_ARCHITECTURE.md` for the audit, packaging boundary, and migration risks. Windows must remain marked “In development” until installer, clean-install, uninstall, real-provider, and macOS regression checks all pass.

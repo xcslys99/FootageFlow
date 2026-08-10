@@ -4,7 +4,7 @@ using System.Text;
 
 namespace FootageFlow.Windows.Services;
 
-public sealed class WindowsCredentialStore
+public sealed class WindowsSecureStore
 {
     private const int CredTypeGeneric = 1;
     private const int CredPersistLocalMachine = 2;

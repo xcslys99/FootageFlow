@@ -6,7 +6,7 @@ Search. Discover. Download. Organize.
 
 FootageFlow is a privacy-friendly desktop app for finding real video and image assets across several media libraries at once. It is designed for documentary, history, country profile, finance, science, and social-video research.
 
-The current release is a native **macOS 15+ Apple Silicon** app. Windows support is planned after the macOS v0.1.0 release is stable; it is not included in this release.
+The current release is a native **macOS 15+ Apple Silicon** app. **Windows 11 x64 — In development.** Windows is not yet declared supported and is not included in v0.1.0.
 
 ## What works
 

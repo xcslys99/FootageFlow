@@ -8,7 +8,6 @@ namespace FootageFlow.Windows;
 public partial class PreviewWindow : Window
 {
     private readonly MediaAsset _asset;
-    private bool _userSeeking;
 
     public PreviewWindow(MediaAsset asset)
     {
@@ -51,7 +50,7 @@ public partial class PreviewWindow : Window
     }
     private void PositionSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
-        if (!_userSeeking && Player.NaturalDuration.HasTimeSpan) Player.Position = TimeSpan.FromSeconds(e.NewValue);
+        if (Player.NaturalDuration.HasTimeSpan) Player.Position = TimeSpan.FromSeconds(e.NewValue);
     }
     private void OpenSource_Click(object sender, RoutedEventArgs e) => ShellService.OpenUrl(_asset.SourcePageURL);
 }

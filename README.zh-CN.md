@@ -6,7 +6,7 @@
 
 FootageFlow 是一款注重隐私的桌面素材搜索与管理软件，可一次搜索多个真实视频和图片素材库，适合历史、国家、财经、人物、科普、纪录片和短视频创作。
 
-当前版本是原生 **macOS 15+ Apple Silicon** 应用。Windows 版会在 macOS v0.1.0 稳定后开发，本次发布尚不包含 Windows 版本。
+当前正式版是原生 **macOS 15+ Apple Silicon** 应用。**Windows 11 x64 — 开发中。** Windows 尚未标记为正式支持，也不包含在 v0.1.0 中。
 
 ## 已实现功能
 

@@ -10,7 +10,7 @@ namespace FootageFlow.Windows.ViewModels;
 public sealed class MainViewModel : ObservableObject
 {
     private readonly SettingsService _settings = new();
-    private readonly WindowsCredentialStore _credentials = new();
+    private readonly WindowsSecureStore _credentials = new();
     private readonly CoreHostClient _core = new();
     private readonly YtDlpPlatformService _ytDlp = new();
     private readonly LocalizationService _localization;
@@ -30,7 +30,7 @@ public sealed class MainViewModel : ObservableObject
     {
         _localization = new LocalizationService(_settings);
         _localization.LanguageChanged += (_, _) => RefreshLanguage();
-        Downloads = new DownloadQueueService(_core, _settings, _ytDlp);
+        Downloads = new DownloadQueueService(_core, _settings, _ytDlp, _localization);
         Providers = new ObservableCollection<ProviderOption>(new[]
         {
             NewProvider("pexels", "Pexels"), NewProvider("pixabay", "Pixabay"),
@@ -175,6 +175,28 @@ public sealed class MainViewModel : ObservableObject
     public string ApiExplanation => T("settings.optionalAPIExplanation");
     public string PrivacyTitle => T("settings.privacy");
     public string PrivacyBody => T("settings.privacyBody");
+    public string PreviewText => T("media.preview");
+    public string FavoriteText => T("media.favorite");
+    public string DownloadText => T("media.download");
+    public string OpenSourceText => T("media.openSource");
+    public string AllText => T("common.all");
+    public string VideoText => T("common.video");
+    public string ImageText => T("common.image");
+    public string LandscapeText => T("media.landscape");
+    public string PortraitText => T("media.portrait");
+    public string SquareText => T("media.square");
+    public string DeleteText => T("common.delete");
+    public string CancelText => T("common.cancel");
+    public string RetryText => T("common.retry");
+    public string OpenFolderText => T("download.openFolder");
+    public string OpenFileText => T("download.openFile");
+    public string ClearHistoryText => T("history.clear");
+    public string SearchAgainText => T("history.research");
+    public string SaveText => T("common.save");
+    public string RemoveKeyText => T("settings.removeAPIKey");
+    public string TestConnectionText => T("settings.testConnection");
+    public string DownloadFolderText => T("settings.downloadRoot");
+    public string ChooseText => T("settings.choose");
 
     public void SetLanguage(string language) => _localization.SetLanguage(language);
 
@@ -257,7 +279,9 @@ public sealed class MainViewModel : ObservableObject
                 var batch = await completed;
                 foreach (var asset in batch.Assets)
                     if (seen.Add(asset.StableId)) Results.Add(asset);
-                SearchStatus = pending.Count > 0 ? $"{T("search.searchingOthers")}  {Results.Count}" : $"{Results.Count} results";
+                SearchStatus = pending.Count > 0
+                    ? $"{T("search.searchingOthers")}  {Results.Count}"
+                    : _localization.Text("search.found", Results.Count);
             }
             await _core.SendAsync(new CoreRequest
             {
@@ -457,6 +481,7 @@ public sealed class MainViewModel : ObservableObject
     {
         OnPropertyChanged(null);
         RefreshProviderModes();
+        Downloads.RefreshLocalizedStatus();
         SearchStatus = T("search.initialStatus");
     }
 }

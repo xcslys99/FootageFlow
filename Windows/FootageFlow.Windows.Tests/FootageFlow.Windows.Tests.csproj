@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0-windows10.0.22000.0</TargetFramework>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <PlatformTarget>x64</PlatformTarget>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\FootageFlow.Windows\FootageFlow.Windows.csproj" />
+    <Content Include="..\..\Sources\FootageFlow\Resources\en.lproj\Localizable.strings"
+             Link="Resources\en.lproj\Localizable.strings" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\Sources\FootageFlow\Resources\zh-Hans.lproj\Localizable.strings"
+             Link="Resources\zh-Hans.lproj\Localizable.strings" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

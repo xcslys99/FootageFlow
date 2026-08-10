@@ -12,21 +12,24 @@ public sealed class DownloadQueueService
     private readonly CoreHostClient _core;
     private readonly SettingsService _settings;
     private readonly YtDlpPlatformService _ytDlp;
+    private readonly LocalizationService _localization;
     public ObservableCollection<DownloadTaskItem> Items { get; } = [];
 
-    public DownloadQueueService(CoreHostClient core, SettingsService settings, YtDlpPlatformService ytDlp)
+    public DownloadQueueService(CoreHostClient core, SettingsService settings, YtDlpPlatformService ytDlp, LocalizationService localization)
     {
         _core = core;
         _settings = settings;
         _ytDlp = ytDlp;
+        _localization = localization;
         _http.DefaultRequestHeaders.UserAgent.ParseAdd("FootageFlow/0.2.0");
     }
 
     public DownloadTaskItem Enqueue(MediaAsset asset, Guid? projectId, string projectName)
     {
-        var existing = Items.FirstOrDefault(x => x.Asset.StableId == asset.StableId && x.Status is not "Failed" and not "Cancelled");
+        var existing = Items.FirstOrDefault(x => x.Asset.StableId == asset.StableId && x.State is not "failed" and not "cancelled");
         if (existing is not null) return existing;
         var item = new DownloadTaskItem(asset, projectId, projectName);
+        SetState(item, "waiting");
         Items.Insert(0, item);
         _ = RunAsync(item);
         return item;
@@ -43,8 +46,13 @@ public sealed class DownloadQueueService
         item.ResetCancellation();
         item.ErrorMessage = null;
         item.Progress = 0;
-        item.Status = "Queued";
+        SetState(item, "waiting");
         _ = RunAsync(item);
+    }
+
+    public void RefreshLocalizedStatus()
+    {
+        foreach (var item in Items) SetState(item, item.State);
     }
 
     private async Task RunAsync(DownloadTaskItem item)
@@ -54,8 +62,8 @@ public sealed class DownloadQueueService
             await _slots.WaitAsync(item.Cancellation.Token);
             try
             {
-                item.Status = "Downloading";
-                var projectFolder = SanitizeWindowsName(string.IsNullOrWhiteSpace(item.ProjectName) ? "Uncategorized" : item.ProjectName);
+                SetState(item, "downloading");
+                var projectFolder = WindowsPathSafety.SanitizeName(string.IsNullOrWhiteSpace(item.ProjectName) ? "Uncategorized" : item.ProjectName);
                 var directory = Path.Combine(_settings.Current.DownloadRoot, projectFolder);
                 Directory.CreateDirectory(directory);
                 var nameResponse = await _core.SendAsync(new CoreRequest
@@ -76,7 +84,7 @@ public sealed class DownloadQueueService
                 {
                     if (string.IsNullOrWhiteSpace(item.Asset.DownloadURL))
                         throw new InvalidOperationException("This source does not provide a direct download.");
-                    saved = UniquePath(directory, preferredName);
+                    saved = WindowsPathSafety.UniquePath(directory, preferredName);
                     await DownloadDirectAsync(item.Asset.DownloadURL, saved, item, item.Cancellation.Token);
                 }
                 item.LocalPath = saved;
@@ -92,19 +100,19 @@ public sealed class DownloadQueueService
                     Action = "addDownload", Asset = item.Asset, LocalPath = saved,
                     ProjectID = item.ProjectId?.ToString(), Language = _settings.Current.Language
                 }, cancellationToken: item.Cancellation.Token);
-                item.Status = "Completed";
+                SetState(item, "completed");
                 item.Speed = "";
             }
             finally { _slots.Release(); }
         }
         catch (OperationCanceledException)
         {
-            item.Status = "Cancelled";
+            SetState(item, "cancelled");
             item.Speed = "";
         }
         catch (Exception error)
         {
-            item.Status = "Failed";
+            SetState(item, "failed");
             item.ErrorMessage = FriendlyMessage(error);
             item.Speed = "";
         }
@@ -150,28 +158,6 @@ public sealed class DownloadQueueService
         }
     }
 
-    private static string UniquePath(string directory, string preferredName)
-    {
-        var safe = SanitizeWindowsName(Path.GetFileNameWithoutExtension(preferredName));
-        var extension = Path.GetExtension(preferredName);
-        if (string.IsNullOrWhiteSpace(extension)) extension = ".mp4";
-        var candidate = Path.Combine(directory, safe + extension);
-        for (var index = 2; File.Exists(candidate) || File.Exists(candidate + ".part"); index++)
-            candidate = Path.Combine(directory, $"{safe}_{index}{extension}");
-        return candidate;
-    }
-
-    private static string SanitizeWindowsName(string value)
-    {
-        var invalid = Path.GetInvalidFileNameChars().ToHashSet();
-        var clean = new string(value.Select(character => invalid.Contains(character) ? '_' : character).ToArray()).Trim(' ', '.');
-        if (string.IsNullOrWhiteSpace(clean)) clean = "Media";
-        var stem = clean.Split('.')[0].ToUpperInvariant();
-        string[] reserved = ["CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9", "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9"];
-        if (reserved.Contains(stem)) clean = "_" + clean;
-        return clean.Length > 80 ? clean[..80] : clean;
-    }
-
     private static string FriendlyMessage(Exception error) => error switch
     {
         HttpRequestException { StatusCode: System.Net.HttpStatusCode.TooManyRequests } => "Too many requests. Please try again later.",
@@ -180,4 +166,10 @@ public sealed class DownloadQueueService
         CoreHostException core => core.Message,
         _ => error.Message
     };
+
+    private void SetState(DownloadTaskItem item, string state)
+    {
+        item.State = state;
+        item.Status = _localization.Text($"download.status.{state}");
+    }
 }

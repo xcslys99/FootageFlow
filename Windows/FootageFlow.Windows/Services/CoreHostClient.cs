@@ -15,9 +15,9 @@ public sealed class CoreHostClient
 
     private readonly string _executable;
 
-    public CoreHostClient()
+    public CoreHostClient(string? executable = null)
     {
-        _executable = new[]
+        _executable = executable ?? new[]
         {
             Path.Combine(AppContext.BaseDirectory, "Core", "FootageFlowCore.exe"),
             Path.Combine(AppContext.BaseDirectory, "FootageFlowCore.exe")
