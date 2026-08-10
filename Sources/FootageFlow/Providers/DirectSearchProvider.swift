@@ -67,6 +67,7 @@ enum DirectSearchEngine {
   static func search(
     provider: ProviderID, request: SearchRequest, loader: any DirectSearchPageLoading
   ) async throws -> [MediaAsset] {
+    guard request.mediaType != .audio else { return [] }
     let targets = try targetURLs(provider: provider, request: request)
     var assets: [MediaAsset] = []
     var firstError: Error?
@@ -106,6 +107,7 @@ enum DirectSearchEngine {
       case .all: [.video, .image]
       case .video: [.video]
       case .image: [.image]
+      case .audio: []
       }
     return try types.map { type in
       let value: String

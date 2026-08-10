@@ -9,6 +9,9 @@
     var orientation: String? = nil
     var resolution: String? = nil
     var duration: String? = nil
+    var yearFrom: Int? = nil
+    var yearTo: Int? = nil
+    var downloadableOnly: Bool? = nil
     var pageSize: Int? = nil
     var providerIDs: [String]? = nil
     var apiKeys: [String: String]? = nil
@@ -41,6 +44,7 @@
     var fileName: String? = nil
     var errorCode: String? = nil
     var errorMessage: String? = nil
+    var text: String? = nil
   }
 
   private struct WindowsProviderDescriptor: Encodable {
@@ -124,8 +128,17 @@
           id: request.id, success: true, segments: KeywordEngine.splitScript(query))
       case "mapYTDLPSearch":
         return mapYTDLPSearch(request)
+      case "formatSource":
+        guard let asset = request.asset else { return invalidRecordID(request.id) }
+        return WindowsCoreResponse(
+          id: request.id, success: true, text: AttributionFormatter.source(for: asset))
+      case "formatAttribution":
+        guard let asset = request.asset else { return invalidRecordID(request.id) }
+        return WindowsCoreResponse(
+          id: request.id, success: true, text: AttributionFormatter.attribution(for: asset))
       case "databaseSnapshot", "addProject", "deleteProject", "updateProject",
-        "toggleFavorite", "addHistory", "deleteHistory", "clearHistory", "addDownload",
+        "toggleFavorite", "addFavorite", "addHistory", "deleteHistory", "clearHistory",
+        "addDownload",
         "deleteDownload":
         return database(request)
       case "suggestFileName":
@@ -173,6 +186,10 @@
         }
         store.toggleFavorite(
           asset: asset, projectID: uuid(request.projectID), segmentIndex: request.segmentIndex)
+      case "addFavorite":
+        guard let asset = request.asset else { return invalidRecordID(request.id) }
+        store.addFavorite(
+          asset: asset, projectID: uuid(request.projectID), segmentIndex: request.segmentIndex)
       case "addHistory":
         guard let query = nonempty(request.query) else { return missingQuery(request.id) }
         let providers = Set((request.providerIDs ?? []).compactMap(ProviderID.init(rawValue:)))
@@ -214,6 +231,8 @@
         orientation: AssetOrientation(rawValue: request.orientation ?? "") ?? .all,
         resolution: ResolutionFilter(rawValue: request.resolution ?? "") ?? .all,
         duration: DurationFilter(rawValue: request.duration ?? "") ?? .all,
+        yearFrom: request.yearFrom, yearTo: request.yearTo,
+        downloadableOnly: request.downloadableOnly ?? false,
         pageSize: max(1, min(request.pageSize ?? 16, 50)))
       let ids = selectedProviderIDs(request)
       let batches = await withTaskGroup(of: WindowsProviderBatch.self) { group in
@@ -322,6 +341,8 @@
       let availability: ProviderAvailability =
         switch info.mode {
         case .officialAPI: .apiConnected
+        case .publicAPI: .publicAPI
+        case .limited: .limitedMode
         case .directSearch, .ytDLP: .bestEffort
         case .publicInterface: .available
         }
@@ -355,6 +376,7 @@
       case .videoUnavailable: "videoUnavailable"
       case .regionalRestriction: "regionalRestriction"
       case .unsupported: "unsupported"
+      case .limitedMode: "limitedMode"
       case .cancelled: "cancelled"
       case .message: "requestFailed"
       }

@@ -9,6 +9,9 @@ final class SearchViewModel: ObservableObject {
   @Published var resolution: ResolutionFilter = .all
   @Published var duration: DurationFilter = .all
   @Published var licenseFilter: LicenseFilter = .all
+  @Published var yearFrom: Int?
+  @Published var yearTo: Int?
+  @Published var downloadableOnly = false
   @Published var sort: SearchSort = .relevance
   @Published var selectedProviders = AppSettings.enabledProviders
   @Published var currentProjectID: UUID?
@@ -26,19 +29,21 @@ final class SearchViewModel: ObservableObject {
   var statusText: String { status.text }
 
   var filteredAssets: [MediaAsset] {
-    var value = assets.filter { asset in
-      (mediaType == .all || asset.mediaType == mediaType)
-        && (orientation == .all || asset.orientation == orientation)
-        && (resolution.minimumHeight == nil || (asset.height ?? 0) >= resolution.minimumHeight!)
-        && duration.matches(asset.duration) && licenseFilter.matches(asset.licenseStatus)
-        && selectedProviders.contains(asset.provider)
-    }
+    let filter = AdvancedSearchFilter(
+      mediaType: mediaType, orientation: orientation, resolution: resolution,
+      duration: duration, license: licenseFilter, selectedProviders: selectedProviders,
+      yearFrom: yearFrom, yearTo: yearTo, downloadableOnly: downloadableOnly)
+    var value = assets.filter { filter.matches($0) }
     switch sort {
     case .relevance: value.sort { score($0) > score($1) }
     case .newest:
       value.sort { ($0.publishedDate ?? .distantPast) > ($1.publishedDate ?? .distantPast) }
     case .resolution:
-      value.sort { ($0.width ?? 0) * ($0.height ?? 0) > ($1.width ?? 0) * ($1.height ?? 0) }
+      value.sort {
+        let left = ($0.width ?? 0) * ($0.height ?? 0)
+        let right = ($1.width ?? 0) * ($1.height ?? 0)
+        return left > right
+      }
     case .duration: value.sort { ($0.duration ?? -1) > ($1.duration ?? -1) }
     }
     return value
@@ -92,7 +97,9 @@ final class SearchViewModel: ObservableObject {
     providerCounts = [:]
     providerModes = [:]
     status = .searchingProviders(selectedProviders.count)
-    let filterSnapshot = (mediaType, orientation, resolution, duration)
+    let filterSnapshot = (
+      mediaType, orientation, resolution, duration, yearFrom, yearTo, downloadableOnly
+    )
     let providerSet = providerID.map { Set([$0]) } ?? selectedProviders
     let providers = makeProviders(directOverrides: directOverrides).filter {
       providerSet.contains($0.info.id)
@@ -114,21 +121,27 @@ final class SearchViewModel: ObservableObject {
             var combined: [MediaAsset] = []
             do {
               let providerKeywords =
-                provider.info.id == .youtube ? Array(active.prefix(2)) : active
+                provider.info.mode == .limited
+                ? Array(active.prefix(1))
+                : (provider.info.id == .youtube ? Array(active.prefix(2)) : active)
               for keyword in providerKeywords {
                 try Task.checkCancellation()
                 let request = SearchRequest(
                   query: keyword, mediaType: filterSnapshot.0, orientation: filterSnapshot.1,
-                  resolution: filterSnapshot.2, duration: filterSnapshot.3, pageSize: 16)
-                if !forceRefresh,
+                  resolution: filterSnapshot.2, duration: filterSnapshot.3,
+                  yearFrom: filterSnapshot.4, yearTo: filterSnapshot.5,
+                  downloadableOnly: filterSnapshot.6, pageSize: 16)
+                if !forceRefresh, provider.info.id != .nationalArchives,
                   let cached = await SearchCache.shared.assets(
                     provider: provider.info.id, request: request)
                 {
                   combined += cached
                 } else {
                   let found = try await provider.search(request)
-                  await SearchCache.shared.store(
-                    found, provider: provider.info.id, request: request)
+                  if provider.info.id != .nationalArchives {
+                    await SearchCache.shared.store(
+                      found, provider: provider.info.id, request: request)
+                  }
                   combined += found
                 }
               }
@@ -199,6 +212,8 @@ final class SearchViewModel: ObservableObject {
       let availability: ProviderAvailability =
         switch batch.mode {
         case .officialAPI: .apiConnected
+        case .publicAPI: .publicAPI
+        case .limited: .limitedMode
         case .directSearch, .ytDLP: .bestEffort
         case .publicInterface: .available
         }
@@ -211,7 +226,7 @@ final class SearchViewModel: ObservableObject {
   }
 
   private func score(_ asset: MediaAsset) -> Double {
-    asset.relevanceScore + (asset.downloadable ? 0.08 : 0)
+    asset.relevanceScore + (asset.isDirectlyDownloadable ? 0.08 : 0)
       + (asset.height ?? 0 >= 1080 ? 0.04 : 0)
       + (asset.creator != nil ? 0.01 : 0) + (asset.licenseStatus != .unknown ? 0.03 : 0)
   }
@@ -221,6 +236,8 @@ final class SearchViewModel: ObservableObject {
     let availability: ProviderAvailability =
       switch provider.info.mode {
       case .officialAPI, .publicInterface: .available
+      case .publicAPI: .publicAPI
+      case .limited: .limitedMode
       case .directSearch, .ytDLP: .bestEffort
       }
     providerStates[provider.info.id] = ProviderRuntimeState(

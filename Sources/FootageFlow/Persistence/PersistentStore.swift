@@ -92,6 +92,14 @@ final class PersistentStore {
     save()
   }
 
+  func addFavorite(asset: MediaAsset, projectID: UUID?, segmentIndex: Int? = nil) {
+    guard !isFavorite(asset, projectID: projectID) else { return }
+    database.favorites.append(
+      SavedAssetRecord(asset: asset, projectID: projectID, segmentIndex: segmentIndex))
+    touchProject(projectID)
+    save()
+  }
+
   func isFavorite(_ asset: MediaAsset, projectID: UUID?) -> Bool {
     database.favorites.contains { $0.stableID == asset.stableID && $0.projectID == projectID }
   }

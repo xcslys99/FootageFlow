@@ -31,11 +31,44 @@ enum LiveSmokeRunner {
       }
       if archive.isEmpty { failures.append("Internet Archive history") }
     } catch { failures.append("Internet Archive: \(error.localizedDescription)") }
+    do {
+      let nasa = try await NASAProvider().search(
+        SearchRequest(
+          query: "Apollo 11", mediaType: .video, yearFrom: 1969, yearTo: 1970, pageSize: 4))
+      print("SMOKE nasa_apollo=\(nasa.count)")
+      if let first = nasa.first {
+        print(
+          "SMOKE nasa_first=\(first.title) source=\(first.sourcePageURL.absoluteString) downloadable=\(first.isDirectlyDownloadable)"
+        )
+      }
+      if nasa.isEmpty { failures.append("NASA Apollo 11") }
+    } catch { failures.append("NASA: \(error.localizedDescription)") }
+    do {
+      let loc = try await LibraryOfCongressProvider().search(
+        SearchRequest(query: "Apollo 11", mediaType: .video, pageSize: 4))
+      print("SMOKE loc_apollo=\(loc.count)")
+      if let first = loc.first {
+        print(
+          "SMOKE loc_first=\(first.title) source=\(first.sourcePageURL.absoluteString) downloadable=\(first.isDirectlyDownloadable)"
+        )
+      }
+      if loc.isEmpty { failures.append("Library of Congress Apollo 11") }
+    } catch { failures.append("Library of Congress: \(error.localizedDescription)") }
     let pexelsWithoutKey = ProviderFactory.make(.pexels, apiKey: "")
     if pexelsWithoutKey.info.mode == .directSearch && !pexelsWithoutKey.info.requiresAPIKey {
       print("SMOKE pexels_without_key_mode=directSearch")
     } else {
       failures.append("Pexels no-key mode")
+    }
+    if ProviderFactory.make(.nationalArchives, apiKey: "").info.mode == .limited {
+      print("SMOKE nationalArchives_without_key_mode=limited")
+    } else {
+      failures.append("National Archives no-key mode")
+    }
+    if ProviderFactory.make(.europeana, apiKey: "").info.mode == .limited {
+      print("SMOKE europeana_without_key_mode=limited")
+    } else {
+      failures.append("Europeana no-key mode")
     }
     async let pexelsDirect = directSearchFailure(PexelsDirectProvider())
     async let pixabayDirect = directSearchFailure(PixabayDirectProvider())

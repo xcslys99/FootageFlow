@@ -12,7 +12,7 @@ struct YouTubeYTDLPProvider: MediaProvider {
   init(service: YTDLPService = YTDLPService()) { self.service = service }
 
   func search(_ request: SearchRequest) async throws -> [MediaAsset] {
-    guard request.mediaType != .image else { return [] }
+    guard request.mediaType != .image && request.mediaType != .audio else { return [] }
     let values = try await service.search(query: request.query, limit: min(request.pageSize, 12))
     return Self.assets(from: values, query: request.query)
   }
@@ -40,7 +40,7 @@ struct YouTubeYTDLPProvider: MediaProvider {
         mediaType: .video, publishedDate: nil, downloadable: true,
         originalMetadata: ["accessMode": ProviderMode.ytDLP.rawValue],
         searchKeyword: query, relevanceScore: 0.9 - Double(index) * 0.01,
-        downloadStrategy: .ytDLP)
+        downloadStrategy: .ytDLP, downloadAvailability: .conditional)
     }
   }
 

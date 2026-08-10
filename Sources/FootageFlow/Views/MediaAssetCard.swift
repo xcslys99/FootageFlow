@@ -4,6 +4,8 @@ struct MediaAssetCard: View {
   let asset: MediaAsset
   let projectID: UUID?
   let segmentIndex: Int?
+  var isSelected = false
+  var onToggleSelection: ((MediaAsset) -> Void)? = nil
   let onPreview: (MediaAsset) -> Void
   @EnvironmentObject private var store: DataStore
   @EnvironmentObject private var downloads: DownloadManager
@@ -31,10 +33,24 @@ struct MediaAssetCard: View {
       .frame(height: 150).clipped().background(.quaternary)
       .overlay(alignment: .topLeading) {
         Label(
-          asset.provider.displayName, systemImage: asset.mediaType == .video ? "film" : "photo"
+          asset.provider.displayName, systemImage: mediaIcon
         )
         .font(.caption2.bold()).padding(5)
         .background(.ultraThickMaterial, in: RoundedRectangle(cornerRadius: 5)).padding(7)
+      }
+      .overlay(alignment: .topTrailing) {
+        if let onToggleSelection {
+          Button {
+            onToggleSelection(asset)
+          } label: {
+            Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+              .font(.title2).symbolRenderingMode(.palette)
+              .foregroundStyle(
+                isSelected ? Color.white : Color.secondary,
+                isSelected ? Color.accentColor : Color.white)
+          }
+          .buttonStyle(.plain).padding(8).help(tr("selection.select"))
+        }
       }
       VStack(alignment: .leading, spacing: 5) {
         Text(asset.title).font(.headline).lineLimit(2).frame(
@@ -90,6 +106,16 @@ struct MediaAssetCard: View {
           guard let url = try? URLValidator.remote(asset.sourcePageURL) else { return }
           DesktopPlatform.shared.open(url)
         }
+        Menu {
+          Button(tr("media.copySource")) {
+            DesktopPlatform.shared.copy(AttributionFormatter.source(for: asset))
+          }
+          Button(tr("media.copyAttribution")) {
+            DesktopPlatform.shared.copy(AttributionFormatter.attribution(for: asset))
+          }
+        } label: {
+          Image(systemName: "ellipsis.circle")
+        }
       }.controlSize(.small)
     }
     .padding(10).background(.background, in: RoundedRectangle(cornerRadius: 10))
@@ -100,9 +126,18 @@ struct MediaAssetCard: View {
     ZStack {
       Color.secondary.opacity(0.1)
       VStack {
-        Image(systemName: asset.mediaType == .video ? "film" : "photo")
+        Image(systemName: mediaIcon)
         Text(text).font(.caption)
       }.foregroundStyle(.secondary)
+    }
+  }
+
+  private var mediaIcon: String {
+    switch asset.mediaType {
+    case .video: "film"
+    case .image: "photo"
+    case .audio: "waveform"
+    case .all: "doc"
     }
   }
 }

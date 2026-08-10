@@ -61,6 +61,11 @@ public partial class MainWindow : Window
         finally { button.IsEnabled = true; }
     }
 
+    private void OpenProviderSearch_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button { Tag: string provider }) _viewModel.OpenOfficialSearch(provider);
+    }
+
     private void ChooseDownloadFolder_Click(object sender, RoutedEventArgs e)
     {
         var dialog = new OpenFolderDialog { Title = "Choose FootageFlow download folder", Multiselect = false };

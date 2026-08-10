@@ -26,6 +26,10 @@ public sealed class MainViewModel : ObservableObject
     private string _resolution = "all";
     private string _duration = "all";
     private string _licenseFilter = "all";
+    private string _yearFrom = "";
+    private string _yearTo = "";
+    private bool _downloadableOnly;
+    private int _selectedCount;
     private string _sort = "relevance";
     private ProjectRecord? _currentProject;
     private string _newProjectName = "";
@@ -51,7 +55,9 @@ public sealed class MainViewModel : ObservableObject
         {
             NewProvider("pexels", "Pexels"), NewProvider("pixabay", "Pixabay"),
             NewProvider("wikimedia", "Wikimedia Commons"),
-            NewProvider("internetArchive", "Internet Archive"), NewProvider("youtube", "YouTube")
+            NewProvider("internetArchive", "Internet Archive"), NewProvider("youtube", "YouTube"),
+            NewProvider("nasa", "NASA"), NewProvider("libraryOfCongress", "Library of Congress"),
+            NewProvider("nationalArchives", "National Archives"), NewProvider("europeana", "Europeana")
         });
         foreach (var provider in Providers)
             provider.PropertyChanged += (_, args) =>
@@ -60,6 +66,7 @@ public sealed class MainViewModel : ObservableObject
                 if (provider.Enabled) _settings.Current.EnabledProviders.Add(provider.Id);
                 else _settings.Current.EnabledProviders.Remove(provider.Id);
                 _settings.Save();
+                ResultsView.Refresh();
             };
         NavigateCommand = new RelayCommand(page => CurrentPage = page?.ToString() ?? "search");
         SearchCommand = new AsyncRelayCommand(_ => SearchAsync(), _ => !IsSearching);
@@ -68,6 +75,15 @@ public sealed class MainViewModel : ObservableObject
         PreviewCommand = new RelayCommand(asset => PreviewRequested?.Invoke(asset as MediaAsset));
         FavoriteCommand = new AsyncRelayCommand(asset => ToggleFavoriteAsync(asset as MediaAsset));
         DownloadCommand = new RelayCommand(asset => EnqueueDownload(asset as MediaAsset));
+        SelectAllVisibleCommand = new RelayCommand(_ => SelectAllVisible());
+        ClearSelectionCommand = new RelayCommand(_ => ClearSelection());
+        DownloadSelectedCommand = new RelayCommand(_ => DownloadSelected());
+        AddSelectedToProjectCommand = new AsyncRelayCommand(_ => AddSelectedToProjectAsync(),
+            _ => CurrentProject is not null && SelectedCount > 0);
+        CreateProjectFromSelectionCommand = new AsyncRelayCommand(_ => CreateProjectFromSelectionAsync());
+        CopySelectedSourceCommand = new AsyncRelayCommand(_ => CopySelectedSourcesAsync());
+        CopySourceCommand = new AsyncRelayCommand(asset => CopyTextAsync(asset as MediaAsset, "formatSource"));
+        CopyAttributionCommand = new AsyncRelayCommand(asset => CopyTextAsync(asset as MediaAsset, "formatAttribution"));
         CreateProjectCommand = new AsyncRelayCommand(_ => CreateProjectAsync());
         ClearProjectCommand = new RelayCommand(_ => CurrentProject = null);
         SaveProjectCommand = new AsyncRelayCommand(_ => SaveProjectAsync(), _ => CurrentProject is not null);
@@ -77,6 +93,7 @@ public sealed class MainViewModel : ObservableObject
         ClearHistoryCommand = new AsyncRelayCommand(_ => ClearHistoryAsync());
         CancelDownloadCommand = new RelayCommand(item => Downloads.Cancel((DownloadTaskItem)item!));
         RetryDownloadCommand = new RelayCommand(item => Downloads.Retry((DownloadTaskItem)item!));
+        RetryFailedDownloadsCommand = new RelayCommand(_ => Downloads.RetryFailed());
         RevealDownloadCommand = new RelayCommand(item =>
         {
             if ((item as DownloadTaskItem)?.LocalPath is { } path) ShellService.Reveal(path);
@@ -120,6 +137,14 @@ public sealed class MainViewModel : ObservableObject
     public ICommand PreviewCommand { get; }
     public ICommand FavoriteCommand { get; }
     public ICommand DownloadCommand { get; }
+    public ICommand SelectAllVisibleCommand { get; }
+    public ICommand ClearSelectionCommand { get; }
+    public ICommand DownloadSelectedCommand { get; }
+    public ICommand AddSelectedToProjectCommand { get; }
+    public ICommand CreateProjectFromSelectionCommand { get; }
+    public ICommand CopySelectedSourceCommand { get; }
+    public ICommand CopySourceCommand { get; }
+    public ICommand CopyAttributionCommand { get; }
     public ICommand CreateProjectCommand { get; }
     public ICommand ClearProjectCommand { get; }
     public ICommand SaveProjectCommand { get; }
@@ -129,6 +154,7 @@ public sealed class MainViewModel : ObservableObject
     public ICommand ClearHistoryCommand { get; }
     public ICommand CancelDownloadCommand { get; }
     public ICommand RetryDownloadCommand { get; }
+    public ICommand RetryFailedDownloadsCommand { get; }
     public ICommand RevealDownloadCommand { get; }
     public ICommand RevealRecordCommand { get; }
     public ICommand OpenRecordCommand { get; }
@@ -172,6 +198,21 @@ public sealed class MainViewModel : ObservableObject
     public string Resolution { get => _resolution; set { if (Set(ref _resolution, value)) ResultsView.Refresh(); } }
     public string Duration { get => _duration; set { if (Set(ref _duration, value)) ResultsView.Refresh(); } }
     public string LicenseFilter { get => _licenseFilter; set { if (Set(ref _licenseFilter, value)) ResultsView.Refresh(); } }
+    public string YearFrom { get => _yearFrom; set { if (Set(ref _yearFrom, Digits(value))) ResultsView.Refresh(); } }
+    public string YearTo { get => _yearTo; set { if (Set(ref _yearTo, Digits(value))) ResultsView.Refresh(); } }
+    public bool DownloadableOnly { get => _downloadableOnly; set { if (Set(ref _downloadableOnly, value)) ResultsView.Refresh(); } }
+    public int SelectedCount
+    {
+        get => _selectedCount;
+        private set
+        {
+            if (!Set(ref _selectedCount, value)) return;
+            OnPropertyChanged(nameof(HasSelection));
+            OnPropertyChanged(nameof(SelectionStatus));
+            (AddSelectedToProjectCommand as AsyncRelayCommand)?.RaiseCanExecuteChanged();
+        }
+    }
+    public bool HasSelection => SelectedCount > 0;
     public string Sort
     {
         get => _sort;
@@ -190,6 +231,7 @@ public sealed class MainViewModel : ObservableObject
             ProjectEditName = value?.Name ?? "";
             ScriptText = value?.Script ?? "";
             (SaveProjectCommand as AsyncRelayCommand)?.RaiseCanExecuteChanged();
+            (AddSelectedToProjectCommand as AsyncRelayCommand)?.RaiseCanExecuteChanged();
             FavoritesView.Refresh();
             HistoryView.Refresh();
             DownloadRecordsView.Refresh();
@@ -242,16 +284,16 @@ public sealed class MainViewModel : ObservableObject
     public string AllText => T("common.all");
     public string VideoText => T("common.video");
     public string ImageText => T("common.image");
+    public string AudioText => T("common.audio");
     public string LandscapeText => T("media.landscape");
     public string PortraitText => T("media.portrait");
     public string SquareText => T("media.square");
-    public string Under10Text => T("filter.under10");
-    public string TenTo30Text => T("filter.tenTo30");
-    public string ThirtyTo60Text => T("filter.thirtyTo60");
-    public string Over60Text => T("filter.over60");
+    public string UnderMinuteText => T("filter.underMinute");
+    public string OneToFiveText => T("filter.oneToFive");
+    public string FiveToTwentyText => T("filter.fiveToTwenty");
+    public string OverTwentyText => T("filter.overTwenty");
     public string LicenseKnownText => T("license.knownOnly");
-    public string LicenseSafeText => T("license.safe");
-    public string LicenseAttributionText => T("license.attribution");
+    public string LicenseOpenText => T("license.openlyLicensed");
     public string LicensePublicDomainText => T("license.publicDomain");
     public string LicenseUnknownText => T("license.unknown");
     public string SortRelevanceText => T("sort.relevance");
@@ -261,6 +303,7 @@ public sealed class MainViewModel : ObservableObject
     public string DeleteText => T("common.delete");
     public string CancelText => T("common.cancel");
     public string RetryText => T("common.retry");
+    public string RetryFailedText => T("download.retryFailed");
     public string OpenFolderText => T("download.openFolder");
     public string OpenFileText => T("download.openFile");
     public string ClearHistoryText => T("history.clear");
@@ -270,8 +313,34 @@ public sealed class MainViewModel : ObservableObject
     public string TestConnectionText => T("settings.testConnection");
     public string DownloadFolderText => T("settings.downloadRoot");
     public string ChooseText => T("settings.choose");
+    public string DownloadableOnlyText => T("filter.downloadableOnly");
+    public string YearFromText => T("filter.yearFrom");
+    public string YearToText => T("filter.yearTo");
+    public string SelectAllVisibleText => T("selection.selectAllVisible");
+    public string DownloadSelectedText => T("selection.downloadSelected");
+    public string AddToProjectText => T("selection.addToProject");
+    public string CopySourceInfoText => T("selection.copySourceInfo");
+    public string ClearSelectionText => T("selection.clear");
+    public string CopySourceText => T("media.copySource");
+    public string CopyAttributionText => T("media.copyAttribution");
+    public string SelectionStatus => _localization.Text("selection.count", SelectedCount);
+    public string OpenOfficialSearchText => T("provider.openOfficialSearch");
 
     public void SetLanguage(string language) => _localization.SetLanguage(language);
+
+    public void OpenOfficialSearch(string provider)
+    {
+        var query = Uri.EscapeDataString(string.IsNullOrWhiteSpace(Query) ? "history" : Query.Trim());
+        var url = provider switch
+        {
+            "nasa" => $"https://images.nasa.gov/search?q={query}",
+            "libraryOfCongress" => $"https://www.loc.gov/film-and-videos/?q={query}",
+            "nationalArchives" => $"https://catalog.archives.gov/search?q={query}",
+            "europeana" => $"https://www.europeana.eu/en/search?query={query}",
+            _ => null
+        };
+        ShellService.OpenUrl(url);
+    }
 
     public void SaveApiKey(string provider, string value)
     {
@@ -297,6 +366,12 @@ public sealed class MainViewModel : ObservableObject
             {
                 _ = await _ytDlp.SearchAsync("bank", 1, CancellationToken.None);
                 option.Status = T("settings.connectionSuccess");
+                return option.Status;
+            }
+            if (provider is "nationalArchives" or "europeana" &&
+                string.IsNullOrWhiteSpace(ReadCredential(provider)))
+            {
+                option.Status = T("provider.limitedMode");
                 return option.Status;
             }
             var response = await _core.SendAsync(new CoreRequest
@@ -330,7 +405,7 @@ public sealed class MainViewModel : ObservableObject
         _searchCancellation = new CancellationTokenSource();
         var cancellationToken = _searchCancellation.Token;
         IsSearching = true;
-        Results.Clear(); SearchKeywords.Clear();
+        Results.Clear(); SearchKeywords.Clear(); SelectedCount = 0;
         var selected = Providers.Where(x => x.Enabled).ToList();
         if (selected.Count == 0) { SearchStatus = T("search.noResults"); IsSearching = false; return; }
         SearchStatus = T("search.searchingOthers");
@@ -351,7 +426,11 @@ public sealed class MainViewModel : ObservableObject
                 pending.Remove(completed);
                 var batch = await completed;
                 foreach (var asset in batch.Assets)
-                    if (seen.Add(asset.StableId)) Results.Add(asset);
+                    if (seen.Add(asset.StableId))
+                    {
+                        asset.PropertyChanged += ResultPropertyChanged;
+                        Results.Add(asset);
+                    }
                 SearchStatus = pending.Count > 0
                     ? $"{T("search.searchingOthers")}  {Results.Count}"
                     : _localization.Text("search.found", Results.Count);
@@ -395,7 +474,10 @@ public sealed class MainViewModel : ObservableObject
             var response = await _core.SendAsync(new CoreRequest
             {
                 Action = "search", Query = query, MediaType = MediaType, Orientation = Orientation,
-                Resolution = Resolution, Duration = Duration, PageSize = 20, ProviderIDs = [option.Id],
+                Resolution = Resolution, Duration = Duration,
+                YearFrom = int.TryParse(YearFrom, out var from) ? from : null,
+                YearTo = int.TryParse(YearTo, out var to) ? to : null,
+                DownloadableOnly = DownloadableOnly, PageSize = 20, ProviderIDs = [option.Id],
                 ApiKeys = CredentialDictionary(option.Id), Language = _settings.Current.Language
             }, cancellationToken: cancellationToken);
             var batch = response.ProviderBatches?.FirstOrDefault() ?? new ProviderBatch
@@ -442,6 +524,73 @@ public sealed class MainViewModel : ObservableObject
         }
         Downloads.Enqueue(asset, CurrentProject?.Id, CurrentProject?.Name ?? T("common.uncategorized"));
         CurrentPage = "downloads";
+    }
+
+    private void ResultPropertyChanged(object? sender, PropertyChangedEventArgs args)
+    {
+        if (args.PropertyName != nameof(MediaAsset.IsSelected)) return;
+        SelectedCount = Results.Count(asset => asset.IsSelected);
+    }
+
+    private void SelectAllVisible()
+    {
+        foreach (var asset in ResultsView.Cast<MediaAsset>()) asset.IsSelected = true;
+    }
+
+    private void ClearSelection()
+    {
+        foreach (var asset in Results) asset.IsSelected = false;
+    }
+
+    private void DownloadSelected()
+    {
+        var selected = Results.Where(asset => asset.IsSelected && asset.Downloadable).ToArray();
+        foreach (var asset in selected)
+            Downloads.Enqueue(asset, CurrentProject?.Id, CurrentProject?.Name ?? T("common.uncategorized"));
+        if (selected.Length > 0) CurrentPage = "downloads";
+    }
+
+    private async Task AddSelectedToProjectAsync()
+    {
+        if (CurrentProject is null) return;
+        foreach (var asset in Results.Where(asset => asset.IsSelected))
+            await _core.SendAsync(new CoreRequest
+            {
+                Action = "addFavorite", Asset = asset, ProjectID = CurrentProject.Id.ToString(),
+                Language = _settings.Current.Language
+            });
+        await LoadDatabaseAsync();
+    }
+
+    private async Task CreateProjectFromSelectionAsync()
+    {
+        if (string.IsNullOrWhiteSpace(NewProjectName) || SelectedCount == 0) return;
+        await CreateProjectAsync();
+        await AddSelectedToProjectAsync();
+    }
+
+    private async Task CopySelectedSourcesAsync()
+    {
+        var parts = new List<string>();
+        foreach (var asset in Results.Where(asset => asset.IsSelected))
+        {
+            var response = await _core.SendAsync(new CoreRequest
+            {
+                Action = "formatSource", Asset = asset, Language = _settings.Current.Language
+            });
+            if (!string.IsNullOrWhiteSpace(response.Text)) parts.Add(response.Text);
+        }
+        if (parts.Count > 0) Clipboard.SetText(string.Join("\n\n---\n\n", parts));
+    }
+
+    private async Task CopyTextAsync(MediaAsset? asset, string action)
+    {
+        if (asset is null) return;
+        var response = await _core.SendAsync(new CoreRequest
+        {
+            Action = action, Asset = asset, Language = _settings.Current.Language
+        });
+        if (!string.IsNullOrWhiteSpace(response.Text)) Clipboard.SetText(response.Text);
     }
 
     private async Task CreateProjectAsync()
@@ -561,27 +710,28 @@ public sealed class MainViewModel : ObservableObject
     private bool MatchesFilters(MediaAsset asset)
     {
         if (MediaType != "all" && asset.MediaType != MediaType) return false;
+        if (DownloadableOnly && !asset.IsDirectlyDownloadable) return false;
         if (Orientation != "all" && AssetOrientation(asset) != Orientation) return false;
         var minimumHeight = Resolution switch { "hd720" => 720, "fullHD" => 1080, "uhd4K" => 2160, _ => 0 };
         if (minimumHeight > 0 && Math.Min(asset.Width ?? 0, asset.Height ?? 0) < minimumHeight) return false;
         if (!DurationMatches(asset.Duration)) return false;
+        if (int.TryParse(YearFrom, out var from) && (asset.PublishedDate?.Year ?? int.MinValue) < from) return false;
+        if (int.TryParse(YearTo, out var to) && (asset.PublishedDate?.Year ?? int.MaxValue) > to) return false;
         return LicenseFilter switch
         {
-            "knownOnly" => asset.LicenseStatus != "UNKNOWN",
-            "safe" => asset.LicenseStatus == "SAFE",
-            "attribution" => asset.LicenseStatus == "ATTRIBUTION_REQUIRED",
-            "publicDomain" => asset.LicenseStatus == "PUBLIC_DOMAIN",
-            "unknown" => asset.LicenseStatus == "UNKNOWN",
+            "knownOnly" => asset.RightsKnown,
+            "openlyLicensed" => asset.RightsKnown && asset.OpenLicense,
+            "publicDomain" => asset.RightsKnown && asset.PublicDomain,
             _ => true
         };
     }
 
     private bool DurationMatches(double? value) => Duration switch
     {
-        "under10" => value is >= 0 and < 10,
-        "tenTo30" => value is >= 10 and < 30,
-        "thirtyTo60" => value is >= 30 and < 60,
-        "over60" => value is >= 60,
+        "underMinute" => value is >= 0 and < 60,
+        "oneToFive" => value is >= 60 and < 300,
+        "fiveToTwenty" => value is >= 300 and < 1200,
+        "overTwenty" => value is >= 1200,
         _ => true
     };
 
@@ -593,6 +743,8 @@ public sealed class MainViewModel : ObservableObject
         if (ratio < 0.88) return "portrait";
         return "square";
     }
+
+    private static string Digits(string value) => new(value.Where(char.IsDigit).Take(4).ToArray());
 
     private void ApplySort()
     {
@@ -629,16 +781,27 @@ public sealed class MainViewModel : ObservableObject
             {
                 "pexels" or "pixabay" => T("provider.mode.directSearch"),
                 "youtube" => T("provider.mode.ytDLP"),
+                "nasa" or "libraryOfCongress" => T("provider.mode.publicAPI"),
+                "nationalArchives" or "europeana" => T("provider.mode.limited"),
                 _ => T("provider.mode.publicInterface")
             };
             provider.Status = hasKey ? T("settings.configured") :
-                provider.SupportsApiKey ? T("provider.bestEffort") : T("provider.available");
+                provider.Id is "nationalArchives" or "europeana" ? T("provider.limitedMode") :
+                provider.Id is "pexels" or "pixabay" or "youtube" ? T("provider.bestEffort") :
+                provider.Id is "nasa" or "libraryOfCongress" ? T("provider.noKeyRequired") :
+                T("provider.available");
+            var values = provider.Id is "nationalArchives" or "europeana" && !hasKey
+                ? new[] { T("provider.openOfficialSearch") }
+                : new[] { T("capability.search"), T("capability.preview"), T("capability.metadata"),
+                    T("capability.rights"), T("capability.download") };
+            provider.Capabilities = _localization.Text("settings.capabilities", string.Join(" · ", values));
         }
     }
 
     private string AvailabilityText(string value) => value switch
     {
         "apiConnected" => T("provider.apiConnected"), "bestEffort" => T("provider.bestEffort"),
+        "publicAPI" => T("provider.publicAPI"), "limitedMode" => T("provider.limitedMode"),
         "rateLimited" => T("provider.rateLimited"), "temporarilyBlocked" => T("provider.temporarilyBlocked"),
         "available" => T("provider.available"), _ => T("provider.unavailable")
     };
@@ -646,6 +809,7 @@ public sealed class MainViewModel : ObservableObject
     private string ModeText(string value) => value switch
     {
         "officialAPI" => $"{T("provider.mode.officialAPI")} · ✓ {T("settings.recommended")}",
+        "publicAPI" => T("provider.mode.publicAPI"), "limited" => T("provider.mode.limited"),
         "directSearch" => T("provider.mode.directSearch"),
         "ytDLP" => T("provider.mode.ytDLP"), _ => T("provider.mode.publicInterface")
     };

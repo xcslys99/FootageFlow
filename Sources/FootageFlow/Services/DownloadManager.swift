@@ -162,6 +162,14 @@ final class DownloadManager: NSObject, ObservableObject, URLSessionDownloadDeleg
   }
 
   @MainActor
+  func retryFailed() {
+    let identifiers = states.values
+      .filter { $0.status == .failed || $0.status == .cancelled }
+      .map(\.id)
+    for identifier in identifiers { retry(stableID: identifier) }
+  }
+
+  @MainActor
   func removeState(stableID: String) {
     guard let state = states[stableID], state.status != .waiting, state.status != .downloading
     else { return }

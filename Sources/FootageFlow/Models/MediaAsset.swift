@@ -2,6 +2,7 @@ import Foundation
 
 enum ProviderID: String, Codable, CaseIterable, Identifiable, Sendable {
   case pexels, pixabay, wikimedia, internetArchive, youtube
+  case nasa, libraryOfCongress, nationalArchives, europeana
 
   var id: String { rawValue }
   var displayName: String {
@@ -11,19 +12,27 @@ enum ProviderID: String, Codable, CaseIterable, Identifiable, Sendable {
     case .wikimedia: "Wikimedia"
     case .internetArchive: "Internet Archive"
     case .youtube: "YouTube"
+    case .nasa: "NASA"
+    case .libraryOfCongress: "Library of Congress"
+    case .nationalArchives: "National Archives"
+    case .europeana: "Europeana"
     }
   }
-  var requiresAPIKey: Bool { [.pexels, .pixabay, .youtube].contains(self) }
+  var supportsAPIKey: Bool {
+    [.pexels, .pixabay, .youtube, .nationalArchives, .europeana].contains(self)
+  }
+  var requiresAPIKey: Bool { [.nationalArchives, .europeana].contains(self) }
 }
 
 enum MediaType: String, Codable, CaseIterable, Identifiable, Sendable {
-  case all, video, image
+  case all, video, image, audio
   var id: String { rawValue }
   var label: String {
     switch self {
     case .all: tr("common.all")
     case .video: tr("common.video")
     case .image: tr("common.image")
+    case .audio: tr("common.audio")
     }
   }
 }
@@ -64,15 +73,15 @@ enum ResolutionFilter: String, Codable, CaseIterable, Identifiable, Sendable {
 }
 
 enum DurationFilter: String, Codable, CaseIterable, Identifiable, Sendable {
-  case all, under10, tenTo30, thirtyTo60, over60
+  case all, underMinute, oneToFive, fiveToTwenty, overTwenty
   var id: String { rawValue }
   var label: String {
     switch self {
     case .all: tr("common.all")
-    case .under10: tr("filter.under10")
-    case .tenTo30: tr("filter.tenTo30")
-    case .thirtyTo60: tr("filter.thirtyTo60")
-    case .over60: tr("filter.over60")
+    case .underMinute: tr("filter.underMinute")
+    case .oneToFive: tr("filter.oneToFive")
+    case .fiveToTwenty: tr("filter.fiveToTwenty")
+    case .overTwenty: tr("filter.overTwenty")
     }
   }
   func matches(_ duration: Double?) -> Bool {
@@ -80,10 +89,10 @@ enum DurationFilter: String, Codable, CaseIterable, Identifiable, Sendable {
     guard let duration else { return false }
     return switch self {
     case .all: true
-    case .under10: duration < 10
-    case .tenTo30: duration >= 10 && duration < 30
-    case .thirtyTo60: duration >= 30 && duration < 60
-    case .over60: duration >= 60
+    case .underMinute: duration < 60
+    case .oneToFive: duration >= 60 && duration < 300
+    case .fiveToTwenty: duration >= 300 && duration < 1_200
+    case .overTwenty: duration >= 1_200
     }
   }
 }
@@ -112,6 +121,39 @@ enum AssetDownloadStrategy: String, Codable, Sendable {
   case ytDLP
 }
 
+enum DownloadAvailability: String, Codable, Sendable {
+  case direct
+  case conditional
+  case unavailable
+}
+
+/// Rights facts supplied by the source. Unknown values remain nil/false by design.
+struct RightsInfo: Codable, Hashable, Sendable {
+  var statement: String?
+  var uri: URL?
+  var source: String?
+  var known: Bool
+  var publicDomain: Bool
+  var openLicense: Bool
+  var attributionRequired: Bool
+  var commercialUseKnown: Bool?
+
+  init(
+    statement: String?, uri: URL? = nil, source: String? = nil, known: Bool? = nil,
+    publicDomain: Bool = false, openLicense: Bool = false,
+    attributionRequired: Bool = false, commercialUseKnown: Bool? = nil
+  ) {
+    self.statement = statement?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
+    self.uri = uri
+    self.source = source
+    self.known = known ?? (self.statement != nil || uri != nil)
+    self.publicDomain = publicDomain
+    self.openLicense = openLicense
+    self.attributionRequired = attributionRequired
+    self.commercialUseKnown = commercialUseKnown
+  }
+}
+
 struct MediaAsset: Identifiable, Codable, Hashable, Sendable {
   let id: String
   let provider: ProviderID
@@ -136,9 +178,24 @@ struct MediaAsset: Identifiable, Codable, Hashable, Sendable {
   var searchKeyword: String
   var relevanceScore: Double
   var downloadStrategy: AssetDownloadStrategy? = nil
+  var rightsInfo: RightsInfo? = nil
+  var downloadAvailability: DownloadAvailability? = nil
 
   var stableID: String { "\(provider.rawValue):\(id)" }
   var effectiveDownloadStrategy: AssetDownloadStrategy { downloadStrategy ?? .directURL }
+  var effectiveDownloadAvailability: DownloadAvailability {
+    downloadAvailability ?? (downloadable && downloadURL != nil ? .direct : .unavailable)
+  }
+  var isDirectlyDownloadable: Bool { effectiveDownloadAvailability == .direct }
+  var effectiveRightsInfo: RightsInfo {
+    if let rightsInfo { return rightsInfo }
+    return RightsInfo(
+      statement: license, uri: licenseURL, source: provider.displayName,
+      known: licenseStatus != .unknown,
+      publicDomain: licenseStatus == .publicDomain,
+      openLicense: [.safe, .attributionRequired, .publicDomain].contains(licenseStatus),
+      attributionRequired: licenseStatus == .attributionRequired)
+  }
   var orientation: AssetOrientation {
     guard let width, let height, width > 0, height > 0 else { return .unknown }
     if abs(Double(width - height)) / Double(max(width, height)) < 0.08 { return .square }
@@ -159,5 +216,5 @@ struct MediaAsset: Identifiable, Codable, Hashable, Sendable {
 }
 
 extension String {
-  fileprivate var nilIfEmpty: String? { isEmpty ? nil : self }
+  var nilIfEmpty: String? { isEmpty ? nil : self }
 }

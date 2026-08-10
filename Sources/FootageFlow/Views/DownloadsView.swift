@@ -24,6 +24,9 @@ struct DownloadsView: View {
       HStack {
         Text(tr("download.title")).font(.largeTitle.bold())
         Spacer()
+        if currentItems.contains(where: { $0.status == .failed || $0.status == .cancelled }) {
+          Button(tr("download.retryFailed")) { downloads.retryFailed() }
+        }
         Text(tr("common.itemsCount", currentItems.count + store.downloads.count)).foregroundStyle(
           .secondary)
       }.padding()

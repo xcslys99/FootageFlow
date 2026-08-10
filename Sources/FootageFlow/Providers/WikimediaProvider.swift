@@ -11,6 +11,7 @@ struct WikimediaProvider: MediaProvider {
     capabilities: ProviderCapabilities(
       search: .supported, preview: .supported, metadata: .supported, license: .supported,
       download: .supported, supportsVideo: true, supportsImage: true,
+      supportsAudio: true,
       accessMethods: [.publicAPI, .publicInterface]))
 
   func search(_ request: SearchRequest) async throws -> [MediaAsset] {
@@ -45,8 +46,10 @@ struct WikimediaProvider: MediaProvider {
       else { return nil }
       let mime = image.mime ?? ""
       let type: MediaType
-      if mime.hasPrefix("video/") || mime == "application/ogg" {
+      if mime.hasPrefix("video/") {
         type = .video
+      } else if mime.hasPrefix("audio/") || mime == "application/ogg" {
+        type = .audio
       } else if mime.hasPrefix("image/") {
         type = .image
       } else {
@@ -64,7 +67,8 @@ struct WikimediaProvider: MediaProvider {
       let description = ProviderUtilities.cleanHTML(metadata["ImageDescription"]?.value)
       let thumbnail = URLValidator.remote(image.thumburl ?? image.url)
       let playablePreview =
-        type == .video && ["mp4", "m4v", "mov"].contains(original.pathExtension.lowercased())
+        (type == .video && ["mp4", "m4v", "mov"].contains(original.pathExtension.lowercased()))
+          || type == .audio
         ? original : (type == .image ? thumbnail : nil)
       return MediaAsset(
         id: String(page.pageid), provider: .wikimedia, title: title, description: description,

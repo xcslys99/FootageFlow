@@ -11,11 +11,11 @@
 - Apple Translation where available, with a rule-based fallback
 - A checksum-pinned yt-dlp macOS executable is bundled for local, best-effort YouTube interoperability; no FFmpeg binary is bundled
 
-FootageFlow v0.2.0 targets Apple Silicon macOS 15+ and Windows 11 x64. SwiftUI, AppKit, AVKit, Apple Translation, and Security.framework remain macOS-only. The Windows WPF layer calls a local Swift Core Host over JSON stdin/stdout so provider behavior, normalized models, license rules, keyword rules, sidecars, and the Codable project database remain single-source Swift implementations. Credentials never appear in command-line arguments.
+FootageFlow v0.3.0 targets Apple Silicon macOS 15+ and Windows 11 x64. SwiftUI, AppKit, AVKit, Apple Translation, and Security.framework remain macOS-only. The Windows WPF layer calls a local Swift Core Host over JSON stdin/stdout so all nine providers, normalized models, rights rules, advanced filters, attribution formatting, keyword rules, sidecars, and the Codable project database remain single-source Swift implementations. Credentials never appear in command-line arguments.
 
 ## Source layout
 
-- `Models/`: `MediaAsset`, filters, provider IDs, and the five-state license model.
+- `Models/`: `MediaAsset`, `RightsInfo`, advanced filters, provider IDs, download availability, and the five-state license model.
 - `Providers/`: independent implementations of the `MediaProvider` protocol.
 - `Networking/`: validated HTTPS requests, readable error mapping, cancellation, bounded retries, and rate-limit handling.
 - `Persistence/`: projects, script segments, favorites, history, and download metadata in an atomic Codable database.
@@ -23,7 +23,7 @@ FootageFlow v0.2.0 targets Apple Silicon macOS 15+ and Windows 11 x64. SwiftUI, 
 - `Platform/`: replaceable system paths, file/folder opening, file reveal, and directory selection.
 - `ViewModels/`: provider orchestration, progressive results, deduplication, filtering, and sorting.
 - `Views/`: macOS SwiftUI presentation only.
-- `Utilities/`: keyword rules, file naming, URL safety, acceptance tests, and offline self-tests.
+- `Utilities/`: keyword rules, attribution formatting, batch selection, file naming, URL safety, acceptance tests, and offline self-tests.
 - `Tests/`: XCTest cases and fixed provider fixtures.
 - `Windows/FootageFlow.Windows/`: WPF views plus Windows-only adapters for Credential Manager, dialogs, folder reveal, MediaElement preview, direct downloads, and yt-dlp process hosting.
 
@@ -33,7 +33,7 @@ Business logic must not import AppKit, SwiftUI, AVKit, Security, or Translation.
 
 `MediaProvider` exposes provider metadata, search, connection testing, detail lookup, and download resolution. `ProviderInfo` contains a `ProviderMode` and explicit `ProviderCapabilities` for search, preview, metadata, license, download, media type, and access methods. Capabilities can be supported, unavailable, or best-effort. Every provider maps its response into `MediaAsset`; unknown fields remain `nil`, and an absent license is always `UNKNOWN`.
 
-`ProviderFactory` makes the automatic per-provider decision. A non-empty Pexels or Pixabay key selects the official API; an empty key selects a direct-search provider. An API failure does not silently downgrade. The user may explicitly try direct search after a rate-limit error. YouTube similarly uses Data API search when configured and the local yt-dlp adapter when not configured. Provider searches remain independent tasks, so a timeout or block never discards successful results from other sources.
+`ProviderFactory` makes the automatic per-provider decision. A non-empty Pexels or Pixabay key selects the official API; an empty key selects a direct-search provider. An API failure does not silently downgrade. The user may explicitly try direct search after a rate-limit error. YouTube similarly uses Data API search when configured and the local yt-dlp adapter when not configured. NASA and Library of Congress use public official APIs without a key. National Archives and Europeana use their official APIs only with a user key; without one, `LimitedDiscoveryProvider` returns an official search URL and never scrapes HTML. Provider searches remain independent tasks, so a timeout or block never discards successful results from other sources.
 
 Current official interfaces:
 
@@ -42,7 +42,23 @@ Current official interfaces:
 - Wikimedia Commons: MediaWiki Action API using `generator=search`, `imageinfo`, and `extmetadata`.
 - Internet Archive: Advanced Search plus `/metadata/{identifier}` for item files and rights fields.
 - YouTube Data API v3: `search.list`, `part=snippet`, `type=video`; yt-dlp is an external-tool adapter for best-effort public search and downloading. It runs with `--ignore-config`, never imports browser cookies, uses bounded retries, and maps rate limits, unavailable videos, regional restrictions, and login-gated content into user-facing provider errors.
+- NASA Image and Video Library: `GET https://images-api.nasa.gov/search` plus the official per-item asset manifest. Video, image, audio, and year filters are sent to the service. HTTP asset links are normalized to HTTPS. NASA ownership alone never sets Public Domain.
+- Library of Congress: official `loc.gov` JSON collection search (`film-and-videos`, `photos`, or `audio-recordings`) and resource fields. Requests are spaced three seconds apart to remain within the published 20 JSON requests/minute limit. `download_restricted` resources never receive a download action.
+- National Archives: `GET https://catalog.archives.gov/api/v2/records/search` with the user's key in `x-api-key`. No key means limited official-search discovery. Normalized NARA search results bypass `SearchCache` because the current Catalog API documentation says API-returned content must not be cached or stored. Persisted user actions still retain the minimum selected/download attribution metadata the user asked FootageFlow to keep.
+- Europeana: Search API v2 with the user's key in `X-Api-Key`. No key means limited official-search discovery. Only video, image, and explicitly requested audio enter the media workflow; Documents/3D are not mapped.
 - Pexels/Pixabay direct mode reads only ordinary public result pages with a short timeout and no authentication, cookie import, CAPTCHA handling, Cloudflare bypass, or anti-bot parameter fabrication. A 403 is treated as a temporary block and suggests the optional official API mode.
+
+`ProviderRequestLimiter` centralizes minimum request spacing. `HTTPClient` uses an ephemeral session, bounded exponential retry for 429/5xx responses, readable errors, no cookies, and no URL cache. API keys are sent only in provider-required headers.
+
+## Rights, filtering, and batch behavior
+
+`RightsInfo` keeps the provider statement, URI, metadata source, known/public-domain/open-license/attribution facts, and optional commercial-use knowledge. Legacy v0.2.0 `MediaAsset` JSON without these fields remains decodable. Unknown data stays unknown; provider identity and download success never imply reuse rights.
+
+`AdvancedSearchFilter` composes source, media type, year, duration, resolution, rights, and `Downloadable Only`. The last option matches only `.direct`; YouTube and other conditional actions are deliberately excluded. A missing year, duration, resolution, or rights value does not pass a filter that requires that value.
+
+`AssetSelection` stores stable `provider:id` values and intersects the set with each new result collection, so a new search cannot act on stale cards. Both shells feed selected downloads into their existing maximum-three queues. Per-task failure does not stop the batch, and the Download Manager exposes Retry Failed.
+
+`AttributionFormatter` is shared by macOS, the Windows Core Host, result-card copy actions, batch source copying, and source sidecars. It omits missing optional fields and uses the localized unknown-rights warning rather than inventing a license.
 
 To add a provider:
 
@@ -79,13 +95,13 @@ dist/FootageFlow.app/Contents/MacOS/FootageFlow --self-test
 dist/FootageFlow.app/Contents/MacOS/FootageFlow --live-smoke
 ```
 
-`--self-test` is fully offline. `--live-smoke` searches Wikimedia Commons and Internet Archive and verifies no-key direct mode, including graceful direct-search blocking. `--acceptance-test <directory>` additionally downloads a small Public Domain fixture, creates both sidecars, checks persistence, and simulates a friendly network error.
+`--self-test` is fully offline. `--live-smoke` searches Wikimedia Commons, Internet Archive, NASA, and Library of Congress, and verifies the no-key/limited provider modes. `--acceptance-test <directory>` additionally downloads a small Public Domain fixture, creates both sidecars, checks persistence, and simulates a friendly network error. Fixed JSON fixtures cover all four v0.3.0 discovery providers; the Windows runner also executes Credential Manager, Core Host, download retry, sidecar, packaging, clean-install, GUI-startup, and uninstall tests.
 
 This Mac currently has Command Line Tools rather than full Xcode. Release builds and offline self-tests work locally, while `swift test` reports that XCTest is unavailable. GitHub Actions runs XCTest on a full Xcode image.
 
 ## Packaging
 
-`scripts/build_app.sh` builds a Release executable, downloads the fixed yt-dlp release only when it is not already cached, verifies its SHA-256, creates the `.app`, copies localized resources without embedding a developer path, generates the original FootageFlow icon, and performs Ad Hoc signing. `scripts/binary_privacy_scan.sh` scans the app executable and bundled tool for credential-like strings. `scripts/build_dmg.sh` creates the drag-to-Applications DMG and SHA-256 checksum. No Developer ID certificate or notarization is claimed for v0.2.0.
+`scripts/build_app.sh` builds a Release executable, downloads the fixed yt-dlp release only when it is not already cached, verifies its SHA-256, creates the `.app`, copies localized resources without embedding a developer path, generates the original FootageFlow icon, and performs Ad Hoc signing. `scripts/binary_privacy_scan.sh` scans the app executable and bundled tool for credential-like strings. `scripts/build_dmg.sh` creates the drag-to-Applications DMG and SHA-256 checksum. No Developer ID certificate or notarization is claimed for v0.3.0.
 
 ## Windows architecture
 
@@ -93,7 +109,7 @@ Windows development remains in this repository and shares the same release histo
 
 The platform split is deliberate:
 
-- Shared Swift: provider implementations and modes, networking, `MediaAsset`, capabilities, license state, keyword rules, deduplication, filename suggestions, source sidecars, and project/favorite/history/download metadata.
+- Shared Swift: all nine provider implementations and modes, networking/rate policy, `MediaAsset`, `RightsInfo`, capabilities, advanced filters, attribution, batch selection, keyword rules, deduplication, filename suggestions, source sidecars, and project/favorite/history/download metadata.
 - macOS: SwiftUI/AppKit/AVKit, Keychain, Apple Translation, Finder integration, and URLSession download presentation.
 - Windows: WPF/MediaElement, Credential Manager, Explorer/file dialogs, a bounded `HttpClient` download queue, and yt-dlp process execution. yt-dlp JSON is mapped back into `MediaAsset` by the shared Swift mapper.
 

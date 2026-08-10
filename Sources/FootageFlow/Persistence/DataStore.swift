@@ -46,6 +46,11 @@ final class DataStore: ObservableObject {
     synchronize()
   }
 
+  func addFavorite(asset: MediaAsset, projectID: UUID?, segmentIndex: Int? = nil) {
+    repository.addFavorite(asset: asset, projectID: projectID, segmentIndex: segmentIndex)
+    synchronize()
+  }
+
   func isFavorite(_ asset: MediaAsset, projectID: UUID?) -> Bool {
     repository.isFavorite(asset, projectID: projectID)
   }

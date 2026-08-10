@@ -11,11 +11,11 @@ actor SearchCache {
   }
 
   func assets(provider: ProviderID, request: SearchRequest) -> [MediaAsset]? {
+    guard case .allowed(let ttl) = ProviderPolicy.cachePolicy(for: provider) else { return nil }
     let url = fileURL(provider: provider, request: request)
     guard let attributes = try? FileManager.default.attributesOfItem(atPath: url.path),
       let modified = attributes[.modificationDate] as? Date
     else { return nil }
-    let ttl: TimeInterval = provider == .pixabay ? 86_400 : 1_800
     guard Date().timeIntervalSince(modified) < ttl, let data = try? Data(contentsOf: url) else {
       return nil
     }
@@ -23,6 +23,7 @@ actor SearchCache {
   }
 
   func store(_ assets: [MediaAsset], provider: ProviderID, request: SearchRequest) {
+    guard case .allowed = ProviderPolicy.cachePolicy(for: provider) else { return }
     guard let data = try? JSONEncoder().encode(assets) else { return }
     try? data.write(to: fileURL(provider: provider, request: request), options: .atomic)
   }
@@ -36,7 +37,7 @@ actor SearchCache {
 
   private func fileURL(provider: ProviderID, request: SearchRequest) -> URL {
     let raw =
-      "\(provider.rawValue)|\(request.query)|\(request.mediaType.rawValue)|\(request.orientation.rawValue)|\(request.resolution.rawValue)|\(request.duration.rawValue)"
+      "\(provider.rawValue)|\(request.query)|\(request.mediaType.rawValue)|\(request.orientation.rawValue)|\(request.resolution.rawValue)|\(request.duration.rawValue)|\(request.yearFrom.map(String.init) ?? "")|\(request.yearTo.map(String.init) ?? "")|\(request.downloadableOnly)"
     let hash = SHA256.hash(data: Data(raw.utf8)).map { String(format: "%02x", $0) }.joined()
     return directory.appendingPathComponent(hash).appendingPathExtension("json")
   }

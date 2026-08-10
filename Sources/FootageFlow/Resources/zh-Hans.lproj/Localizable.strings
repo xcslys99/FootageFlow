@@ -1,6 +1,8 @@
 "common.all" = "全部";
 "common.video" = "视频";
 "common.image" = "图片";
+"common.audio" = "音频";
+"common.notProvided" = "来源未提供";
 "common.unknown" = "未知";
 "common.unavailable" = "不可用";
 "common.cancel" = "取消";
@@ -55,6 +57,7 @@
 "license.unknown" = "授权未知";
 "license.restricted" = "受限制";
 "license.knownOnly" = "仅显示授权信息明确的素材";
+"license.openlyLicensed" = "开放授权";
 
 "filter.type" = "类型";
 "filter.orientation" = "方向";
@@ -70,6 +73,14 @@
 "filter.tenTo30" = "10–30秒";
 "filter.thirtyTo60" = "30–60秒";
 "filter.over60" = "≥60秒";
+"filter.underMinute" = "< 1分钟";
+"filter.oneToFive" = "1–5分钟";
+"filter.fiveToTwenty" = "5–20分钟";
+"filter.overTwenty" = "20分钟以上";
+"filter.advanced" = "高级筛选";
+"filter.yearFrom" = "起始年份";
+"filter.yearTo" = "结束年份";
+"filter.downloadableOnly" = "仅显示可直接下载";
 "sort.relevance" = "相关度";
 "sort.newest" = "最新";
 "sort.resolution" = "分辨率";
@@ -99,16 +110,23 @@
 "provider.unavailable" = "不可用";
 "provider.bestEffort" = "尽力提供";
 "provider.apiConnected" = "API 已连接";
+"provider.publicAPI" = "公开 API";
+"provider.noKeyRequired" = "无需 Key";
+"provider.limitedMode" = "受限模式";
 "provider.authenticationRequired" = "需要 API Key";
 "provider.rateLimited" = "请求受限";
 "provider.temporarilyBlocked" = "暂时受限";
 "provider.disabled" = "已停用";
 "provider.missingKey" = "%@：尚未配置 API Key";
 "provider.mode.officialAPI" = "官方 API";
+"provider.mode.publicAPI" = "官方公开 API";
 "provider.mode.publicInterface" = "公共接口";
+"provider.mode.limited" = "受限模式";
 "provider.mode.directSearch" = "直接搜索";
 "provider.mode.ytDLP" = "yt-dlp 尽力下载";
 "provider.tryDirectSearch" = "尝试直接搜索";
+"provider.limitedSearchMessage" = "%@ 当前为受限模式。配置 API Key 可在应用内完整搜索，也可以打开官方搜索页面。";
+"provider.openOfficialSearch" = "打开官方搜索";
 
 "error.invalidAPIKey" = "API Key 无效";
 "error.noNetwork" = "网络连接失败，请检查网络连接后重试。";
@@ -162,6 +180,7 @@
 "settings.openLogs" = "打开日志";
 "settings.logHelp" = "日志只记录来源、请求类型、HTTP 状态和错误类型，不记录 API Key。Pixabay 搜索结果按官方要求缓存 24 小时。";
 "settings.privacy" = "隐私";
+"settings.legal" = "法律说明";
 "settings.privacyBody" = "FootageFlow 不含分析、跟踪、广告或遥测 SDK。项目、文稿、收藏和下载历史只保存在当前设备，仅向启用的素材来源发送必要请求。API Key 保存在操作系统的安全凭据存储中。";
 "settings.apiKey" = "API Key";
 "settings.testConnection" = "测试连接";
@@ -173,10 +192,40 @@
 "settings.saveFailed" = "保存失败";
 "settings.savedKeychain" = "已保存到安全凭据存储";
 "settings.enabled" = "已启用";
+"settings.capabilities" = "能力：%@";
+"capability.search" = "搜索";
+"capability.preview" = "预览";
+"capability.metadata" = "元数据";
+"capability.rights" = "授权信息";
+"capability.download" = "下载";
 "settings.chooseDownloadFolder" = "选择下载目录";
 "settings.clearHistory" = "清空搜索历史";
 "settings.wikimediaDetail" = "Wikimedia Commons 官方 MediaWiki API";
 "settings.archiveDetail" = "Internet Archive 高级搜索和元数据 API";
+"settings.nasaDetail" = "NASA Image and Video Library 官方 API · 无需 API Key";
+"settings.locDetail" = "Library of Congress 官方 JSON API · 无需 API Key";
+"settings.naraLimitedDetail" = "尚未配置 API Key。受限模式只打开官方 Catalog 搜索；添加自己的 API Key 后可在应用内完整搜索。";
+"settings.europeanaLimitedDetail" = "尚未配置 API Key。添加自己的 API Key 可获得更完整的应用内搜索，也可以在浏览器打开 Europeana 搜索。";
+
+"selection.select" = "选择素材";
+"selection.selectAllVisible" = "选择当前显示";
+"selection.count" = "已选择 %d 项";
+"selection.downloadSelected" = "下载所选";
+"selection.addToProject" = "添加到项目";
+"selection.copySourceInfo" = "复制来源信息";
+"selection.clear" = "取消选择";
+
+"media.copySource" = "复制来源";
+"media.copyAttribution" = "复制署名信息";
+"attribution.title" = "标题";
+"attribution.provider" = "来源平台";
+"attribution.creator" = "作者";
+"attribution.date" = "日期";
+"attribution.source" = "来源";
+"attribution.originalURL" = "原始页面";
+"attribution.rights" = "版权 / 授权";
+"attribution.rightsURL" = "授权链接";
+"attribution.rightsUnknown" = "来源未提供明确信息，使用前请前往原始页面确认。";
 
 "project.title" = "我的项目";
 "project.all" = "全部项目";
@@ -229,6 +278,7 @@
 "download.saveFailed" = "保存文件失败";
 "download.retrying" = "下载中断，正在第 %d 次重试";
 "download.failed" = "下载失败，请稍后重试。";
+"download.retryFailed" = "重试失败项目";
 "download.rateLimited" = "请求过于频繁，请稍后再试。";
 "download.videoUnavailable" = "该 YouTube 视频当前不可用。";
 "download.regionalRestriction" = "该视频在当前地区不可用。";
@@ -274,6 +324,7 @@
 "sidecar.licenseName" = "License 名称";
 "sidecar.licenseURL" = "License 链接";
 "sidecar.licenseStatus" = "授权状态";
+"sidecar.rightsSource" = "授权元数据来源";
 "sidecar.searchKeyword" = "搜索关键词";
 "sidecar.downloadDate" = "下载日期时间";
 "sidecar.projectName" = "项目名称";

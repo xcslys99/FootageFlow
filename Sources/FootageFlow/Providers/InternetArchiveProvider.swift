@@ -11,6 +11,7 @@ struct InternetArchiveProvider: MediaProvider {
     capabilities: ProviderCapabilities(
       search: .supported, preview: .supported, metadata: .supported, license: .bestEffort,
       download: .bestEffort, supportsVideo: true, supportsImage: true,
+      supportsAudio: true,
       accessMethods: [.publicAPI, .publicInterface]))
 
   func search(_ request: SearchRequest) async throws -> [MediaAsset] {
@@ -18,7 +19,8 @@ struct InternetArchiveProvider: MediaProvider {
     switch request.mediaType {
     case .video: mediaClause = "mediatype:movies"
     case .image: mediaClause = "mediatype:image"
-    case .all: mediaClause = "(mediatype:movies OR mediatype:image)"
+    case .audio: mediaClause = "mediatype:audio"
+    case .all: mediaClause = "(mediatype:movies OR mediatype:image OR mediatype:audio)"
     }
     var items = [
       URLQueryItem(name: "q", value: "(\(request.query)) AND \(mediaClause)"),
@@ -82,13 +84,18 @@ struct InternetArchiveProvider: MediaProvider {
       let metadata = root["metadata"] as? [String: Any] ?? doc
       let files = root["files"] as? [[String: Any]] ?? []
       let mediatype = string(metadata["mediatype"]) ?? string(doc["mediatype"]) ?? ""
-      let type: MediaType = mediatype == "movies" ? .video : .image
+      let type: MediaType =
+        mediatype == "movies" ? .video : (mediatype == "audio" ? .audio : .image)
       let candidates = files.compactMap { file -> IAFile? in
         guard let name = string(file["name"]), !name.hasPrefix("_") else { return nil }
         let ext = URL(fileURLWithPath: name).pathExtension.lowercased()
         let video = ["mp4", "m4v", "mov", "webm", "ogv"].contains(ext)
         let image = ["jpg", "jpeg", "png", "tif", "tiff", "webp"].contains(ext)
-        guard (type == .video && video) || (type == .image && image) else { return nil }
+        let audio = ["mp3", "m4a", "wav", "flac", "ogg"].contains(ext)
+        guard
+          (type == .video && video) || (type == .image && image)
+            || (type == .audio && audio)
+        else { return nil }
         return IAFile(
           name: name, width: int(file["width"]), height: int(file["height"]),
           duration: duration(file["length"]), original: string(file["source"]) == "original",
@@ -123,8 +130,10 @@ struct InternetArchiveProvider: MediaProvider {
       let matches = tokens.filter { relevanceText.contains($0) }.count
       let relevance = tokens.isEmpty ? 0 : Double(matches) / Double(tokens.count)
       let previewURL =
-        type == .video
-        ? previewFile.flatMap { fileURL(identifier: identifier, name: $0.name) }
+        type == .video || type == .audio
+        ? (type == .audio ? chosen : previewFile).flatMap {
+          fileURL(identifier: identifier, name: $0.name)
+        }
         : (download ?? thumbnail)
       return MediaAsset(
         id: identifier, provider: .internetArchive, title: title, description: description,
