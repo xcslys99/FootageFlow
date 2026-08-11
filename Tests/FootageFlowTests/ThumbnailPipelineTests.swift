@@ -159,6 +159,16 @@ import Foundation
       do {
         guard let handler = Self.handler else { throw URLError(.badServerResponse) }
         let (response, data) = try handler(request)
+        if (300...399).contains(response.statusCode),
+          let location = response.value(forHTTPHeaderField: "Location"),
+          let redirectURL = URL(string: location, relativeTo: request.url)?.absoluteURL
+        {
+          client?.urlProtocol(
+            self,
+            wasRedirectedTo: URLRequest(url: redirectURL),
+            redirectResponse: response)
+          return
+        }
         client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
         if !data.isEmpty { client?.urlProtocol(self, didLoad: data) }
         client?.urlProtocolDidFinishLoading(self)
