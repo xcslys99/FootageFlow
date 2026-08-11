@@ -181,16 +181,18 @@ enum DirectSearchHTMLParser {
       let title =
         firstAttribute(["alt", "aria-label", "title"], in: body)
         ?? source.deletingPathExtension().lastPathComponent.replacingOccurrences(of: "-", with: " ")
-      let thumbnailText =
-        largestSource(in: body)
-        ?? firstAttribute(["poster", "data-lazy-src", "data-src", "src"], in: body)
-      let thumbnail = thumbnailText.flatMap { remoteResource($0, relativeTo: source) }
+      let thumbnailTexts =
+        [largestSource(in: body)]
+        + attributeValues(["poster", "data-lazy-src", "data-src", "src"], in: body)
+        .map(Optional.some)
+      let thumbnails = ThumbnailResolver.candidates(
+        provider: provider, rawValues: thumbnailTexts, originalPageURL: source)
       let direct =
         directMediaURL(in: body, relativeTo: source, expectedType: type)
-        ?? (type == .image ? thumbnail : nil)
+        ?? (type == .image ? thumbnails.first : nil)
       let dimensions = dimensions(in: body)
       return makeAsset(
-        provider: provider, source: source, direct: direct, thumbnail: thumbnail, type: type,
+        provider: provider, source: source, direct: direct, thumbnails: thumbnails, type: type,
         title: unescape(title), creator: nil, width: dimensions.0, height: dimensions.1,
         duration: nil, query: query, rank: index)
     }
@@ -207,25 +209,29 @@ enum DirectSearchHTMLParser {
       assetType(source, provider: provider) != nil
     else { return nil }
     let directText = string(dictionary["contentUrl"]) ?? string(dictionary["contentURL"])
-    let thumbnailText =
-      string(dictionary["thumbnailUrl"])
-      ?? string(dictionary["thumbnailURL"]) ?? string(dictionary["image"])
+    let thumbnailTexts =
+      strings(dictionary["thumbnailUrl"])
+      + strings(dictionary["thumbnailURL"])
+      + strings(dictionary["image"])
+      + strings(dictionary["poster"])
     let direct = directText.flatMap { remoteResource($0, relativeTo: source) }
-    let thumbnail = thumbnailText.flatMap { remoteResource($0, relativeTo: source) }
+    let thumbnails = ThumbnailResolver.candidates(
+      provider: provider, rawValues: thumbnailTexts.map(Optional.some), originalPageURL: source)
     let author = dictionary["author"] as? [String: Any]
     let creator = string(author?["name"]) ?? string(dictionary["creator"])
     let title =
       string(dictionary["name"]) ?? string(dictionary["caption"])
       ?? source.lastPathComponent.replacingOccurrences(of: "-", with: " ")
     return makeAsset(
-      provider: provider, source: source, direct: direct ?? (inferred == .image ? thumbnail : nil),
-      thumbnail: thumbnail, type: inferred, title: unescape(title), creator: creator,
+      provider: provider, source: source,
+      direct: direct ?? (inferred == .image ? thumbnails.first : nil),
+      thumbnails: thumbnails, type: inferred, title: unescape(title), creator: creator,
       width: integer(dictionary["width"]), height: integer(dictionary["height"]),
       duration: isoDuration(string(dictionary["duration"])), query: query, rank: 0)
   }
 
   private static func makeAsset(
-    provider: ProviderID, source: URL, direct: URL?, thumbnail: URL?, type: MediaType,
+    provider: ProviderID, source: URL, direct: URL?, thumbnails: [URL], type: MediaType,
     title: String, creator: String?, width: Int?, height: Int?, duration: Double?, query: String,
     rank: Int
   ) -> MediaAsset {
@@ -237,14 +243,15 @@ enum DirectSearchHTMLParser {
       provider == .pexels
         ? "https://www.pexels.com/license/" : "https://pixabay.com/service/license-summary/")
     return MediaAsset(
-      id: id, provider: provider, title: title, description: nil, thumbnailURL: thumbnail,
-      previewURL: type == .video ? direct : (thumbnail ?? direct), downloadURL: direct,
+      id: id, provider: provider, title: title, description: nil,
+      thumbnailURL: thumbnails.first,
+      previewURL: type == .video ? direct : (thumbnails.first ?? direct), downloadURL: direct,
       sourcePageURL: source, creator: creator, license: licenseName, licenseURL: licenseURL,
       licenseStatus: .unknown, width: width, height: height, duration: duration,
       fileType: direct.map { fileType($0, mediaType: type) }, mediaType: type,
       publishedDate: nil, downloadable: direct != nil,
       originalMetadata: ["accessMode": ProviderMode.directSearch.rawValue], searchKeyword: query,
-      relevanceScore: 0.8 - Double(rank) * 0.01)
+      relevanceScore: 0.8 - Double(rank) * 0.01, thumbnailCandidates: thumbnails)
   }
 
   private static func assetType(_ url: URL, provider: ProviderID) -> MediaType? {
@@ -324,6 +331,14 @@ enum DirectSearchHTMLParser {
     return nil
   }
 
+  private static func attributeValues(_ names: [String], in html: String) -> [String] {
+    names.flatMap { name in
+      let pattern =
+        "(?i)\\b\(NSRegularExpression.escapedPattern(for: name))\\s*=\\s*[\"']([^\"']+)[\"']"
+      return matches(pattern, in: html)
+    }
+  }
+
   private static func collectDictionaries(_ value: Any, into output: inout [[String: Any]]) {
     if let dictionary = value as? [String: Any] {
       output.append(dictionary)
@@ -338,6 +353,17 @@ enum DirectSearchHTMLParser {
     if let value = value as? [String] { return value.first }
     if let value = value as? [String: Any] { return string(value["url"]) ?? string(value["name"]) }
     return nil
+  }
+
+  private static func strings(_ value: Any?) -> [String] {
+    if let value = value as? String { return [value] }
+    if let values = value as? [String] { return values }
+    if let values = value as? [Any] { return values.flatMap(strings) }
+    if let value = value as? [String: Any] {
+      return ["url", "contentUrl", "thumbnailUrl", "fileUrl"]
+        .flatMap { strings(value[$0]) }
+    }
+    return []
   }
 
   private static func integer(_ value: Any?) -> Int? {

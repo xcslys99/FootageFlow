@@ -56,14 +56,16 @@ struct VimeoProvider: MediaProvider {
   static func asset(_ item: VimeoVideo, query: String, index: Int) -> MediaAsset? {
     guard let source = URLValidator.remote(item.link) else { return nil }
     let rights = vimeoRights(item.license)
-    let thumbnail = item.pictures?.sizes.max {
-      ($0.width ?? 0) * ($0.height ?? 0) < ($1.width ?? 0) * ($1.height ?? 0)
+    let orderedPictures = (item.pictures?.sizes ?? []).sorted {
+      ($0.width ?? 0) * ($0.height ?? 0) > ($1.width ?? 0) * ($1.height ?? 0)
     }
+    let thumbnails = ThumbnailResolver.candidates(
+      provider: .vimeo, rawValues: orderedPictures.map(\.link), originalPageURL: source)
     let id = item.uri.split(separator: "/").last.map(String.init) ?? item.uri
     return MediaAsset(
       id: id, provider: .vimeo, title: item.name,
       description: ProviderUtilities.cleanHTML(item.description),
-      thumbnailURL: URLValidator.remote(thumbnail?.link), previewURL: nil, downloadURL: nil,
+      thumbnailURL: thumbnails.first, previewURL: nil, downloadURL: nil,
       sourcePageURL: source, creator: item.user?.name, license: rights.statement,
       licenseURL: rights.uri, licenseStatus: vimeoLicenseStatus(item.license),
       width: item.width, height: item.height, duration: item.duration, fileType: "Vimeo",
@@ -74,7 +76,8 @@ struct VimeoProvider: MediaProvider {
         "privacyDownload": item.privacy?.download.map(String.init) ?? "unknown",
         "discoveryOnly": "true",
       ], searchKeyword: query, relevanceScore: 1 - Double(index) * 0.01,
-      rightsInfo: rights, downloadAvailability: .unavailable)
+      rightsInfo: rights, downloadAvailability: .unavailable,
+      thumbnailCandidates: thumbnails)
   }
 }
 

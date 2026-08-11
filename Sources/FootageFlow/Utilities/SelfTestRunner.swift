@@ -22,6 +22,35 @@ enum SelfTestRunner {
     check(
       !URLValidator.isSafeRemote(URL(string: "http://example.com/media.mp4")),
       "Unsafe URL rejection")
+    let peerThumbnail = ThumbnailResolver.candidates(
+      provider: .peertube, rawValues: ["/lazy-static/thumbnails/video.jpg"],
+      originalPageURL: URL(string: "https://sepiasearch.org/w/video"),
+      instanceURL: URL(string: "https://video.peer.example"))
+    check(
+      peerThumbnail.first?.absoluteString
+        == "https://video.peer.example/lazy-static/thumbnails/video.jpg",
+      "PeerTube instance thumbnail resolution")
+    check(
+      ThumbnailResolver.resolve("//cdn.example.com/a.jpg", relativeTo: nil)?.absoluteString
+        == "https://cdn.example.com/a.jpg",
+      "Protocol-relative thumbnail resolution")
+    check(
+      ThumbnailResolver.resolve("not a URL", relativeTo: nil) == nil,
+      "Malformed thumbnail rejection")
+    check(
+      ThumbnailImageFormat.detect(data: Data([0xFF, 0xD8, 0xFF]), contentType: nil) == .jpeg,
+      "JPEG thumbnail detection")
+    check(
+      ThumbnailImageFormat.detect(data: Data("RIFF0000WEBP".utf8), contentType: nil) == .webp,
+      "WebP thumbnail detection")
+    check(
+      ThumbnailImageFormat.detect(
+        data: Data([0, 0, 0, 20] + Array("ftypavif".utf8)), contentType: nil) == .avif,
+      "AVIF thumbnail detection")
+    check(
+      ThumbnailResponseValidator.validate(
+        status: 200, contentType: "text/html", data: Data("<html>404</html>".utf8)) == nil,
+      "Thumbnail HTML rejection")
     check(
       !AppLogger.redact("Authorization: Bearer secret-token-value").contains(
         "secret-token-value"),
@@ -141,6 +170,9 @@ enum SelfTestRunner {
             && recommendation.contains("Europeana")
             && recommendation.contains("YouTube"),
           "\(language.rawValue) API recommendation")
+        check(
+          localization.text("media.retryThumbnail") != "media.retryThumbnail",
+          "\(language.rawValue) thumbnail retry localization")
       }
       localization.setLanguage(.simplifiedChinese)
       check(localization.text("nav.quickSearch") == "快速搜索", "Chinese localization")

@@ -92,7 +92,11 @@ struct LibraryOfCongressProvider: MediaProvider {
       case .image: secure(firstString(item["image_url"]))
       case .all: nil
       }
-    let thumbnail = secure(locString(resource["image"])) ?? secure(firstString(item["image_url"]))
+    let thumbnails = ThumbnailResolver.candidates(
+      provider: .libraryOfCongress,
+      rawValues: strings(item["image_url"]) + [locString(resource["image"])],
+      originalPageURL: source)
+    let thumbnail = thumbnails.first
     let advisory =
       firstString(item["rights_advisory"])
       ?? firstString(item["rights_information"]) ?? firstString(item["rights"])
@@ -121,7 +125,8 @@ struct LibraryOfCongressProvider: MediaProvider {
         "onlineFormat": strings(item["online_format"]).joined(separator: ", "),
         "downloadRestricted": String(restricted),
       ], searchKeyword: request.query, relevanceScore: 1 - Double(index) * 0.01,
-      rightsInfo: rights, downloadAvailability: direct == nil ? .unavailable : .direct)
+      rightsInfo: rights, downloadAvailability: direct == nil ? .unavailable : .direct,
+      thumbnailCandidates: thumbnails)
   }
 
   private static func mediaType(item: [String: Any], resources: [[String: Any]]) -> MediaType {

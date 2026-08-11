@@ -79,7 +79,9 @@ struct WikimediaProvider: MediaProvider {
         ProviderUtilities.cleanHTML(metadata["ObjectName"]?.value)
         ?? page.title.replacingOccurrences(of: "File:", with: "")
       let description = ProviderUtilities.cleanHTML(metadata["ImageDescription"]?.value)
-      let thumbnail = URLValidator.remote(image.thumburl ?? image.url)
+      let thumbnails = ThumbnailResolver.candidates(
+        provider: .wikimedia, rawValues: [image.thumburl, image.url], originalPageURL: source)
+      let thumbnail = thumbnails.first
       let playablePreview =
         (type == .video && ["mp4", "m4v", "mov"].contains(original.pathExtension.lowercased()))
           || type == .audio
@@ -97,7 +99,8 @@ struct WikimediaProvider: MediaProvider {
         originalMetadata: [
           "credit": ProviderUtilities.cleanHTML(metadata["Credit"]?.value) ?? "",
           "uploader": image.user ?? "",
-        ], searchKeyword: request.query, relevanceScore: 1 - Double(index) * 0.01)
+        ], searchKeyword: request.query, relevanceScore: 1 - Double(index) * 0.01,
+        thumbnailCandidates: thumbnails)
     }
     let next = response.continuation.flatMap { value -> ProviderContinuation? in
       guard let offset = value.gsrOffset else { return nil }

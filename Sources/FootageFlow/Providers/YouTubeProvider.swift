@@ -47,16 +47,24 @@ struct YouTubeProvider: MediaProvider {
       let thumb =
         item.snippet.thumbnails.high ?? item.snippet.thumbnails.medium
         ?? item.snippet.thumbnails.defaultValue
+      let thumbnails = ThumbnailResolver.candidates(
+        provider: .youtube,
+        rawValues: [
+          item.snippet.thumbnails.high?.url, item.snippet.thumbnails.medium?.url,
+          item.snippet.thumbnails.defaultValue?.url,
+          "https://i.ytimg.com/vi/\(videoID)/hqdefault.jpg",
+          "https://i.ytimg.com/vi/\(videoID)/mqdefault.jpg",
+        ], originalPageURL: page)
       return MediaAsset(
         id: videoID, provider: .youtube, title: item.snippet.title,
-        description: item.snippet.description, thumbnailURL: URLValidator.remote(thumb?.url),
+        description: item.snippet.description, thumbnailURL: thumbnails.first,
         previewURL: nil, downloadURL: page, sourcePageURL: page, creator: item.snippet.channelTitle,
         license: nil, licenseURL: nil, licenseStatus: .unknown, width: thumb?.width,
         height: thumb?.height, duration: nil, fileType: "YouTube", mediaType: .video,
         publishedDate: ProviderUtilities.parseDate(item.snippet.publishedAt), downloadable: true,
         originalMetadata: ["channelID": item.snippet.channelId], searchKeyword: request.query,
         relevanceScore: 1 - Double(index) * 0.01, downloadStrategy: .ytDLP,
-        downloadAvailability: .conditional)
+        downloadAvailability: .conditional, thumbnailCandidates: thumbnails)
     }
     return ProviderPage(
       assets: assets,

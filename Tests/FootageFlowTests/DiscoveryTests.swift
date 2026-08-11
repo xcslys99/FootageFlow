@@ -155,6 +155,7 @@ import Foundation
         JSONSerialization.jsonObject(with: JSONEncoder().encode(sampleAsset())) as? [String: Any])
       object.removeValue(forKey: "rightsInfo")
       object.removeValue(forKey: "downloadAvailability")
+      object.removeValue(forKey: "thumbnailCandidates")
       let legacy = try JSONSerialization.data(withJSONObject: object)
       let decoded = try JSONDecoder().decode(MediaAsset.self, from: legacy)
       #expect(decoded.id == "1")

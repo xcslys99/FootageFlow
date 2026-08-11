@@ -47,6 +47,84 @@ Check(!WindowsPathSafety.SanitizeName("bank:run?.mp4").Contains(':'), "Windows i
 Check(WindowsPathSafety.SanitizeName(new string('a', 200)).Length == 80, "Windows filename length");
 Check(WindowsPathSafety.SanitizeName("阿根廷 银行").Contains("阿根廷"), "Chinese filename preservation");
 
+var peerThumbnails = ThumbnailUrlNormalizer.Normalize(
+    "peertube", ["/lazy-static/thumbnails/video.jpg"],
+    "https://sepiasearch.org/w/video",
+    new Dictionary<string, string> { ["instanceHost"] = "video.peer.example" });
+Check(peerThumbnails.Single() == "https://video.peer.example/lazy-static/thumbnails/video.jpg",
+    "PeerTube relative thumbnail uses the video instance");
+Check(ThumbnailUrlNormalizer.NormalizeOne("//cdn.example.com/a.jpg") == "https://cdn.example.com/a.jpg",
+    "Protocol-relative thumbnail normalization");
+Check(ThumbnailUrlNormalizer.NormalizeOne("http://cdn.example.com/a.jpg") == "https://cdn.example.com/a.jpg",
+    "Thumbnail HTTPS upgrade");
+Check(ThumbnailUrlNormalizer.NormalizeOne("not a URL") is null, "Malformed thumbnail rejection");
+
+var jpegBytes = new byte[] { 0xFF, 0xD8, 0xFF, 0xD9 };
+var pngBytes = new byte[] { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A };
+Check(ThumbnailLoaderService.DetectFormat(jpegBytes) == ThumbnailImageFormat.Jpeg, "JPEG signature detection");
+Check(ThumbnailLoaderService.DetectFormat(pngBytes) == ThumbnailImageFormat.Png, "PNG signature detection");
+Check(ThumbnailLoaderService.DetectFormat("RIFF0000WEBP"u8.ToArray()) == ThumbnailImageFormat.WebP,
+    "WebP signature detection");
+Check(ThumbnailLoaderService.DetectFormat(new byte[] { 0, 0, 0, 20 }.Concat("ftypavif"u8.ToArray()).ToArray()) == ThumbnailImageFormat.Avif,
+    "AVIF signature detection");
+Check(ThumbnailLoaderService.DetectFormat("GIF89a"u8.ToArray()) == ThumbnailImageFormat.Gif,
+    "GIF signature detection");
+
+var thumbnailHandler = new ThumbnailTestHandler((request, _) =>
+{
+    if (request.RequestUri?.AbsolutePath == "/redirect")
+        return Response(HttpStatusCode.Redirect, location: "/image.jpg");
+    if (request.RequestUri?.AbsolutePath == "/image.jpg")
+        return Response(HttpStatusCode.OK, jpegBytes, "image/jpeg");
+    if (request.RequestUri?.AbsolutePath == "/forbidden") return Response(HttpStatusCode.Forbidden);
+    if (request.RequestUri?.AbsolutePath == "/missing") return Response(HttpStatusCode.NotFound);
+    if (request.RequestUri?.AbsolutePath == "/limited") return Response(HttpStatusCode.TooManyRequests);
+    return Response(HttpStatusCode.OK, "<html>error</html>"u8.ToArray(), "text/html");
+});
+using (var thumbnailLoader = new ThumbnailLoaderService(thumbnailHandler))
+{
+    var redirected = await thumbnailLoader.LoadOneAsync("https://thumbnail.test/redirect");
+    Check(redirected.Format == ThumbnailImageFormat.Jpeg && thumbnailHandler.Attempts == 2,
+        "Windows thumbnail redirect handling");
+    var cached = await thumbnailLoader.LoadOneAsync("https://thumbnail.test/redirect");
+    Check(cached.FromCache && thumbnailHandler.Attempts == 2, "Windows thumbnail cache hit");
+    try { await thumbnailLoader.LoadOneAsync("https://thumbnail.test/forbidden"); failures.Add("Thumbnail HTTP 403 classification"); }
+    catch (ThumbnailLoadException error) { Check(error.StatusCode == 403, "Thumbnail HTTP 403 classification"); }
+    try { await thumbnailLoader.LoadOneAsync("https://thumbnail.test/missing"); failures.Add("Thumbnail HTTP 404 classification"); }
+    catch (ThumbnailLoadException error) { Check(error.StatusCode == 404, "Thumbnail HTTP 404 classification"); }
+    try { await thumbnailLoader.LoadOneAsync("https://thumbnail.test/limited"); failures.Add("Thumbnail HTTP 429 classification"); }
+    catch (ThumbnailLoadException error) { Check(error.StatusCode == 429, "Thumbnail HTTP 429 classification"); }
+}
+
+var fallbackHandler = new ThumbnailTestHandler((_, attempt) =>
+    attempt == 1 ? Response(HttpStatusCode.NotFound) : Response(HttpStatusCode.OK, pngBytes, "image/png"));
+using (var thumbnailLoader = new ThumbnailLoaderService(fallbackHandler))
+{
+    var fallback = await thumbnailLoader.LoadFirstAsync(
+        ["https://thumbnail.test/missing", "https://thumbnail.test/fallback.png"]);
+    Check(fallback.Format == ThumbnailImageFormat.Png && fallbackHandler.Attempts == 2,
+        "Thumbnail candidate fallback after HTTP 404");
+}
+
+var failedCacheHandler = new ThumbnailTestHandler((_, attempt) =>
+    attempt == 1 ? Response(HttpStatusCode.NotFound) : Response(HttpStatusCode.OK, jpegBytes, "image/jpeg"));
+using (var thumbnailLoader = new ThumbnailLoaderService(failedCacheHandler))
+{
+    try { await thumbnailLoader.LoadOneAsync("https://thumbnail.test/recover"); } catch { }
+    try { await thumbnailLoader.LoadOneAsync("https://thumbnail.test/recover"); } catch { }
+    Check(failedCacheHandler.Attempts == 1, "Failed thumbnail cache uses short suppression");
+    var recovered = await thumbnailLoader.LoadOneAsync("https://thumbnail.test/recover", forceRetry: true);
+    Check(recovered.Format == ThumbnailImageFormat.Jpeg && failedCacheHandler.Attempts == 2,
+        "Failed thumbnail cache supports explicit retry");
+}
+
+var timeoutHandler = new ThumbnailTestHandler((_, _) => throw new TaskCanceledException("simulated timeout"));
+using (var thumbnailLoader = new ThumbnailLoaderService(timeoutHandler))
+{
+    try { await thumbnailLoader.LoadOneAsync("https://thumbnail.test/timeout"); failures.Add("Thumbnail timeout classification"); }
+    catch (ThumbnailLoadException error) { Check(error.Reason == "timeout", "Thumbnail timeout classification"); }
+}
+
 var media = new MediaAsset
 {
     Id = "fixture", Provider = "wikimedia", Title = "Fixture", SourcePageURL = "https://example.com/source",
@@ -211,6 +289,15 @@ Console.WriteLine($"WINDOWS_SELF_TEST passed={passed} failed={failures.Count}");
 foreach (var failure in failures) Console.WriteLine("FAIL " + failure);
 return failures.Count == 0 ? 0 : 1;
 
+static HttpResponseMessage Response(
+    HttpStatusCode status, byte[]? data = null, string? contentType = null, string? location = null)
+{
+    var response = new HttpResponseMessage(status) { Content = new ByteArrayContent(data ?? []) };
+    if (contentType is not null) response.Content.Headers.ContentType = new(contentType);
+    if (location is not null) response.Headers.Location = new Uri(location, UriKind.RelativeOrAbsolute);
+    return response;
+}
+
 static async Task WaitForStateAsync(DownloadTaskItem item, string expected, TimeSpan timeout)
 {
     var deadline = DateTime.UtcNow + timeout;
@@ -240,6 +327,19 @@ sealed class RetryDownloadHandler : HttpMessageHandler
         };
         response.Content.Headers.ContentLength = 28;
         return Task.FromResult(response);
+    }
+}
+
+sealed class ThumbnailTestHandler(Func<HttpRequestMessage, int, HttpResponseMessage> response) : HttpMessageHandler
+{
+    private int _attempts;
+    public int Attempts => Volatile.Read(ref _attempts);
+
+    protected override Task<HttpResponseMessage> SendAsync(
+        HttpRequestMessage request, CancellationToken cancellationToken)
+    {
+        var attempt = Interlocked.Increment(ref _attempts);
+        return Task.FromResult(response(request, attempt));
     }
 }
 

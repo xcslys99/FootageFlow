@@ -138,7 +138,13 @@ struct InternetArchiveProvider: MediaProvider {
         string(metadata["description"]) ?? string(doc["description"]))
       let creator = string(metadata["creator"]) ?? string(doc["creator"])
       let dateText = string(metadata["date"]) ?? string(doc["date"]) ?? string(doc["year"])
-      let thumbnail = URLValidator.remote("https://archive.org/services/img/\(encoded)")
+      let thumbnails = ThumbnailResolver.candidates(
+        provider: .internetArchive,
+        rawValues: [
+          "https://archive.org/services/img/\(encoded)",
+          "https://archive.org/download/\(encoded)/__ia_thumb.jpg",
+        ], originalPageURL: source)
+      let thumbnail = thumbnails.first
       let relevanceText = "\(title) \(description ?? "")".lowercased()
       let tokens = request.query.lowercased().split(whereSeparator: { !$0.isLetter && !$0.isNumber }
       ).map(String.init).filter { $0.count > 2 }
@@ -162,7 +168,8 @@ struct InternetArchiveProvider: MediaProvider {
         mediaType: type, publishedDate: ProviderUtilities.parseDate(dateText),
         downloadable: download != nil,
         originalMetadata: ["identifier": identifier, "rights": rights ?? ""],
-        searchKeyword: request.query, relevanceScore: relevance + (1 - Double(rank) * 0.01) * 0.1)
+        searchKeyword: request.query, relevanceScore: relevance + (1 - Double(rank) * 0.01) * 0.1,
+        thumbnailCandidates: thumbnails)
     } catch { return nil }
   }
 

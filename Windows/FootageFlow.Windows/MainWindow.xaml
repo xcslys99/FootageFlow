@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:models="clr-namespace:FootageFlow.Windows.Models"
         xmlns:infrastructure="clr-namespace:FootageFlow.Windows.Infrastructure"
+        xmlns:controls="clr-namespace:FootageFlow.Windows.Controls"
         Title="FootageFlow" Width="1380" Height="880" MinWidth="1080" MinHeight="700"
         WindowStartupLocation="CenterScreen" Background="#FAFBFC"
         Icon="Assets/FootageFlow.png">
@@ -54,7 +55,10 @@
             <RowDefinition Height="164" /><RowDefinition Height="Auto" />
           </Grid.RowDefinitions>
           <Border Background="#E9EDF2" CornerRadius="8,8,0,0" ClipToBounds="True">
-            <Image Source="{Binding ThumbnailURL}" Stretch="UniformToFill" />
+            <controls:RemoteThumbnail
+              SourceURL="{Binding ThumbnailURL}" CandidateURLs="{Binding EffectiveThumbnailURLs}"
+              FailureText="{Binding DataContext.ThumbnailUnavailableText, RelativeSource={RelativeSource AncestorType=Window}}"
+              RetryText="{Binding DataContext.RetryThumbnailText, RelativeSource={RelativeSource AncestorType=Window}}" />
           </Border>
           <CheckBox IsChecked="{Binding IsSelected}" HorizontalAlignment="Right" VerticalAlignment="Top"
                     Margin="10" Width="24" Height="24" ToolTip="{Binding DataContext.SelectAllVisibleText, RelativeSource={RelativeSource AncestorType=Window}}" />
@@ -236,7 +240,7 @@
                     <Grid>
                       <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="180" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
                       <CheckBox IsChecked="{Binding IsSelected}" IsEnabled="{Binding IsReady}" VerticalAlignment="Top" Margin="0,4,10,0" />
-                      <Border Grid.Column="1" Height="102" Background="#E9EDF2" CornerRadius="6" ClipToBounds="True"><Image Source="{Binding ThumbnailURL}" Stretch="UniformToFill" /></Border>
+                      <Border Grid.Column="1" Height="102" Background="#E9EDF2" CornerRadius="6" ClipToBounds="True"><controls:RemoteThumbnail SourceURL="{Binding ThumbnailURL}" FailureText="{Binding DataContext.ThumbnailUnavailableText, RelativeSource={RelativeSource AncestorType=Window}}" RetryText="{Binding DataContext.RetryThumbnailText, RelativeSource={RelativeSource AncestorType=Window}}" /></Border>
                       <StackPanel Grid.Column="2" Margin="14,0">
                         <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextWrapping="Wrap" MaxHeight="42" />
                         <TextBlock Text="{Binding SourceSummary}" Foreground="{StaticResource SubtleTextBrush}" Margin="0,4" />

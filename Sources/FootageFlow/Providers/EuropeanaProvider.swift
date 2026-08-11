@@ -70,7 +70,10 @@ struct EuropeanaProvider: MediaProvider {
       ?? URLValidator.remote("https://www.europeana.eu/item\(item.id)")
     guard let source else { return nil }
     let direct = (item.edmIsShownBy ?? []).compactMap(URLValidator.remote).first(where: mediaURL)
-    let thumbnail = (item.edmPreview ?? []).compactMap(URLValidator.remote).first
+    let rawThumbnails = (item.edmPreview ?? []) + (type == .image ? (item.edmIsShownBy ?? []) : [])
+    let thumbnails = ThumbnailResolver.candidates(
+      provider: .europeana, rawValues: rawThumbnails, originalPageURL: source)
+    let thumbnail = thumbnails.first
     let rightsText = (item.edmRights ?? item.rights ?? []).first
     let rightsURL = URLValidator.remote(rightsText)
     let rightsName = ProviderUtilities.licenseName(name: rightsText, url: rightsText)
@@ -95,7 +98,8 @@ struct EuropeanaProvider: MediaProvider {
         "dataProvider": item.dataProvider?.first ?? "",
         "country": item.country?.first ?? "",
       ], searchKeyword: query, relevanceScore: 1 - Double(index) * 0.01,
-      rightsInfo: rights, downloadAvailability: direct == nil ? .unavailable : .direct)
+      rightsInfo: rights, downloadAvailability: direct == nil ? .unavailable : .direct,
+      thumbnailCandidates: thumbnails)
   }
 
   private static func mediaURL(_ url: URL) -> Bool {

@@ -94,8 +94,14 @@ struct NationalArchivesProvider: MediaProvider {
       ?? candidates.first
     let type = requested?.1 ?? naraMediaType(record: record) ?? .image
     if request.mediaType != .all && request.mediaType != type { return nil }
-    let thumbnail = objects.compactMap { naraURL($0["thumbnailLink"] ?? $0["thumbnailUrl"]) }.first
+    var rawThumbnails = objects.compactMap {
+      naraString($0["thumbnailLink"] ?? $0["thumbnailUrl"] ?? $0["previewUrl"])
+    }
     let direct = requested?.0
+    if type == .image, let direct { rawThumbnails.append(direct.absoluteString) }
+    let thumbnails = ThumbnailResolver.candidates(
+      provider: .nationalArchives, rawValues: rawThumbnails, originalPageURL: source)
+    let thumbnail = thumbnails.first
     let restriction =
       naraNestedString(record["useRestriction"], keys: ["status", "note"])
       ?? naraNestedString(record["accessRestriction"], keys: ["status", "note"])
@@ -122,7 +128,8 @@ struct NationalArchivesProvider: MediaProvider {
         "naId": naID, "disclaimer": ProviderPolicy.nationalArchivesNotice,
         "accessRestriction": naraNestedString(record["accessRestriction"], keys: ["status"]) ?? "",
       ], searchKeyword: request.query, relevanceScore: 1 - Double(index) * 0.01,
-      rightsInfo: rights, downloadAvailability: direct == nil ? .unavailable : .direct)
+      rightsInfo: rights, downloadAvailability: direct == nil ? .unavailable : .direct,
+      thumbnailCandidates: thumbnails)
   }
 }
 

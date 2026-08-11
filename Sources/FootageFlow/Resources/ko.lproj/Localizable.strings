@@ -53,6 +53,8 @@
 "media.unmute" = "음소거 해제";
 "media.previewUnavailable" = "이 소스는 내장된 미리보기를 제공하지 않습니다. 대신 원본 소스 페이지를 열어보세요.";
 "media.thumbnailUnavailable" = "미리보기 이미지를 사용할 수 없습니다.";
+"media.retryThumbnail" = "미리보기 이미지 다시 시도";
+"common.loading" = "불러오는 중";
 "media.noDescription" = "설명이 없습니다. 게시하거나 재사용하기 전에 원본 소스를 확인하세요.";
 "media.licenseUnavailable" = "라이선스 정보를 사용할 수 없습니다. 재사용하기 전에 원본 소스를 확인하세요.";
 "license.safe" = "이용 조건 명확";

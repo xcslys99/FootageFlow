@@ -76,7 +76,21 @@ struct PeerTubeProvider: MediaProvider {
       license?.localizedCaseInsensitiveContains("unknown") == true
       ? LicenseStatus.unknown : ProviderUtilities.licenseStatus(name: license)
     let creator = item.channel?.displayName ?? item.account?.displayName ?? item.account?.name
-    let thumbnail = URLValidator.remote(item.thumbnailUrl)
+    let instance =
+      ThumbnailResolver.origin(fromHost: item.channel?.host ?? item.account?.host)
+      ?? ThumbnailResolver.origin(from: source)
+    let listedThumbnails = (item.thumbnails ?? []).sorted {
+      ($0.width ?? 0) * ($0.height ?? 0) > ($1.width ?? 0) * ($1.height ?? 0)
+    }
+    let candidates = ThumbnailResolver.candidates(
+      provider: .peertube,
+      rawValues: listedThumbnails.map(\.fileUrl)
+        + listedThumbnails.map(\.path)
+        + [item.thumbnailUrl, item.thumbnailPath]
+        + [item.previewUrl, item.previewPath],
+      originalPageURL: source, instanceURL: instance,
+      metadata: ["instanceHost": instance?.host ?? ""])
+    let thumbnail = candidates.first
     let rights = RightsInfo(
       statement: licenseStatus == .unknown ? nil : license,
       source: "PeerTube video metadata", known: licenseStatus != .unknown,
@@ -93,10 +107,12 @@ struct PeerTubeProvider: MediaProvider {
       publishedDate: ProviderUtilities.parseDate(item.originallyPublishedAt ?? item.publishedAt),
       downloadable: false,
       originalMetadata: [
-        "host": source.host ?? "", "uuid": item.uuid,
+        "host": source.host ?? "", "instanceHost": instance?.host ?? "", "uuid": item.uuid,
+        "thumbnailRaw": item.thumbnailUrl ?? item.thumbnailPath ?? "",
         "views": item.views.map(String.init) ?? "",
       ], searchKeyword: query, relevanceScore: 1 - Double(index) * 0.01,
-      rightsInfo: rights, downloadAvailability: .unavailable)
+      rightsInfo: rights, downloadAvailability: .unavailable,
+      thumbnailCandidates: candidates)
   }
 }
 
@@ -107,12 +123,19 @@ struct PeerTubeSearchResponse: Decodable {
 
 struct PeerTubeVideo: Decodable {
   let uuid, name, url: String
-  let description, truncatedDescription, thumbnailUrl: String?
+  let description, truncatedDescription, thumbnailUrl, thumbnailPath: String?
+  let previewUrl, previewPath: String?
   let publishedAt, originallyPublishedAt: String?
   let duration: Double?
   let views: Int?
   let licence: PeerTubeLabel?
   let account, channel: PeerTubeOwner?
+  let thumbnails: [PeerTubeThumbnail]?
+}
+
+struct PeerTubeThumbnail: Decodable {
+  let fileUrl, path: String?
+  let width, height: Int?
 }
 
 struct PeerTubeLabel: Decodable {

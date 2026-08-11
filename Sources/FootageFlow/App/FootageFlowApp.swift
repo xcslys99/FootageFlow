@@ -16,6 +16,12 @@ struct FootageFlowApp: App {
       Task.detached { Darwin.exit(await LiveSmokeRunner.run()) }
       dispatchMain()
     }
+    if CommandLine.arguments.contains("--thumbnail-smoke") {
+      let query =
+        CommandLine.arguments.last == "--thumbnail-smoke" ? "city" : CommandLine.arguments.last!
+      Task.detached { Darwin.exit(await ThumbnailDiagnosticsRunner.run(query: query)) }
+      dispatchMain()
+    }
     if let index = CommandLine.arguments.firstIndex(of: "--acceptance-test") {
       let path =
         CommandLine.arguments.indices.contains(index + 1)
