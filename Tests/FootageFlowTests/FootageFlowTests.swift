@@ -121,6 +121,11 @@ import Foundation
         peer.data.first.flatMap { PeerTubeProvider.asset($0, query: "history", index: 0) })
       XCTAssertEqual(peerAsset.provider, .peertube)
       XCTAssertFalse(peerAsset.downloadable)
+      XCTAssertEqual(peerAsset.effectiveThumbnailCandidates.first?.host, "video.example.org")
+      XCTAssertTrue(
+        peerAsset.effectiveThumbnailCandidates.contains {
+          $0.path == "/lazy-static/previews/peer-preview.jpg"
+        })
 
       let coverr = try JSONDecoder().decode(CoverrSearchResponse.self, from: fixture("coverr"))
       let coverrAsset = try XCTUnwrap(

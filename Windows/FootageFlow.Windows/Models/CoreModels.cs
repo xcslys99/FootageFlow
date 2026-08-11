@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using FootageFlow.Windows.Infrastructure;
+using FootageFlow.Windows.Services;
 
 namespace FootageFlow.Windows.Models;
 
@@ -190,6 +191,7 @@ public sealed class MediaAsset : ObservableObject
     public string Title { get; init; } = "";
     public string? Description { get; init; }
     public string? ThumbnailURL { get; init; }
+    public IReadOnlyList<string>? ThumbnailCandidates { get; init; }
     public string? PreviewURL { get; init; }
     public string? DownloadURL { get; init; }
     public string SourcePageURL { get; init; } = "";
@@ -213,6 +215,20 @@ public sealed class MediaAsset : ObservableObject
     [JsonIgnore] public bool IsSelected { get => _isSelected; set => Set(ref _isSelected, value); }
 
     [JsonIgnore] public string StableId => $"{Provider}:{Id}";
+    [JsonIgnore] public IReadOnlyList<string> EffectiveThumbnailURLs => ThumbnailUrlNormalizer.Normalize(
+        Provider,
+        new[] { ThumbnailURL }
+            .Concat(ThumbnailCandidates ?? [])
+            .Concat(MediaType == "image" ? new[] { PreviewURL, DownloadURL } : [])
+            .Concat(new[]
+            {
+                OriginalMetadata.GetValueOrDefault("thumbnail"),
+                OriginalMetadata.GetValueOrDefault("previewImage"),
+                OriginalMetadata.GetValueOrDefault("poster"),
+                OriginalMetadata.GetValueOrDefault("image")
+            }),
+        SourcePageURL,
+        OriginalMetadata);
     [JsonIgnore] public string SourceDisplayName =>
         OriginalMetadata.GetValueOrDefault("sourceName") ?? Provider;
     [JsonIgnore] public string Resolution => Width is > 0 && Height is > 0 ? $"{Width}×{Height}" : "—";

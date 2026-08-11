@@ -86,9 +86,11 @@ struct PexelsProvider: MediaProvider {
         ($0.width ?? 99999) * ($0.height ?? 99999) < ($1.width ?? 99999) * ($1.height ?? 99999)
       }
       let download = URLValidator.remote(best?.link)
+      let thumbnails = ThumbnailResolver.candidates(
+        provider: .pexels, rawValues: [video.image], originalPageURL: source)
       return MediaAsset(
         id: String(video.id), provider: .pexels, title: "\(request.query) · Pexels \(video.id)",
-        description: nil, thumbnailURL: URLValidator.remote(video.image),
+        description: nil, thumbnailURL: thumbnails.first,
         previewURL: URLValidator.remote(preview?.link ?? best?.link), downloadURL: download,
         sourcePageURL: source, creator: video.user.name, license: "Pexels License",
         licenseURL: URLValidator.remote("https://www.pexels.com/license/"), licenseStatus: .safe,
@@ -96,7 +98,7 @@ struct PexelsProvider: MediaProvider {
         duration: Double(video.duration), fileType: best?.fileType ?? "video/mp4",
         mediaType: .video, publishedDate: nil, downloadable: download != nil,
         originalMetadata: ["userURL": video.user.url], searchKeyword: request.query,
-        relevanceScore: 1 - Double(index) * 0.01)
+        relevanceScore: 1 - Double(index) * 0.01, thumbnailCandidates: thumbnails)
     }
     return (assets, response.nextPage != nil, response.totalResults ?? assets.count)
   }
@@ -112,17 +114,20 @@ struct PexelsProvider: MediaProvider {
       guard let source = URLValidator.remote(photo.url),
         let download = URLValidator.remote(photo.src.original)
       else { return nil }
+      let thumbnails = ThumbnailResolver.candidates(
+        provider: .pexels, rawValues: [photo.src.medium, photo.src.large, photo.src.original],
+        originalPageURL: source)
       return MediaAsset(
         id: String(photo.id), provider: .pexels,
         title: photo.alt?.isEmpty == false ? photo.alt! : "Pexels Photo \(photo.id)",
-        description: photo.alt, thumbnailURL: URLValidator.remote(photo.src.medium),
+        description: photo.alt, thumbnailURL: thumbnails.first,
         previewURL: URLValidator.remote(photo.src.large), downloadURL: download,
         sourcePageURL: source, creator: photo.photographer, license: "Pexels License",
         licenseURL: URLValidator.remote("https://www.pexels.com/license/"), licenseStatus: .safe,
         width: photo.width, height: photo.height, duration: nil, fileType: "image/jpeg",
         mediaType: .image, publishedDate: nil, downloadable: true,
         originalMetadata: ["photographerURL": photo.photographerURL], searchKeyword: request.query,
-        relevanceScore: 1 - Double(index) * 0.01)
+        relevanceScore: 1 - Double(index) * 0.01, thumbnailCandidates: thumbnails)
     }
     return (assets, response.nextPage != nil, response.totalResults ?? assets.count)
   }

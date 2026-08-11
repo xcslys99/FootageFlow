@@ -17,6 +17,7 @@ All notable FootageFlow changes are documented here.
 - Search result volume, cumulative provider counts, de-duplication, and isolation of failed next-page requests
 - yt-dlp progress and speed reporting, friendly unsupported/login/region/rate-limit failures, and safe cancellation/retry
 - Provider capability and settings parity across macOS and Windows
+- Cross-platform thumbnail reliability with provider-aware URL normalization, PeerTube instance resolution, ordered fallback candidates, response validation, short-lived failure caching, loading state, and explicit retry
 
 ### Security
 

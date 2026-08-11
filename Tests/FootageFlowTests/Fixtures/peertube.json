@@ -5,7 +5,14 @@
     "name": "Historic City Film",
     "url": "https://video.example.org/w/peer-fixture",
     "description": "A public PeerTube fixture",
-    "thumbnailUrl": "https://video.example.org/lazy-static/thumbnails/peer.jpg",
+    "thumbnailUrl": "/lazy-static/thumbnails/peer.jpg",
+    "thumbnailPath": "/lazy-static/thumbnails/peer.jpg",
+    "previewUrl": "/lazy-static/previews/peer-preview.jpg",
+    "previewPath": "/lazy-static/previews/peer-preview.jpg",
+    "thumbnails": [
+      {"fileUrl": "/lazy-static/thumbnails/peer.jpg", "width": 280, "height": 157},
+      {"path": "/lazy-static/previews/peer-preview.jpg", "width": 850, "height": 480}
+    ],
     "publishedAt": "2001-01-02T03:04:05Z",
     "duration": 42,
     "views": 100,

@@ -57,6 +57,8 @@
 "media.unmute" = "Unmute";
 "media.previewUnavailable" = "This source does not provide an embedded preview. Open the original source page instead.";
 "media.thumbnailUnavailable" = "Thumbnail unavailable";
+"media.retryThumbnail" = "Retry thumbnail";
+"common.loading" = "Loading";
 "media.noDescription" = "No description is available. Check the original source before publishing or reuse.";
 "media.licenseUnavailable" = "License information unavailable — verify with the original source before reuse.";
 

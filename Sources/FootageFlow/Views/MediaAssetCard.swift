@@ -19,17 +19,10 @@ struct MediaAssetCard: View {
   var body: some View {
     let _ = localization.language
     VStack(alignment: .leading, spacing: 9) {
-      AsyncImage(url: asset.thumbnailURL) { phase in
-        switch phase {
-        case .success(let image): image.resizable().scaledToFill()
-        case .failure: placeholder(tr("media.thumbnailUnavailable"))
-        default:
-          ZStack {
-            Color.secondary.opacity(0.08)
-            ProgressView()
-          }
-        }
-      }
+      RemoteThumbnailView(
+        candidates: asset.effectiveThumbnailCandidates, provider: asset.provider,
+        fallbackSystemImage: mediaIcon
+      )
       .frame(height: 150).clipped().background(.quaternary)
       .overlay(alignment: .topLeading) {
         Label(
@@ -120,16 +113,6 @@ struct MediaAssetCard: View {
     }
     .padding(10).background(.background, in: RoundedRectangle(cornerRadius: 10))
     .overlay(RoundedRectangle(cornerRadius: 10).stroke(.separator.opacity(0.6), lineWidth: 1))
-  }
-
-  private func placeholder(_ text: String) -> some View {
-    ZStack {
-      Color.secondary.opacity(0.1)
-      VStack {
-        Image(systemName: mediaIcon)
-        Text(text).font(.caption)
-      }.foregroundStyle(.secondary)
-    }
   }
 
   private var mediaIcon: String {

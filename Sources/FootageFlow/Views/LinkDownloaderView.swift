@@ -50,19 +50,11 @@ struct LinkDownloaderView: View {
     let value = item.wrappedValue
     HStack(alignment: .top, spacing: 14) {
       Toggle("", isOn: item.isSelected).labelsHidden().disabled(!value.isReady)
-      Group {
-        if let thumbnail = value.analysis?.thumbnailURL {
-          AsyncImage(url: thumbnail) { phase in
-            if let image = phase.image {
-              image.resizable().scaledToFill()
-            } else {
-              Rectangle().fill(.quaternary)
-            }
-          }
-        } else {
-          Rectangle().fill(.quaternary).overlay(Image(systemName: "link"))
-        }
-      }.frame(width: 180, height: 102).clipShape(RoundedRectangle(cornerRadius: 7))
+      RemoteThumbnailView(
+        candidates: [value.analysis?.thumbnailURL].compactMap { $0 },
+        fallbackSystemImage: "link"
+      )
+      .frame(width: 180, height: 102).clipShape(RoundedRectangle(cornerRadius: 7))
       VStack(alignment: .leading, spacing: 6) {
         Text(value.analysis?.title ?? value.rawURL).font(.headline).lineLimit(2)
         if let analysis = value.analysis {

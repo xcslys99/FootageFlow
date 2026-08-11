@@ -58,13 +58,15 @@ struct CoverrProvider: MediaProvider {
     }
     let preview = URLValidator.remote(item.urls?.mp4Preview ?? item.urls?.mp4)
     let download = URLValidator.remote(item.urls?.mp4Download ?? item.urls?.mp4)
+    let thumbnails = ThumbnailResolver.candidates(
+      provider: .coverr, rawValues: [item.thumbnail], originalPageURL: source)
     let rights = RightsInfo(
       statement: "Coverr API License", uri: URLValidator.remote("https://coverr.co/license/"),
       source: "Coverr API and license page", known: true, openLicense: true,
       attributionRequired: true, commercialUseKnown: true)
     return MediaAsset(
       id: item.id, provider: .coverr, title: item.title,
-      description: item.description, thumbnailURL: URLValidator.remote(item.thumbnail),
+      description: item.description, thumbnailURL: thumbnails.first,
       previewURL: preview, downloadURL: download, sourcePageURL: source, creator: nil,
       license: "Coverr API License — attribution required",
       licenseURL: URLValidator.remote("https://coverr.co/license/"),
@@ -74,7 +76,8 @@ struct CoverrProvider: MediaProvider {
       originalMetadata: [
         "tags": item.tags.joined(separator: ", "), "aspectRatio": item.aspectRatio ?? "",
       ], searchKeyword: query, relevanceScore: 1 - Double(index) * 0.01,
-      rightsInfo: rights, downloadAvailability: download == nil ? .unavailable : .direct)
+      rightsInfo: rights, downloadAvailability: download == nil ? .unavailable : .direct,
+      thumbnailCandidates: thumbnails)
   }
 }
 

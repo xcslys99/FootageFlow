@@ -54,6 +54,14 @@ Current official interfaces:
 
 `ProviderRequestLimiter` centralizes minimum request spacing. `HTTPClient` uses an ephemeral session, bounded exponential retry for 429/5xx responses, readable errors, no cookies, and no URL cache. API keys are sent only in provider-required headers. Search state retains one continuation per provider/query pair, appends de-duplicated results, restores failed continuations for retry, and rejects late pages from an old query.
 
+## Thumbnail pipeline
+
+Providers return ordered `thumbnailCandidates`; `MediaAsset.effectiveThumbnailCandidates` performs backward-compatible recovery from the old primary URL and metadata fields. `ThumbnailResolver` is the only shared URL normalization point. It accepts absolute, protocol-relative, and relative values, upgrades HTTP candidates to HTTPS, rejects credentials/malformed URLs, removes duplicates, and resolves PeerTube relative paths against the result's own instance rather than SepiaSearch.
+
+The macOS `ThumbnailPipeline` and Windows `ThumbnailLoaderService` use ephemeral/cookieless requests, a FootageFlow User-Agent, bounded timeout, redirect handling, cancellation, HTTP and Content-Type checks, image signature detection, candidate fallback, six-hour successful memory caching, and a 45-second failed-response cache. HTML error pages, empty responses, 403/404/429 responses, and decode failures never enter the successful cache. macOS decodes through `NSImage`; Windows first asks for JPEG/PNG, then uses WIC for JPEG/PNG/GIF and installed WebP/AVIF codecs, falling through to the next candidate if decoding is unavailable. No global ATS exception or insecure HTTP fallback is enabled.
+
+Run `FootageFlow --thumbnail-smoke <query>` to collect a sanitized live report. It never prints query strings from signed thumbnail URLs or credentials. See `docs/THUMBNAIL_PIPELINE_AUDIT.md` for the v0.5.0 diagnosis and evidence.
+
 ## Link Downloader
 
 `YTDLPService.analyze` is the shared metadata and format normalizer. It always passes `--ignore-config`, never imports browser cookies, rejects embedded URL credentials and sensitive query parameters, blocks loopback/local/private-network addresses, excludes DRM-marked formats, and maps unsupported, unavailable, login-gated, region-restricted, and rate-limited failures. Selected quality, subtitle language, and source name are stored as non-secret `MediaAsset.originalMetadata` fields. Source sidecars redact sensitive URL query values before writing either text or JSON metadata.

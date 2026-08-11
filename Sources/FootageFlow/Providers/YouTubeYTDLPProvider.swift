@@ -44,19 +44,26 @@ struct YouTubeYTDLPProvider: MediaProvider {
       let thumbnail = item.thumbnails?.max {
         ($0.width ?? 0) * ($0.height ?? 0) < ($1.width ?? 0) * ($1.height ?? 0)
       }
-      let thumbnailURL =
-        URLValidator.remote(thumbnail?.url)
-        ?? URLValidator.remote("https://i.ytimg.com/vi/\(item.id)/hqdefault.jpg")
+      let orderedThumbnails = (item.thumbnails ?? []).sorted {
+        ($0.width ?? 0) * ($0.height ?? 0) > ($1.width ?? 0) * ($1.height ?? 0)
+      }
+      let thumbnails = ThumbnailResolver.candidates(
+        provider: .youtube,
+        rawValues: orderedThumbnails.map(\.url) + [
+          "https://i.ytimg.com/vi/\(item.id)/hqdefault.jpg",
+          "https://i.ytimg.com/vi/\(item.id)/mqdefault.jpg",
+        ], originalPageURL: source)
       return MediaAsset(
         id: item.id, provider: .youtube, title: item.title ?? "YouTube \(item.id)",
-        description: nil, thumbnailURL: thumbnailURL, previewURL: nil,
+        description: nil, thumbnailURL: thumbnails.first, previewURL: nil,
         downloadURL: source, sourcePageURL: source, creator: item.channel ?? item.uploader,
         license: nil, licenseURL: nil, licenseStatus: .unknown, width: thumbnail?.width,
         height: thumbnail?.height, duration: item.duration, fileType: "video",
         mediaType: .video, publishedDate: nil, downloadable: true,
         originalMetadata: ["accessMode": ProviderMode.ytDLP.rawValue],
         searchKeyword: query, relevanceScore: 0.9 - Double(index) * 0.01,
-        downloadStrategy: .ytDLP, downloadAvailability: .conditional)
+        downloadStrategy: .ytDLP, downloadAvailability: .conditional,
+        thumbnailCandidates: thumbnails)
     }
   }
 

@@ -71,11 +71,10 @@ struct DownloadsView: View {
 
   private func currentRow(_ item: DownloadProgress) -> some View {
     HStack(spacing: 12) {
-      AsyncImage(url: item.asset.thumbnailURL) { image in
-        image.resizable().scaledToFill()
-      } placeholder: {
-        Color.secondary.opacity(0.1)
-      }
+      RemoteThumbnailView(
+        candidates: item.asset.effectiveThumbnailCandidates, provider: item.asset.provider,
+        fallbackSystemImage: "arrow.down.circle"
+      )
       .frame(width: 110, height: 64).clipped().cornerRadius(6)
       VStack(alignment: .leading, spacing: 5) {
         HStack {
@@ -119,11 +118,10 @@ struct DownloadsView: View {
 
   private func completedRow(_ record: DownloadRecord) -> some View {
     HStack(spacing: 12) {
-      AsyncImage(url: URLValidator.remote(record.thumbnailURL)) { image in
-        image.resizable().scaledToFill()
-      } placeholder: {
-        Color.secondary.opacity(0.1)
-      }
+      RemoteThumbnailView(
+        candidates: [URLValidator.remote(record.thumbnailURL)].compactMap { $0 },
+        provider: ProviderID(rawValue: record.providerRaw), fallbackSystemImage: "photo"
+      )
       .frame(width: 110, height: 64).clipped().cornerRadius(6)
       VStack(alignment: .leading, spacing: 4) {
         Text(record.fileName).font(.headline).lineLimit(1)

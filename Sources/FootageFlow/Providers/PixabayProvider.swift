@@ -78,16 +78,19 @@ struct PixabayProvider: MediaProvider {
         let page = URLValidator.remote(hit.pageURL), let download = URLValidator.remote(best.url)
       else { return nil }
       let preview = files.min(by: { $0.width * $0.height < $1.width * $1.height }) ?? best
+      let thumbnails = ThumbnailResolver.candidates(
+        provider: .pixabay,
+        rawValues: [preview.thumbnail] + files.map(\.thumbnail), originalPageURL: page)
       return MediaAsset(
         id: String(hit.id), provider: .pixabay, title: hit.tags ?? "Pixabay Video \(hit.id)",
-        description: hit.tags, thumbnailURL: URLValidator.remote(preview.thumbnail),
+        description: hit.tags, thumbnailURL: thumbnails.first,
         previewURL: URLValidator.remote(preview.url), downloadURL: download, sourcePageURL: page,
         creator: hit.user, license: "Pixabay Content License",
         licenseURL: URLValidator.remote("https://pixabay.com/service/license-summary/"),
         licenseStatus: .safe, width: best.width, height: best.height,
         duration: hit.duration.map(Double.init), fileType: "video/mp4", mediaType: .video,
         publishedDate: nil, downloadable: true, originalMetadata: [:], searchKeyword: request.query,
-        relevanceScore: 1 - Double(index) * 0.01)
+        relevanceScore: 1 - Double(index) * 0.01, thumbnailCandidates: thumbnails)
     }
     let total = response.totalHits ?? response.total ?? assets.count
     let perPage = max(3, min(request.pageSize, 50))
@@ -107,16 +110,20 @@ struct PixabayProvider: MediaProvider {
       guard let page = URLValidator.remote(hit.pageURL) else { return nil }
       let download = hit.imageURL ?? hit.fullHDURL ?? hit.largeImageURL
       guard let downloadURL = URLValidator.remote(download) else { return nil }
+      let thumbnails = ThumbnailResolver.candidates(
+        provider: .pixabay,
+        rawValues: [hit.webformatURL, hit.largeImageURL, hit.fullHDURL, hit.imageURL],
+        originalPageURL: page)
       return MediaAsset(
         id: String(hit.id), provider: .pixabay, title: hit.tags ?? "Pixabay Image \(hit.id)",
-        description: hit.tags, thumbnailURL: URLValidator.remote(hit.webformatURL),
+        description: hit.tags, thumbnailURL: thumbnails.first,
         previewURL: URLValidator.remote(hit.largeImageURL), downloadURL: downloadURL,
         sourcePageURL: page, creator: hit.user, license: "Pixabay Content License",
         licenseURL: URLValidator.remote("https://pixabay.com/service/license-summary/"),
         licenseStatus: .safe, width: hit.imageWidth, height: hit.imageHeight, duration: nil,
         fileType: "image/jpeg", mediaType: .image, publishedDate: nil, downloadable: true,
         originalMetadata: [:], searchKeyword: request.query,
-        relevanceScore: 1 - Double(index) * 0.01)
+        relevanceScore: 1 - Double(index) * 0.01, thumbnailCandidates: thumbnails)
     }
     let total = response.totalHits ?? response.total ?? assets.count
     let perPage = max(3, min(request.pageSize, 50))

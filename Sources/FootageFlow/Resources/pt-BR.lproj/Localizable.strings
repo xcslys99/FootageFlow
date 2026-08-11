@@ -53,6 +53,8 @@
 "media.unmute" = "Ativar som";
 "media.previewUnavailable" = "Esta fonte não fornece uma visualização incorporada. Abra a página de origem original.";
 "media.thumbnailUnavailable" = "Miniatura indisponível";
+"media.retryThumbnail" = "Tentar miniatura novamente";
+"common.loading" = "Carregando";
 "media.noDescription" = "Nenhuma descrição está disponível. Verifique a fonte original antes de publicar ou reutilizar.";
 "media.licenseUnavailable" = "Informações de licença indisponíveis – verifique com a fonte original antes de reutilizar.";
 "license.safe" = "Claramente licenciado";

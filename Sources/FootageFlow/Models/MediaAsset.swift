@@ -192,6 +192,8 @@ struct MediaAsset: Identifiable, Codable, Hashable, Sendable {
   var downloadStrategy: AssetDownloadStrategy? = nil
   var rightsInfo: RightsInfo? = nil
   var downloadAvailability: DownloadAvailability? = nil
+  /// Ordered, normalized alternatives. Optional keeps v0.1-v0.5 persisted JSON decodable.
+  var thumbnailCandidates: [URL]? = nil
 
   var stableID: String { "\(provider.rawValue):\(id)" }
   var sourceDisplayName: String {
@@ -203,6 +205,22 @@ struct MediaAsset: Identifiable, Codable, Hashable, Sendable {
     downloadAvailability ?? (downloadable && downloadURL != nil ? .direct : .unavailable)
   }
   var isDirectlyDownloadable: Bool { effectiveDownloadAvailability == .direct }
+  var effectiveThumbnailCandidates: [URL] {
+    let explicit = thumbnailCandidates ?? []
+    var rawValues: [String?] = [thumbnailURL?.absoluteString]
+    rawValues += explicit.map(\.absoluteString)
+    if mediaType == .image {
+      rawValues += [previewURL?.absoluteString, downloadURL?.absoluteString]
+    }
+    rawValues += [
+      originalMetadata["thumbnail"], originalMetadata["previewImage"],
+      originalMetadata["poster"], originalMetadata["image"],
+    ]
+    return ThumbnailResolver.candidates(
+      provider: provider, rawValues: rawValues, originalPageURL: sourcePageURL,
+      instanceURL: ThumbnailResolver.origin(fromHost: originalMetadata["instanceHost"]),
+      metadata: originalMetadata)
+  }
   var effectiveRightsInfo: RightsInfo {
     if let rightsInfo { return rightsInfo }
     return RightsInfo(

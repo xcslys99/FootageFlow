@@ -45,7 +45,7 @@ actor SearchCache {
 
   private func fileURL(provider: ProviderID, request: SearchRequest) -> URL {
     let raw =
-      "\(provider.rawValue)|\(request.query)|\(request.mediaType.rawValue)|\(request.orientation.rawValue)|\(request.resolution.rawValue)|\(request.duration.rawValue)|\(request.yearFrom.map(String.init) ?? "")|\(request.yearTo.map(String.init) ?? "")|\(request.downloadableOnly)"
+      "thumbnail-pipeline-v2|\(provider.rawValue)|\(request.query)|\(request.mediaType.rawValue)|\(request.orientation.rawValue)|\(request.resolution.rawValue)|\(request.duration.rawValue)|\(request.yearFrom.map(String.init) ?? "")|\(request.yearTo.map(String.init) ?? "")|\(request.downloadableOnly)"
     let hash = SHA256.hash(data: Data(raw.utf8)).map { String(format: "%02x", $0) }.joined()
     return directory.appendingPathComponent(hash).appendingPathExtension("json")
   }

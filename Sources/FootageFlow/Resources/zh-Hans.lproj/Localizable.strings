@@ -56,6 +56,8 @@
 "media.unmute" = "取消静音";
 "media.previewUnavailable" = "该来源不提供应用内预览，请打开原始来源页面查看。";
 "media.thumbnailUnavailable" = "缩略图不可用";
+"media.retryThumbnail" = "重试缩略图";
+"common.loading" = "正在加载";
 "media.noDescription" = "暂无描述，请在发布或使用前查看原始来源页。";
 "media.licenseUnavailable" = "未能获取明确的许可信息，请在使用前前往原始来源确认版权与授权条件。";
 

@@ -343,6 +343,8 @@ public sealed class MainViewModel : ObservableObject
     public string PrivacyTitle => T("settings.privacy");
     public string PrivacyBody => T("settings.privacyBody");
     public string PreviewText => T("media.preview");
+    public string ThumbnailUnavailableText => T("media.thumbnailUnavailable");
+    public string RetryThumbnailText => T("media.retryThumbnail");
     public string FavoriteText => T("media.favorite");
     public string DownloadText => T("media.download");
     public string OpenSourceText => T("media.openSource");

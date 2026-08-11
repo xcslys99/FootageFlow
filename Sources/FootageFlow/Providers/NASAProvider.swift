@@ -86,9 +86,15 @@ struct NASAProvider: MediaProvider {
     let downloadable = bestAsset(in: candidateURLs, type: type)
     let preview =
       previewAsset(in: candidateURLs, type: type) ?? (type == .image ? downloadable : nil)
-    let thumbnail =
-      item.links?.first(where: { $0.rel == "preview" }).flatMap { secureURL($0.href) }
-      ?? item.links?.first.flatMap { secureURL($0.href) }
+    let manifestImages = candidateURLs.filter {
+      ["jpg", "jpeg", "png", "webp", "gif"].contains($0.pathExtension.lowercased())
+    }
+    let thumbnails = ThumbnailResolver.candidates(
+      provider: .nasa,
+      rawValues: (item.links ?? []).sorted { $0.rel == "preview" && $1.rel != "preview" }
+        .map(\.href) + manifestImages.map(\.absoluteString),
+      originalPageURL: source)
+    let thumbnail = thumbnails.first
     let creator = data.photographer?.nilIfEmpty ?? data.secondaryCreator?.nilIfEmpty
     let metadata = [
       "nasaID": data.nasaID, "center": data.center ?? "", "location": data.location ?? "",
@@ -104,7 +110,8 @@ struct NASAProvider: MediaProvider {
       downloadable: downloadable != nil, originalMetadata: metadata, searchKeyword: query,
       relevanceScore: 1 - Double(index) * 0.01,
       rightsInfo: RightsInfo(statement: nil, source: "NASA item metadata", known: false),
-      downloadAvailability: downloadable == nil ? .unavailable : .direct)
+      downloadAvailability: downloadable == nil ? .unavailable : .direct,
+      thumbnailCandidates: thumbnails)
   }
 
   private static func pathComponent(_ value: String) -> String {

@@ -53,6 +53,8 @@
 "media.unmute" = "ミュートを解除する";
 "media.previewUnavailable" = "このソースは埋め込みプレビューを提供しません。代わりに元のソース ページを開いてください。";
 "media.thumbnailUnavailable" = "サムネイルは利用できません";
+"media.retryThumbnail" = "サムネイルを再試行";
+"common.loading" = "読み込み中";
 "media.noDescription" = "説明はありません。公開または再利用する前に、元のソースを確認してください。";
 "media.licenseUnavailable" = "ライセンス情報が利用できません - 再利用する前に元のソースで確認してください。";
 "license.safe" = "利用条件が明確";

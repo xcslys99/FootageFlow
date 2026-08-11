@@ -56,6 +56,8 @@
 "media.unmute" = "取消靜音";
 "media.previewUnavailable" = "該來源不提供應用內預覽，請開啟原始來源頁面檢視。";
 "media.thumbnailUnavailable" = "縮圖不可用";
+"media.retryThumbnail" = "重試縮圖";
+"common.loading" = "正在載入";
 "media.noDescription" = "暫無描述，請在釋出或使用前檢視原始來源頁。";
 "media.licenseUnavailable" = "未能獲取明確的許可資訊，請在使用前前往原始來源確認版權與授權條件。";
 
