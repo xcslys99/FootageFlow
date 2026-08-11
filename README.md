@@ -2,11 +2,38 @@
 
 [English](README.md) · [简体中文](README.zh-CN.md)
 
-**Search footage across 15 sources, or paste a public media link. macOS + Windows. Free and open source.**
+**Search footage. Paste links. Download media.**
 
-FootageFlow is a privacy-friendly desktop app for discovering, downloading, and organizing real video, image, and audio assets. It is built for documentary, history, country profile, finance, science, and social-video research.
+A free and open-source desktop app for macOS and Windows that helps video creators search footage across multiple sources and download supported media from pasted links.
 
-FootageFlow v0.5.0 supports **macOS 15+ on Apple Silicon** and **Windows 11 x64**. Both editions share provider behavior, pagination, normalized metadata and rights, filters, attribution formatting, keyword rules, source sidecars, and project persistence.
+**macOS Apple Silicon** · **Windows 11 x64** · **Free** · **Open Source (MIT)**
+
+[Download for macOS or Windows — Latest Release](https://github.com/xcslys99/FootageFlow/releases/latest) · [All Releases](https://github.com/xcslys99/FootageFlow/releases)
+
+FootageFlow is privacy-friendly and built for documentary, history, country profile, finance, science, and social-video research. FootageFlow v0.5.0 supports **macOS 15+ on Apple Silicon** and **Windows 11 x64**. Both editions share provider behavior, pagination, normalized metadata and rights, filters, attribution formatting, keyword rules, source sidecars, and project persistence.
+
+## Two ways to use FootageFlow
+
+### 1. Footage Search
+
+Search footage across multiple sources from one place.
+
+- Concurrent multi-provider search with pagination and **Load More**
+- Advanced filters, including **Downloadable Only**
+- Multi-select and batch download through the existing Download Manager
+- Projects, favorites, search history, and download history
+- Provider-supplied source, rights, license, and attribution tracking
+
+### 2. Link Downloader
+
+Already have a media URL? Paste one or more supported public media links into FootageFlow and let the app try to analyze and download the available media.
+
+- Reads source metadata and available formats
+- Offers quality, audio-only, and subtitle choices when the source provides them
+- Supports YouTube, X/Twitter, Vimeo, and other public sites supported by the bundled yt-dlp integration
+- Sends every task into the same Download Manager with progress, cancellation, retry, history, and source sidecars
+
+Availability depends on the source, individual media, permissions, regional restrictions, authentication requirements, and platform changes. FootageFlow is a best-effort link downloader and does not promise 100% download success.
 
 ## What works
 
@@ -20,7 +47,7 @@ FootageFlow v0.5.0 supports **macOS 15+ on Apple Silicon** and **Windows 11 x64*
 - A matching `.source.txt` and `.source.json` beside every successful download
 - English, Simplified Chinese, Traditional Chinese, Spanish, Brazilian Portuguese, Japanese, Korean, German, French, and Russian; English remains the first-launch default
 - A concise recommendation below the search field explains that free official APIs improve National Archives, Europeana, and YouTube search, with a direct link to provider settings
-- A visible **Feedback & Community** page links to safe GitHub bug reports, ideas, Q&A, the repository, and releases
+- A visible **Feedback & Community** page integrates GitHub Issues and Discussions for bug reports, ideas, and Q&A, with links to the repository and Releases
 - Optional API keys stored only in macOS Keychain or Windows Credential Manager
 - No analytics, advertising, tracking, cloud account, paid LLM, OpenAI API, or Codex dependency
 

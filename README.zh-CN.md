@@ -2,11 +2,38 @@
 
 [English](README.md) · [简体中文](README.zh-CN.md)
 
-**一次搜索 15 个素材来源，也可直接粘贴公开媒体链接。支持 macOS + Windows。免费开源。**
+**搜索素材，粘贴链接，下载媒体。**
 
-FootageFlow 是一款注重隐私的桌面素材发现、下载与管理软件，面向历史、国家、财经、人物、科普、纪录片和短视频创作者，可搜索真实视频、图片和音频资料。
+一款面向视频创作者的免费开源桌面工具，支持 macOS 和 Windows。你既可以一次搜索多个素材来源，也可以粘贴支持的公开媒体链接，尝试解析和下载媒体。
 
-FootageFlow v0.5.0 正式支持 **macOS 15+ Apple Silicon** 和 **Windows 11 x64**。两个版本共用 Provider、分页、统一 Metadata/Rights、高级筛选、署名文本、关键词、来源 Sidecar 和项目持久化核心。
+**macOS Apple Silicon** · **Windows 11 x64** · **免费** · **开源（MIT）**
+
+[下载 macOS 或 Windows 最新正式版](https://github.com/xcslys99/FootageFlow/releases/latest) · [查看全部版本](https://github.com/xcslys99/FootageFlow/releases)
+
+FootageFlow 注重隐私，适合历史、国家、财经、人物、科普、纪录片和短视频创作。FootageFlow v0.5.0 正式支持 **macOS 15+ Apple Silicon** 和 **Windows 11 x64**。两个版本共用 Provider、分页、统一 Metadata/Rights、高级筛选、署名文本、关键词、来源 Sidecar 和项目持久化核心。
+
+## FootageFlow 的两种核心用法
+
+### 1. 素材搜索
+
+在一个界面中同时搜索多个素材来源。
+
+- 多 Provider 并发搜索、分页与“加载更多”
+- 高级筛选，包括“仅显示可直接下载”
+- 多选并通过现有下载管理器进行批量下载
+- 项目、收藏、搜索历史和下载历史
+- 保存 Provider 实际提供的来源、Rights、License 和署名信息
+
+### 2. 链接下载
+
+已经有媒体链接？把一个或多个支持的公开媒体链接粘贴进 FootageFlow，软件会尝试解析并下载可用媒体。
+
+- 读取来源 Metadata 和实际可用格式
+- 来源提供时可选择清晰度、仅音频和字幕
+- 支持 YouTube、X/Twitter、Vimeo，以及当前内置 yt-dlp 支持的其他公开网站
+- 所有任务进入同一个下载管理器，继续支持进度、取消、重试、历史记录和来源 Sidecar
+
+可用性取决于来源网站、具体媒体、访问权限、地区限制、登录要求以及平台变化。FootageFlow 是尽力提供的链接下载器，不承诺 100% 下载成功。
 
 ## 已实现功能
 
@@ -20,7 +47,7 @@ FootageFlow v0.5.0 正式支持 **macOS 15+ Apple Silicon** 和 **Windows 11 x64
 - 每个成功下载文件自动生成同名 `.source.txt` 和 `.source.json`
 - 支持 English、简体中文、繁體中文、西班牙语、巴西葡萄牙语、日语、韩语、德语、法语和俄语；首次启动仍默认 English
 - 搜索栏下方明确提示 National Archives、Europeana 和 YouTube 配置官方免费 API 后效果更好，并可直接进入素材来源设置
-- 明显的“反馈与社区”页面可进入 GitHub 报告问题、提出建议、提问并查看版本
+- 明显的“反馈与社区”页面集成 GitHub Issues 和 Discussions，可报告问题、提出建议、提问并查看仓库与正式版本
 - 可选 API Key 只保存在 macOS Keychain 或 Windows Credential Manager
 - 不含分析、广告、跟踪、云端账号、付费大模型，也不依赖 OpenAI API、Codex 或终端脚本
 

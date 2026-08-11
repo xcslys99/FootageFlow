@@ -24,7 +24,7 @@ body:
       options:
         - Core / all platforms
         - macOS
-        - Windows (future release)
+        - Windows 11 x64
   - type: textarea
     id: privacy
     attributes:
