@@ -171,7 +171,7 @@ import Foundation
       let asset = analysis.mediaAsset(
         quality: .audioOnly, downloadSubtitles: true, subtitleLanguage: "en")
       XCTAssertEqual(asset.provider, .linkDownloader)
-      XCTAssertTrue(asset.id.hasSuffix(":audioOnly:subs:en"))
+      XCTAssertTrue(asset.id.hasSuffix(":audioOnly:original:subs:en"))
       XCTAssertEqual(asset.effectiveDownloadStrategy, .ytDLP)
       XCTAssertEqual(asset.originalMetadata["linkFormatSelector"], "bestaudio[acodec!=none]/best")
       XCTAssertEqual(asset.originalMetadata["linkDownloadSubtitles"], "true")
@@ -186,6 +186,8 @@ import Foundation
       let options = YTDLPDownloadOptions(asset: clip)
       XCTAssertEqual(options.outputPreset, .editingCompatibleMP4)
       XCTAssertEqual(options.clipRange, range)
+      XCTAssertTrue(options.effectiveFormatSelector.contains("vcodec^=avc1"))
+      XCTAssertTrue(options.effectiveFormatSelector.contains("bestaudio[ext=m4a]"))
       XCTAssertTrue(FileNameSanitizer.fileName(asset: clip).contains("00-00-20_to_00-00-45"))
       XCTAssertTrue(FileNameSanitizer.fileName(asset: clip).hasSuffix(".mp4"))
     }
@@ -430,7 +432,9 @@ import Foundation
         executableURL: try executableFixture())
       let saved = try await service.download(
         sourceURL: URL(string: "https://www.youtube.com/watch?v=abc123")!, directory: directory,
-        fileStem: "fixture")
+        fileStem: "fixture",
+        options: YTDLPDownloadOptions(
+          formatSelector: "best", downloadSubtitles: false, subtitleLanguages: nil))
       XCTAssertEqual(saved.standardizedFileURL, destination.standardizedFileURL)
       XCTAssertTrue(FileManager.default.fileExists(atPath: saved.path))
     }

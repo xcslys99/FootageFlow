@@ -92,7 +92,13 @@ enum KeywordEngine {
       rule.terms.contains { compact.localizedCaseInsensitiveContains($0) }
     }
     let years = years(in: compact)
-    let canonical = unique(matched.map(\.canonical))
+    let allCanonical = unique(matched.map(\.canonical))
+    let canonical = allCanonical.filter { candidate in
+      !allCanonical.contains { other in
+        other.caseInsensitiveCompare(candidate) != .orderedSame
+          && other.localizedCaseInsensitiveContains(candidate)
+      }
+    }
     if !canonical.isEmpty {
       candidates.append((years + canonical).joined(separator: " "))
     }

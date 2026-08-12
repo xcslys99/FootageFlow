@@ -39,9 +39,9 @@ let package = Package(
     .executable(name: "FootageFlow", targets: ["FootageFlow"])
   ],
   dependencies: [
-    // Pin the official runtime to the compiler version so tests also execute
-    // on machines that have Command Line Tools without a full Xcode install.
-    .package(url: "https://github.com/swiftlang/swift-testing.git", exact: "6.3.2")
+    // macOS 15 GitHub runners currently ship Swift 6.1.2. Pin the matching
+    // official runtime so tests execute consistently on Swift 6.1 through 6.3.
+    .package(url: "https://github.com/swiftlang/swift-testing.git", exact: "6.1.2")
   ],
   targets: [
     .executableTarget(

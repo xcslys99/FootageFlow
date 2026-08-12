@@ -34,6 +34,8 @@ import Foundation
     func openverseFixture() throws {
       let response = try JSONDecoder().decode(
         OpenverseSearchResponse.self, from: fixture("openverse"))
+      #expect(response.resultCount == 1)
+      #expect(response.pageCount == 2)
       let item = try #require(response.results.first)
       let asset = try #require(
         OpenverseProvider.asset(item, type: .image, query: "coffee", index: 0))
@@ -44,6 +46,7 @@ import Foundation
       #expect(asset.effectiveRightsInfo.attributionRequired)
       #expect(asset.isDirectlyDownloadable)
       #expect(asset.thumbnailURL?.scheme == "https")
+      #expect(asset.originalMetadata["attribution"]?.contains("CC BY-SA 4.0") == true)
       let audio = try #require(
         OpenverseProvider.asset(item, type: .audio, query: "coffee", index: 0))
       #expect(audio.duration == 9)
@@ -53,6 +56,8 @@ import Foundation
     func dailymotionFixture() throws {
       let response = try JSONDecoder().decode(
         DailymotionSearchResponse.self, from: fixture("dailymotion"))
+      #expect(response.hasMore)
+      #expect(response.total == 42)
       let item = try #require(response.list.first)
       let asset = try #require(DailymotionProvider.asset(item, query: "city", index: 0))
       #expect(asset.provider == .dailymotion)
@@ -78,6 +83,12 @@ import Foundation
       #expect(throws: ClipRangeError.invalidRange) {
         try ClipTimeRange.parse(start: "20", end: "20", mediaDuration: 120)
       }
+      #expect(throws: ClipRangeError.invalidRange) {
+        try ClipTimeRange.parse(start: "20", end: "20.25", mediaDuration: 120)
+      }
+      let longRange = try ClipTimeRange.parse(
+        start: "00:10:00", end: "01:10:00", mediaDuration: 5_000)
+      #expect(longRange.duration == 3_600)
       #expect(throws: ClipRangeError.beyondDuration) {
         try ClipTimeRange.parse(start: "20", end: "121", mediaDuration: 120)
       }
@@ -89,6 +100,18 @@ import Foundation
         !YTDLPDownloadOptions(
           formatSelector: "best", downloadSubtitles: false, subtitleLanguages: nil
         ).requiresFFmpeg)
+      let editingOptions = YTDLPDownloadOptions(
+        formatSelector: LinkDownloadQuality.p720.formatSelector,
+        downloadSubtitles: false, subtitleLanguages: nil,
+        outputPreset: .editingCompatibleMP4, clipRange: range, mediaDuration: 120)
+      #expect(editingOptions.effectiveFormatSelector.contains("vcodec^=avc1"))
+      #expect(editingOptions.effectiveFormatSelector.contains("bestaudio[ext=m4a]"))
+      #expect(editingOptions.effectiveFormatSelector.contains("height<=720"))
+      let audioOptions = YTDLPDownloadOptions(
+        formatSelector: LinkDownloadQuality.audioOnly.formatSelector,
+        downloadSubtitles: false, subtitleLanguages: nil,
+        outputPreset: .audioOnly, clipRange: range, mediaDuration: 120)
+      #expect(audioOptions.effectiveFormatSelector == LinkDownloadQuality.audioOnly.formatSelector)
     }
 
     @Test("editing output survives download history and source sidecars")
@@ -123,9 +146,12 @@ import Foundation
     @Test("smart expansion is multilingual bounded and optional")
     func smartExpansion() {
       let cases = [
-        ("hamburger", "cheeseburger"), ("台湾美食", "Taiwan street food"),
-        ("台灣美食", "Taiwan street food"), ("台湾料理", "Taiwan cuisine"),
-        ("comida taiwanesa", "Taiwan cuisine"),
+        ("hamburger", "cheeseburger"), ("fries", "potato fries"),
+        ("coffee shop", "barista making coffee"), ("city night", "night traffic"),
+        ("factory worker", "manufacturing worker"),
+        ("Apollo 11", "1969 moon landing"), ("俄乌战争", "Ukraine conflict"),
+        ("台湾美食", "Taiwan street food"), ("台灣美食", "Taiwan street food"),
+        ("台湾料理", "Taiwan cuisine"), ("comida taiwanesa", "Taiwan cuisine"),
         ("российско-украинская война", "Ukraine conflict"),
       ]
       for (query, expected) in cases {
@@ -137,6 +163,25 @@ import Foundation
       #expect(
         KeywordEngine.keywords(for: "coffee shop", smartExpansion: false).map(\.text)
           == ["coffee shop"])
+      let languageCases = [
+        ("城市夜景", "city night"), ("都市夜景", "city night"),
+        ("夜の街", "city night"), ("도시 야경", "city night"),
+        ("ciudad de noche", "city night"), ("cidade à noite", "city night"),
+        ("stadt bei nacht", "city night"), ("ville de nuit", "city night"),
+        ("ночной город", "city night"),
+      ]
+      for (query, expected) in languageCases {
+        #expect(KeywordEngine.keywords(for: query).map(\.text).contains(expected))
+      }
+      var disabled = KeywordEngine.keywords(for: "Apollo 11")
+      disabled[1].isEnabled = false
+      #expect(
+        !KeywordEngine.providerQueries(from: disabled, provider: .openverse, mode: .publicAPI)
+          .contains(disabled[1].text))
+      let duplicate = [SearchKeyword(text: "Apollo 11"), SearchKeyword(text: "apollo 11")]
+      #expect(
+        KeywordEngine.providerQueries(from: duplicate, provider: .wikimedia, mode: .publicAPI)
+          .count == 2)
       let values = KeywordEngine.keywords(for: "Apollo 11")
       #expect(
         KeywordEngine.providerQueries(from: values, provider: .youtube, mode: .publicAPI).count
@@ -156,6 +201,7 @@ import Foundation
           "normal note\nhttps://youtu.be/example\nhttps://vimeo.com/123\nhttps://youtu.be/example"
       )
       #expect(values.count == 2)
+      #expect(LinkURLParser.mediaURLs(from: "").isEmpty)
       #expect(LinkURLParser.mediaURLs(from: "secret password text").isEmpty)
       #expect(LinkURLParser.mediaURLs(from: "http://127.0.0.1/private").isEmpty)
       #expect(LinkURLParser.mediaURLs(from: "https://example.com/file.mp4").count == 1)

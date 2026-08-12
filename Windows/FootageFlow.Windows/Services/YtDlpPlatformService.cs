@@ -93,6 +93,14 @@ public sealed class YtDlpPlatformService
     {
         var selector = metadata?.GetValueOrDefault("linkFormatSelector") ??
             "bestvideo[height<=720]+bestaudio/best[height<=720]";
+        var outputPreset = metadata?.GetValueOrDefault("linkOutputPreset") ?? "original";
+        double clipStart = 0, clipEnd = 0;
+        var hasClip = double.TryParse(metadata?.GetValueOrDefault("linkClipStart"),
+                NumberStyles.Float, CultureInfo.InvariantCulture, out clipStart) &&
+            double.TryParse(metadata?.GetValueOrDefault("linkClipEnd"),
+                NumberStyles.Float, CultureInfo.InvariantCulture, out clipEnd) && clipEnd > clipStart;
+        if (outputPreset != "audioOnly" && (hasClip || outputPreset == "editingCompatibleMP4"))
+            selector = EditingCompatibleSelector(selector);
         var arguments = new List<string>
         {
             "--ignore-config", "--no-warnings", "--no-playlist", "--no-overwrites",
@@ -101,12 +109,6 @@ public sealed class YtDlpPlatformService
             "--format", selector, "--paths", directory, "--output", $"{fileStem}.%(ext)s",
             "--print", "after_move:FFFILE:%(filepath)s"
         };
-        var outputPreset = metadata?.GetValueOrDefault("linkOutputPreset") ?? "original";
-        double clipStart = 0, clipEnd = 0;
-        var hasClip = double.TryParse(metadata?.GetValueOrDefault("linkClipStart"),
-                NumberStyles.Float, CultureInfo.InvariantCulture, out clipStart) &&
-            double.TryParse(metadata?.GetValueOrDefault("linkClipEnd"),
-                NumberStyles.Float, CultureInfo.InvariantCulture, out clipEnd) && clipEnd > clipStart;
         var needsFfmpeg = hasClip || selector.Contains('+') ||
             outputPreset is "editingCompatibleMP4" or "audioOnly";
         if (needsFfmpeg)
@@ -123,6 +125,10 @@ public sealed class YtDlpPlatformService
             arguments.Add("--download-sections");
             arguments.Add($"*{clipStart.ToString("0.###", CultureInfo.InvariantCulture)}-{clipEnd.ToString("0.###", CultureInfo.InvariantCulture)}");
             arguments.Add("--force-keyframes-at-cuts");
+        }
+        if (outputPreset != "audioOnly" && (hasClip || outputPreset == "editingCompatibleMP4"))
+        {
+            arguments.Add("--merge-output-format"); arguments.Add("mp4");
         }
         if (outputPreset == "audioOnly")
         {
@@ -162,6 +168,15 @@ public sealed class YtDlpPlatformService
                 candidate, directory, fileStem, duration, progress, cancellationToken);
         }
         return candidate;
+    }
+
+    internal static string EditingCompatibleSelector(string fallback)
+    {
+        var height = fallback.Contains("height<=1080", StringComparison.Ordinal) ? "[height<=1080]" :
+            fallback.Contains("height<=720", StringComparison.Ordinal) ? "[height<=720]" :
+            fallback.Contains("height<=480", StringComparison.Ordinal) ? "[height<=480]" : "";
+        return $"bestvideo[vcodec^=avc1]{height}+bestaudio[ext=m4a]/" +
+            $"best[ext=mp4][vcodec^=avc1]{height}/{fallback}";
     }
 
     private async Task<string> TranscodeEditingCompatibleAsync(

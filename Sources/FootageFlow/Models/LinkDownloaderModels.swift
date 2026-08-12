@@ -249,6 +249,27 @@ struct YTDLPDownloadOptions: Sendable, Equatable {
   var requiresFFmpeg: Bool {
     outputPreset.requiresFFmpeg || clipRange != nil || formatSelector.contains("+")
   }
+
+  /// Precise clipping and editing-compatible output require FFmpeg to decode
+  /// the selected source. Prefer AVC + M4A when those formats are available;
+  /// the original selector remains the final fallback for other sites.
+  var effectiveFormatSelector: String {
+    guard outputPreset != .audioOnly,
+      clipRange != nil || outputPreset == .editingCompatibleMP4
+    else { return formatSelector }
+    let height: String
+    if formatSelector.contains("height<=1080") {
+      height = "[height<=1080]"
+    } else if formatSelector.contains("height<=720") {
+      height = "[height<=720]"
+    } else if formatSelector.contains("height<=480") {
+      height = "[height<=480]"
+    } else {
+      height = ""
+    }
+    return
+      "bestvideo[vcodec^=avc1]\(height)+bestaudio[ext=m4a]/best[ext=mp4][vcodec^=avc1]\(height)/\(formatSelector)"
+  }
 }
 
 struct YTDLPDownloadUpdate: Sendable {

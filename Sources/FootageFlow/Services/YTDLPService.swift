@@ -82,7 +82,8 @@ struct YTDLPService: Sendable {
         "--no-playlist", "--no-overwrites", "--socket-timeout", "15", "--retries", "1",
         "--fragment-retries", "1", "--newline", "--progress-template",
         "download:FFPROGRESS:%(progress._percent_str)s|%(progress.speed)s", "--format",
-        options.formatSelector, "--paths", directory.path, "--output", "\(fileStem).%(ext)s",
+        options.effectiveFormatSelector, "--paths", directory.path, "--output",
+        "\(fileStem).%(ext)s",
         "--print", "after_move:FFFILE:%(filepath)s",
       ]
     if let ffmpegURL {
@@ -90,6 +91,11 @@ struct YTDLPService: Sendable {
     }
     if let clipRange = options.clipRange {
       arguments += ["--download-sections", clipRange.sectionArgument, "--force-keyframes-at-cuts"]
+    }
+    if options.outputPreset != .audioOnly,
+      options.clipRange != nil || options.outputPreset == .editingCompatibleMP4
+    {
+      arguments += ["--merge-output-format", "mp4"]
     }
     if options.outputPreset == .audioOnly {
       arguments += ["--extract-audio", "--audio-format", "m4a", "--audio-quality", "0"]
