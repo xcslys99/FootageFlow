@@ -10,7 +10,7 @@ A free and open-source desktop app for macOS and Windows that helps video creato
 
 [Download for macOS or Windows — Latest Release](https://github.com/xcslys99/FootageFlow/releases/latest) · [All Releases](https://github.com/xcslys99/FootageFlow/releases)
 
-FootageFlow is privacy-friendly and built for documentary, history, country profile, finance, science, and social-video research. FootageFlow v0.5.0 supports **macOS 15+ on Apple Silicon** and **Windows 11 x64**. Both editions share provider behavior, pagination, normalized metadata and rights, filters, attribution formatting, keyword rules, source sidecars, and project persistence.
+FootageFlow is privacy-friendly and built for documentary, history, country profile, finance, science, and social-video research. FootageFlow v0.6.0 supports **macOS 15+ on Apple Silicon** and **Windows 11 x64**. Both editions share all 17 search providers, pagination, normalized metadata and rights, smart keyword rules, creator output metadata, source sidecars, and project persistence.
 
 ## Two ways to use FootageFlow
 
@@ -29,17 +29,28 @@ Search footage across multiple sources from one place.
 Already have a media URL? Paste one or more supported public media links into FootageFlow and let the app try to analyze and download the available media.
 
 - Reads source metadata and available formats
-- Offers quality, audio-only, and subtitle choices when the source provides them
+- Downloads full media or a validated start/end clip
+- Offers quality, audio-only, subtitle, original, and editing-compatible MP4 choices when the source provides them
 - Supports YouTube, X/Twitter, Vimeo, and other public sites supported by the bundled yt-dlp integration
 - Sends every task into the same Download Manager with progress, cancellation, retry, history, and source sidecars
 
 Availability depends on the source, individual media, permissions, regional restrictions, authentication requirements, and platform changes. FootageFlow is a best-effort link downloader and does not promise 100% download success.
 
+## Creator Workflow
+
+- **Download only the clip you need:** enter a start/end time or use the lightweight range controls after link analysis. Clip tasks use the existing Download Manager.
+- **Expand search keywords automatically:** up to five visible, editable multilingual queries improve provider coverage. Smart Search Expansion is rule-based and does not require a paid AI API.
+- **Export for editing:** keep the source format, create an H.264/AAC/yuv420p MP4 with fast-start metadata, or extract M4A audio. FootageFlow verifies editing-compatible output before completion.
+- **Detect copied media links locally:** optional clipboard detection runs only while FootageFlow is active, is off by default, and never uploads clipboard contents.
+- **Search Openverse:** discover openly licensed images and audio with item-specific rights and attribution metadata.
+- **Discover Dailymotion videos:** search public metadata and open the original page; Dailymotion is primarily a discovery source.
+
 ## What works
 
-- Concurrent, progressive search across 15 sources, including Pexels, Pixabay, Wikimedia Commons, Internet Archive, YouTube, NASA, Library of Congress, National Archives, Europeana, PeerTube/SepiaSearch, Coverr, and Vimeo
+- Concurrent, progressive search across 17 sources, including Pexels, Pixabay, Wikimedia Commons, Internet Archive, YouTube, NASA, Library of Congress, National Archives, Europeana, PeerTube/SepiaSearch, Coverr, Vimeo, Openverse, and Dailymotion
+- Visible, editable Smart Search Expansion with bounded provider query budgets and an off switch
 - Provider-aware pagination and **Load More** append results without clearing the current search; a failed next page does not discard earlier results
-- **Link Downloader** analyzes one or more public media URLs, shows available quality/subtitle choices, and sends selected items into the existing Download Manager
+- **Link Downloader** analyzes one or more public media URLs, supports full/clip scope and output presets, and sends selected items into the existing Download Manager
 - Advanced filters for source, media type, year, duration, resolution, rights, and direct-download availability
 - Multi-select, Select All Visible, batch download through the existing three-slot queue, add to project, retry failed, and copy source information
 - Copy Source and Copy Attribution text generated only from provider-supplied metadata
@@ -49,6 +60,7 @@ Availability depends on the source, individual media, permissions, regional rest
 - A concise recommendation below the search field explains that free official APIs improve National Archives, Europeana, and YouTube search, with a direct link to provider settings
 - A visible **Feedback & Community** page integrates GitHub Issues and Discussions for bug reports, ideas, and Q&A, with links to the repository and Releases
 - Optional API keys stored only in macOS Keychain or Windows Credential Manager
+- Optional, foreground-only clipboard link detection; disabled by default and entirely local
 - No analytics, advertising, tracking, cloud account, paid LLM, OpenAI API, or Codex dependency
 
 YouTube search can use the official Data API when configured. FootageFlow also includes a local, best-effort yt-dlp path for public search and downloads. Downloads may fail because of rate limits, regional restrictions, login requirements, rights restrictions, or platform changes. FootageFlow does not import browser cookies, bypass DRM, or promise that every video is downloadable.
@@ -57,23 +69,23 @@ YouTube search can use the official Data API when configured. FootageFlow also i
 
 These screenshots are from FootageFlow on macOS. The Windows edition follows the same product structure with platform-native controls.
 
-![FootageFlow v0.5.0 real 15-source search, provider status, and Load More](docs/images/main-search.png)
+![FootageFlow v0.6.0 Smart Search Expansion and real provider results](docs/images/main-search.png)
 
-![FootageFlow v0.5.0 Link Downloader analyzing public YouTube and X links](docs/images/link-downloader.png)
+![FootageFlow v0.6.0 Link Downloader with clip and output controls](docs/images/link-downloader.png)
 
-![FootageFlow v0.5.0 provider modes and ten-language settings](docs/images/provider-settings.png)
+![FootageFlow v0.6.0 provider, clipboard, and ten-language settings](docs/images/provider-settings.png)
 
 ## Install on macOS
 
-1. Download `FootageFlow-0.5.0-macOS-arm64.dmg` from Releases.
+1. Download `FootageFlow-0.6.0-macOS-arm64.dmg` from Releases.
 2. Open the DMG and drag FootageFlow to Applications.
-3. Open FootageFlow. The v0.5.0 build is Ad Hoc signed, not notarized; if macOS blocks the first launch, use **System Settings → Privacy & Security → Open Anyway**.
+3. Open FootageFlow. The v0.6.0 build is Ad Hoc signed, not notarized; if macOS blocks the first launch, use **System Settings → Privacy & Security → Open Anyway**.
 
 No terminal command is required for normal use.
 
 ## Install on Windows
 
-1. On a Windows 11 x64 PC, download `FootageFlow-Setup-0.5.0-Windows-x64.exe` from Releases.
+1. On a Windows 11 x64 PC, download `FootageFlow-Setup-0.6.0-Windows-x64.exe` from Releases.
 2. Verify it against the attached `.sha256` file, then double-click the installer.
 3. Complete the setup wizard and open FootageFlow from the Start menu.
 
@@ -111,14 +123,16 @@ FootageFlow does not require every provider to use the same access method. Some 
 | [Mixkit](https://mixkit.co/) | Limited discovery | Open official search | Open original only | Free/restricted licenses vary; verify original |
 | [Coverr](https://api.coverr.co/docs) | Official API with user key | Limited: open official search | API media URL when supplied | Coverr API/license metadata; attribution retained |
 | [Vimeo](https://developer.vimeo.com/api/reference) | Official API with user token | Limited: open official search | Discovery only by default | License metadata only when explicitly supplied |
+| [Openverse](https://api.openverse.org/) | Public image/audio API | Anonymous access | Original media when supplied | Item license, URL, creator, and attribution metadata |
+| [Dailymotion](https://developers.dailymotion.com/reference/api-list-videos) | Public video discovery endpoint | No key required for current public fields | Discovery only | Unknown unless explicit metadata is available |
 
 API keys are credentials, not platform logins. They remain on this device, are masked in the UI, and can be added, replaced, tested, or removed under **Settings → Sources / Providers**. Keys are never placed in ordinary settings, logs, source code, Git, telemetry, or request URLs.
 
 ## Link Downloader
 
-Open **Link Downloader**, paste one or more public media-page URLs, and choose **Analyze**. FootageFlow uses its bundled, configuration-isolated yt-dlp adapter to identify metadata, progressive quality choices, audio-only streams, and subtitles that the source actually reports. YouTube, X/Twitter, Vimeo, and other public sites supported by the bundled tool may work, but no site or item is guaranteed.
+Open **Link Downloader**, paste one or more public media-page URLs, and choose **Analyze**. FootageFlow uses its bundled, configuration-isolated yt-dlp adapter to identify metadata, available video heights, audio-only streams, and subtitles that the source actually reports. Choose the full item or a validated start/end clip, then keep the original output, request an editing-compatible MP4, or extract M4A audio. YouTube, X/Twitter, Vimeo, Dailymotion, and other public sites supported by the bundled tool may work, but no site or item is guaranteed.
 
-Every selected item enters the same Download Manager used by search results, with progress, speed, cancellation, retry, folder reveal, download history, and source sidecars. FootageFlow does not load browser cookies, bypass DRM, bypass sign-in or private-video controls, or unlock paid/member content. It also rejects links containing embedded credentials or sensitive query parameters, and blocks local/private-network addresses. If access is unavailable, use **Open Original**.
+Every selected item enters the same Download Manager used by search results, with progress, speed, cancellation, retry, folder reveal, download history, and source sidecars. Output preset and clip times remain visible in download history and sidecars. FootageFlow does not load browser cookies, bypass DRM, bypass sign-in or private-video controls, or unlock paid/member content. It also rejects links containing embedded credentials or sensitive query parameters, and blocks local/private-network addresses. If access is unavailable, use **Open Original**.
 
 Download availability depends on the source website, individual media, access permissions, and platform changes. Users must follow the source site's terms, copyright rules, and applicable law.
 
