@@ -94,6 +94,9 @@ struct DownloadsView: View {
           Text(item.message)
           if let speed = item.speedText { Text("· \(speed)") }
         }.font(.caption2).foregroundStyle(item.status == .failed ? .red : .secondary)
+        if let summary = item.workflowSummary {
+          Text(summary).font(.caption2).foregroundStyle(.secondary).lineLimit(2)
+        }
         if let destination = item.destination {
           Text(tr("download.saveLocation", destination.path)).font(.caption2).foregroundStyle(
             .tertiary
@@ -129,6 +132,9 @@ struct DownloadsView: View {
           "\(record.sourceName?.nilIfEmpty ?? ProviderID(rawValue: record.providerRaw)?.displayName ?? record.providerRaw) · \(record.downloadedAt.formatted(date: .abbreviated, time: .shortened))"
         )
         .font(.caption).foregroundStyle(.secondary)
+        if let summary = record.workflowSummary {
+          Text(summary).font(.caption2).foregroundStyle(.secondary).lineLimit(2)
+        }
         Text(record.localPath).font(.caption2).foregroundStyle(.tertiary).lineLimit(1)
       }
       Spacer()

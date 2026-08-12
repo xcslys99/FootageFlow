@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <assembly manifestVersion="1.0" xmlns="urn:schemas-microsoft-com:asm.v1">
-  <assemblyIdentity version="0.5.0.0" name="FootageFlow.Windows" />
+  <assemblyIdentity version="0.6.0.0" name="FootageFlow.Windows" />
   <compatibility xmlns="urn:schemas-microsoft-com:compatibility.v1">
     <application>
       <supportedOS Id="{4f476546-9374-4f74-9d1f-ef54c27887a6}" />

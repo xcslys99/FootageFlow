@@ -1,5 +1,5 @@
 param(
-    [string]$Version = "0.5.0",
+    [string]$Version = "0.6.0",
     [string]$OutputDirectory = ""
 )
 $ErrorActionPreference = "Stop"
@@ -43,6 +43,13 @@ try {
 
     $ytDlp = & (Join-Path $PSScriptRoot "fetch-yt-dlp.ps1")
     Copy-Item $ytDlp (Join-Path $toolsDirectory "yt-dlp.exe") -Force
+    $ffmpegDirectory = & (Join-Path $PSScriptRoot "fetch-ffmpeg.ps1")
+    Copy-Item (Join-Path $ffmpegDirectory "ffmpeg.exe") (Join-Path $toolsDirectory "ffmpeg.exe") -Force
+    Copy-Item (Join-Path $ffmpegDirectory "ffprobe.exe") (Join-Path $toolsDirectory "ffprobe.exe") -Force
+    $ffmpegLicenseDirectory = Join-Path $licensesDirectory "ffmpeg"
+    New-Item -ItemType Directory -Path $ffmpegLicenseDirectory -Force | Out-Null
+    Copy-Item (Join-Path $ffmpegDirectory "LICENSE.txt") (Join-Path $ffmpegLicenseDirectory "LICENSE.txt") -Force
+    Copy-Item (Join-Path $ffmpegDirectory "README.txt") (Join-Path $ffmpegLicenseDirectory "README.txt") -Force
     Copy-Item "LICENSE" (Join-Path $stage "LICENSE.txt")
     Copy-Item "THIRD_PARTY_NOTICES.md" (Join-Path $stage "THIRD_PARTY_NOTICES.md")
 

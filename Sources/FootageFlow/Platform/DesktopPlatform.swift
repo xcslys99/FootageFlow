@@ -7,6 +7,7 @@ protocol DesktopPlatformServing {
   func chooseDirectory(prompt: String) -> URL?
   func copy(_ text: String)
   func clipboardText() -> String?
+  var isApplicationActive: Bool { get }
 }
 
 enum DesktopPlatform {
@@ -36,6 +37,7 @@ enum DesktopPlatform {
     }
 
     func clipboardText() -> String? { NSPasteboard.general.string(forType: .string) }
+    var isApplicationActive: Bool { NSApp.isActive }
   }
 #else
   private struct SystemDesktopPlatform: DesktopPlatformServing {
@@ -44,5 +46,6 @@ enum DesktopPlatform {
     func chooseDirectory(prompt: String) -> URL? { nil }
     func copy(_ text: String) {}
     func clipboardText() -> String? { nil }
+    var isApplicationActive: Bool { false }
   }
 #endif

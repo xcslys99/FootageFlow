@@ -79,6 +79,10 @@ struct DownloadRecord: Identifiable, Codable, Hashable {
   var sourcePageURL: String
   var projectID: UUID?
   var downloadedAt: Date = .now
+  var outputPresetRaw: String?
+  var clipStartSeconds: Double?
+  var clipEndSeconds: Double?
+  var clipDurationSeconds: Double?
 
   init(asset: MediaAsset, fileURL: URL, projectID: UUID?) {
     stableAssetID = asset.stableID
@@ -90,6 +94,25 @@ struct DownloadRecord: Identifiable, Codable, Hashable {
     thumbnailURL = asset.thumbnailURL?.absoluteString
     sourcePageURL = asset.sourcePageURL.absoluteString
     self.projectID = projectID
+    outputPresetRaw = asset.originalMetadata["linkOutputPreset"]
+    clipStartSeconds = asset.originalMetadata["linkClipStart"].flatMap(Double.init)
+    clipEndSeconds = asset.originalMetadata["linkClipEnd"].flatMap(Double.init)
+    clipDurationSeconds = asset.originalMetadata["linkClipDuration"].flatMap(Double.init)
+  }
+
+  var workflowSummary: String? {
+    guard let outputPresetRaw,
+      let output = EditingOutputPreset(rawValue: outputPresetRaw)
+    else { return nil }
+    var parts = ["\(tr("link.outputFormat")): \(output.label)"]
+    if let start = clipStartSeconds, let end = clipEndSeconds {
+      parts.append("\(tr("link.clip.start")): \(TimecodeParser.string(start))")
+      parts.append("\(tr("link.clip.end")): \(TimecodeParser.string(end))")
+      if let duration = clipDurationSeconds {
+        parts.append(tr("link.clip.duration", TimecodeParser.string(duration)))
+      }
+    }
+    return parts.joined(separator: " · ")
   }
 }
 

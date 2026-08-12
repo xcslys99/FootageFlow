@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Windows.Data;
+using System.Windows;
 
 namespace FootageFlow.Windows.Infrastructure;
 
@@ -24,6 +25,23 @@ public sealed class LicenseDisplayConverter : IMultiValueConverter
         throw new NotSupportedException();
 }
 
+public sealed class ObjectVisibilityConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture) =>
+        value is null ? Visibility.Collapsed : Visibility.Visible;
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) =>
+        throw new NotSupportedException();
+}
+
+public sealed class ClipScopeVisibilityConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture) =>
+        string.Equals(value as string, "clip", StringComparison.OrdinalIgnoreCase)
+            ? Visibility.Visible : Visibility.Collapsed;
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) =>
+        throw new NotSupportedException();
+}
+
 public sealed class ProviderNameConverter : IValueConverter
 {
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture) =>
@@ -44,6 +62,8 @@ public sealed class ProviderNameConverter : IValueConverter
             "mixkit" => "Mixkit",
             "coverr" => "Coverr",
             "vimeo" => "Vimeo",
+            "openverse" => "Openverse",
+            "dailymotion" => "Dailymotion",
             "linkDownloader" => "Link Downloader",
             var other => other ?? ""
         };

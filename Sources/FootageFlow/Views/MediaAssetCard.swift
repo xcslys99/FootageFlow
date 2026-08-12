@@ -14,7 +14,12 @@ struct MediaAssetCard: View {
   private var projectName: String? {
     projectID.flatMap { id in store.projects.first { $0.id == id }?.name }
   }
-  private var downloadState: DownloadProgress? { downloads.states[asset.stableID] }
+  private var downloadState: DownloadProgress? {
+    downloads.states[asset.stableID]
+      ?? downloads.states.values.first {
+        $0.id.hasPrefix("\(asset.provider.rawValue):\(asset.id):")
+      }
+  }
 
   var body: some View {
     let _ = localization.language
@@ -81,16 +86,20 @@ struct MediaAssetCard: View {
           if let downloadState,
             downloadState.status == .downloading || downloadState.status == .waiting
           {
-            Button(tr("common.cancel")) { downloads.cancel(stableID: asset.stableID) }
+            Button(tr("common.cancel")) { downloads.cancel(stableID: downloadState.id) }
           } else if let downloadState,
             downloadState.status == .failed || downloadState.status == .cancelled
           {
-            Button(tr("common.retry")) { downloads.retry(stableID: asset.stableID) }
+            Button(tr("common.retry")) { downloads.retry(stableID: downloadState.id) }
           } else {
-            Button(tr("media.download")) {
-              downloads.start(
-                asset: asset, projectID: projectID, projectName: projectName,
-                segmentIndex: segmentIndex)
+            if asset.effectiveDownloadStrategy == .ytDLP {
+              Menu(tr("media.download")) {
+                ForEach(EditingOutputPreset.allCases) { preset in
+                  Button(preset.label) { startDownload(preset: preset) }
+                }
+              }
+            } else {
+              Button(tr("media.download")) { startDownload() }
             }
           }
         }
@@ -122,5 +131,12 @@ struct MediaAssetCard: View {
     case .audio: "waveform"
     case .all: "doc"
     }
+  }
+
+  private func startDownload(preset: EditingOutputPreset? = nil) {
+    let downloadAsset = preset.map { asset.withEditingOutput($0) } ?? asset
+    downloads.start(
+      asset: downloadAsset, projectID: projectID, projectName: projectName,
+      segmentIndex: segmentIndex)
   }
 }

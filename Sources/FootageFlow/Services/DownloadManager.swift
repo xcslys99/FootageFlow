@@ -34,6 +34,22 @@ struct DownloadProgress: Identifiable {
     let value = ByteCountFormatter.string(fromByteCount: Int64(bytesPerSecond), countStyle: .file)
     return tr("download.speed", value)
   }
+  var workflowSummary: String? {
+    guard let rawPreset = asset.originalMetadata["linkOutputPreset"],
+      let preset = EditingOutputPreset(rawValue: rawPreset)
+    else { return nil }
+    var parts = ["\(tr("link.outputFormat")): \(preset.label)"]
+    if let start = asset.originalMetadata["linkClipStart"].flatMap(Double.init),
+      let end = asset.originalMetadata["linkClipEnd"].flatMap(Double.init)
+    {
+      parts.append("\(tr("link.clip.start")): \(TimecodeParser.string(start))")
+      parts.append("\(tr("link.clip.end")): \(TimecodeParser.string(end))")
+      if let duration = asset.originalMetadata["linkClipDuration"].flatMap(Double.init) {
+        parts.append(tr("link.clip.duration", TimecodeParser.string(duration)))
+      }
+    }
+    return parts.joined(separator: " · ")
+  }
 }
 
 private struct DownloadContext {

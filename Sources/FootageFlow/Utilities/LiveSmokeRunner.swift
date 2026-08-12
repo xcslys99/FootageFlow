@@ -54,6 +54,40 @@ enum LiveSmokeRunner {
       }
       if loc.isEmpty { failures.append("Library of Congress Apollo 11") }
     } catch { failures.append("Library of Congress: \(error.localizedDescription)") }
+    do {
+      let openverseImages = try await OpenverseProvider().search(
+        SearchRequest(query: "coffee", mediaType: .image, pageSize: 4))
+      print("SMOKE openverse_images=\(openverseImages.count)")
+      if let first = openverseImages.first {
+        print(
+          "SMOKE openverse_first=\(first.title) source=\(first.sourcePageURL.absoluteString) license=\(first.licenseText)"
+        )
+      }
+      if openverseImages.isEmpty || openverseImages.contains(where: { $0.mediaType != .image }) {
+        failures.append("Openverse images")
+      }
+      let openverseAudio = try await OpenverseProvider().search(
+        SearchRequest(query: "coffee", mediaType: .audio, pageSize: 2))
+      print("SMOKE openverse_audio=\(openverseAudio.count)")
+      if openverseAudio.isEmpty || openverseAudio.contains(where: { $0.mediaType != .audio }) {
+        failures.append("Openverse audio")
+      }
+    } catch { failures.append("Openverse: \(error.localizedDescription)") }
+    do {
+      let dailymotion = try await DailymotionProvider().search(
+        SearchRequest(query: "coffee", mediaType: .video, pageSize: 4))
+      print("SMOKE dailymotion_videos=\(dailymotion.count)")
+      if let first = dailymotion.first {
+        print(
+          "SMOKE dailymotion_first=\(first.title) source=\(first.sourcePageURL.absoluteString) downloadable=\(first.downloadable)"
+        )
+      }
+      if dailymotion.isEmpty
+        || dailymotion.contains(where: { $0.downloadable || $0.licenseStatus != .unknown })
+      {
+        failures.append("Dailymotion discovery")
+      }
+    } catch { failures.append("Dailymotion: \(error.localizedDescription)") }
     let pexelsWithoutKey = ProviderFactory.make(.pexels, apiKey: "")
     if pexelsWithoutKey.info.mode == .directSearch && !pexelsWithoutKey.info.requiresAPIKey {
       print("SMOKE pexels_without_key_mode=directSearch")

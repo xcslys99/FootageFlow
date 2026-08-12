@@ -1,0 +1,16 @@
+{
+  "page": 1,
+  "limit": 20,
+  "total": 42,
+  "has_more": true,
+  "list": [{
+    "id": "xfixture",
+    "title": "City at night",
+    "description": "A public discovery fixture",
+    "duration": 95,
+    "thumbnail_720_url": "https://s1.dmcdn.net/v/fixture/x720",
+    "url": "https://www.dailymotion.com/video/xfixture",
+    "owner.screenname": "Fixture Channel",
+    "created_time": 1704067200
+  }]
+}

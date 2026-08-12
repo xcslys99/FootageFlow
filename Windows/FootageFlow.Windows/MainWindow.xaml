@@ -35,6 +35,8 @@
     <BooleanToVisibilityConverter x:Key="BoolVisibility" />
     <infrastructure:LicenseDisplayConverter x:Key="LicenseDisplay" />
     <infrastructure:ProviderNameConverter x:Key="ProviderName" />
+    <infrastructure:ObjectVisibilityConverter x:Key="ObjectVisibility" />
+    <infrastructure:ClipScopeVisibilityConverter x:Key="ClipScopeVisibility" />
     <Style x:Key="NavButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
       <Setter Property="HorizontalContentAlignment" Value="Left" />
       <Setter Property="Background" Value="Transparent" />
@@ -75,6 +77,8 @@
               <Button Content="{Binding DataContext.PreviewText, RelativeSource={RelativeSource AncestorType=Window}}" Command="{Binding DataContext.PreviewCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" />
               <Button Content="♡" ToolTip="{Binding DataContext.FavoriteText, RelativeSource={RelativeSource AncestorType=Window}}" Command="{Binding DataContext.FavoriteCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" />
               <Button Content="{Binding DataContext.DownloadText, RelativeSource={RelativeSource AncestorType=Window}}" Command="{Binding DataContext.DownloadCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" IsEnabled="{Binding Downloadable}" />
+              <Button Content="MP4" ToolTip="{Binding DataContext.EditingCompatibleOutputText, RelativeSource={RelativeSource AncestorType=Window}}" Command="{Binding DataContext.DownloadEditingCompatibleCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" Visibility="{Binding SupportsEditingOutput, Converter={StaticResource BoolVisibility}}" />
+              <Button Content="♫" ToolTip="{Binding DataContext.AudioOnlyOutputText, RelativeSource={RelativeSource AncestorType=Window}}" Command="{Binding DataContext.DownloadAudioOnlyCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" Visibility="{Binding SupportsEditingOutput, Converter={StaticResource BoolVisibility}}" />
               <Button Content="{Binding DataContext.OpenSourceText, RelativeSource={RelativeSource AncestorType=Window}}" Command="{Binding DataContext.OpenSourceCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" />
               <Button Content="{Binding DataContext.CopySourceText, RelativeSource={RelativeSource AncestorType=Window}}" Command="{Binding DataContext.CopySourceCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" />
               <Button Content="{Binding DataContext.CopyAttributionText, RelativeSource={RelativeSource AncestorType=Window}}" Command="{Binding DataContext.CopyAttributionCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" />
@@ -176,10 +180,15 @@
             </ItemsControl>
           </StackPanel>
           <StackPanel Grid.Row="3" Margin="0,4,0,8">
-            <TextBlock Text="{Binding KeywordsTitle}" FontWeight="SemiBold" />
+            <WrapPanel>
+              <TextBlock Text="{Binding KeywordsTitle}" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,12,0" />
+              <CheckBox Content="{Binding SmartExpansionText}" IsChecked="{Binding SmartExpansionEnabled}" VerticalAlignment="Center" />
+              <Button Content="{Binding RegenerateKeywordsText}" Command="{Binding RegenerateKeywordsCommand}" />
+              <Button Content="{Binding AddKeywordText}" Command="{Binding AddSearchKeywordCommand}" />
+            </WrapPanel>
             <ItemsControl ItemsSource="{Binding SearchKeywords}">
               <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
-              <ItemsControl.ItemTemplate><DataTemplate><Border Background="#E8F2FF" CornerRadius="10" Padding="9,4" Margin="0,5,6,0"><TextBlock Text="{Binding Text}" /></Border></DataTemplate></ItemsControl.ItemTemplate>
+              <ItemsControl.ItemTemplate><DataTemplate><Border Background="#E8F2FF" CornerRadius="10" Padding="7,4" Margin="0,5,6,0"><StackPanel Orientation="Horizontal"><CheckBox IsChecked="{Binding IsEnabled}" VerticalAlignment="Center" /><TextBox Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}" MinWidth="110" BorderThickness="0" Background="Transparent" Padding="3,0" /><Button Content="×" Command="{Binding DataContext.RemoveSearchKeywordCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" Padding="4,0" /></StackPanel></Border></DataTemplate></ItemsControl.ItemTemplate>
             </ItemsControl>
             <TextBlock Text="{Binding SearchStatus}" Margin="0,7,0,0" Foreground="{StaticResource SubtleTextBrush}" />
             <WrapPanel Margin="0,8,0,0">
@@ -209,12 +218,23 @@
         </Grid>
 
         <Grid Visibility="{Binding IsLinkDownloaderPage, Converter={StaticResource BoolVisibility}}">
-          <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="130" /><RowDefinition Height="Auto" /><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+          <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="130" /><RowDefinition Height="Auto" /><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
           <StackPanel>
             <TextBlock Text="{Binding NavLinkDownloader}" Style="{StaticResource SectionTitle}" />
             <TextBlock Text="{Binding LinkTagline}" Foreground="{StaticResource SubtleTextBrush}" TextWrapping="Wrap" />
           </StackPanel>
-          <Grid Grid.Row="1" Margin="0,12,0,8">
+          <Border Grid.Row="1" Margin="0,10,0,0" Padding="10" CornerRadius="8" Background="#E8F2FF"
+                  Visibility="{Binding HasClipboardSuggestion, Converter={StaticResource BoolVisibility}}">
+            <DockPanel>
+              <WrapPanel DockPanel.Dock="Right">
+                <Button Content="{Binding LinkAnalyzeText}" Command="{Binding AnalyzeClipboardCommand}" Style="{StaticResource PrimaryButton}" />
+                <Button Content="{Binding ClipboardIgnoreText}" Command="{Binding IgnoreClipboardCommand}" />
+                <Button Content="{Binding ClipboardDisableText}" Command="{Binding DisableClipboardCommand}" />
+              </WrapPanel>
+              <TextBlock Text="{Binding ClipboardSuggestionText}" FontWeight="SemiBold" VerticalAlignment="Center" />
+            </DockPanel>
+          </Border>
+          <Grid Grid.Row="2" Margin="0,12,0,8">
             <Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
             <TextBox Text="{Binding LinkInput, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" TextWrapping="NoWrap" VerticalScrollBarVisibility="Auto" FontFamily="Consolas" />
             <StackPanel Grid.Column="1" Margin="8,0,0,0">
@@ -222,7 +242,7 @@
               <Button Content="{Binding LinkAnalyzeText}" Command="{Binding AnalyzeLinksCommand}" Style="{StaticResource PrimaryButton}" />
             </StackPanel>
           </Grid>
-          <Grid Grid.Row="2" Margin="0,0,0,10">
+          <Grid Grid.Row="3" Margin="0,0,0,10">
             <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
             <TextBlock Text="{Binding LinkDetectedText}" FontWeight="SemiBold" VerticalAlignment="Center" />
             <TextBlock Grid.Column="1" Text="{Binding LinkStatus}" Foreground="{StaticResource SubtleTextBrush}" Margin="12,0" VerticalAlignment="Center" />
@@ -232,7 +252,7 @@
               <Button Content="{Binding LinkDownloadSelectedText}" Command="{Binding DownloadLinkSelectedCommand}" Style="{StaticResource PrimaryButton}" />
             </StackPanel>
           </Grid>
-          <ScrollViewer Grid.Row="3" VerticalScrollBarVisibility="Auto">
+          <ScrollViewer Grid.Row="4" VerticalScrollBarVisibility="Auto">
             <ItemsControl ItemsSource="{Binding LinkItems}">
               <ItemsControl.ItemTemplate>
                 <DataTemplate>
@@ -251,6 +271,20 @@
                           <CheckBox Content="{Binding DataContext.LinkSubtitlesText, RelativeSource={RelativeSource AncestorType=Window}}" IsChecked="{Binding DownloadSubtitles}" Visibility="{Binding HasSubtitles, Converter={StaticResource BoolVisibility}}" VerticalAlignment="Center" Margin="12,0,5,0" />
                           <ComboBox ItemsSource="{Binding SubtitleLanguages}" SelectedItem="{Binding SubtitleLanguage}" Width="105" Visibility="{Binding DownloadSubtitles, Converter={StaticResource BoolVisibility}}" />
                         </WrapPanel>
+                        <WrapPanel Visibility="{Binding Analysis, Converter={StaticResource ObjectVisibility}}" Margin="0,6,0,0">
+                          <TextBlock Text="{Binding DataContext.LinkDownloadModeText, RelativeSource={RelativeSource AncestorType=Window}}" VerticalAlignment="Center" Margin="0,0,6,0" />
+                          <ComboBox ItemsSource="{Binding ScopeChoices}" DisplayMemberPath="Label" SelectedValuePath="Id" SelectedValue="{Binding SelectedScope}" Width="150" />
+                          <TextBlock Text="{Binding DataContext.LinkOutputFormatText, RelativeSource={RelativeSource AncestorType=Window}}" VerticalAlignment="Center" Margin="12,0,6,0" />
+                          <ComboBox ItemsSource="{Binding OutputChoices}" DisplayMemberPath="Label" SelectedValuePath="Id" SelectedValue="{Binding OutputPreset}" Width="190" />
+                        </WrapPanel>
+                        <WrapPanel Visibility="{Binding SelectedScope, Converter={StaticResource ClipScopeVisibility}}" Margin="0,6,0,0">
+                          <TextBlock Text="{Binding DataContext.LinkClipStartText, RelativeSource={RelativeSource AncestorType=Window}}" VerticalAlignment="Center" Margin="0,0,5,0" />
+                          <TextBox Text="{Binding ClipStart, UpdateSourceTrigger=PropertyChanged}" Width="95" />
+                          <TextBlock Text="{Binding DataContext.LinkClipEndText, RelativeSource={RelativeSource AncestorType=Window}}" VerticalAlignment="Center" Margin="10,0,5,0" />
+                          <TextBox Text="{Binding ClipEnd, UpdateSourceTrigger=PropertyChanged}" Width="95" />
+                          <Button Content="{Binding DataContext.ResetText, RelativeSource={RelativeSource AncestorType=Window}}" Command="{Binding DataContext.ResetClipCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" />
+                          <TextBlock Text="{Binding ClipErrorText}" Foreground="#B42318" VerticalAlignment="Center" Margin="8,0" />
+                        </WrapPanel>
                       </StackPanel>
                       <Button Grid.Column="3" Content="{Binding DataContext.LinkOpenOriginalText, RelativeSource={RelativeSource AncestorType=Window}}" Command="{Binding DataContext.OpenLinkOriginalCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" VerticalAlignment="Bottom" />
                     </Grid>
@@ -259,7 +293,7 @@
               </ItemsControl.ItemTemplate>
             </ItemsControl>
           </ScrollViewer>
-          <TextBlock Grid.Row="4" Text="{Binding LinkLegalNotice}" Foreground="{StaticResource SubtleTextBrush}" FontSize="11" TextWrapping="Wrap" Margin="0,8,0,0" />
+          <TextBlock Grid.Row="5" Text="{Binding LinkLegalNotice}" Foreground="{StaticResource SubtleTextBrush}" FontSize="11" TextWrapping="Wrap" Margin="0,8,0,0" />
         </Grid>
 
         <Grid Visibility="{Binding IsScriptPage, Converter={StaticResource BoolVisibility}}">
@@ -303,9 +337,9 @@
           <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions>
           <DockPanel><TextBlock Text="{Binding DownloadsTitle}" Style="{StaticResource SectionTitle}" /><Button Content="{Binding RetryFailedText}" Command="{Binding RetryFailedDownloadsCommand}" DockPanel.Dock="Right" HorizontalAlignment="Right" /></DockPanel>
           <ScrollViewer Grid.Row="1"><StackPanel>
-            <ItemsControl ItemsSource="{Binding Downloads.Items}"><ItemsControl.ItemTemplate><DataTemplate><Border Background="White" BorderBrush="#E1E5EA" BorderThickness="1" CornerRadius="7" Padding="12" Margin="0,0,0,8"><Grid><Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition Width="170" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><StackPanel><TextBlock Text="{Binding Asset.Title}" FontWeight="SemiBold" /><TextBlock Text="{Binding Status}" Foreground="{StaticResource SubtleTextBrush}" /><TextBlock Text="{Binding ErrorMessage}" Foreground="#B42318" TextWrapping="Wrap" /></StackPanel><StackPanel Grid.Column="1"><ProgressBar Value="{Binding Progress}" Maximum="100" Height="8" Margin="8" /><TextBlock Text="{Binding Speed}" HorizontalAlignment="Center" /></StackPanel><WrapPanel Grid.Column="2"><Button Content="{Binding DataContext.CancelText, RelativeSource={RelativeSource AncestorType=Window}}" Command="{Binding DataContext.CancelDownloadCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" IsEnabled="{Binding CanCancel}" /><Button Content="{Binding DataContext.RetryText, RelativeSource={RelativeSource AncestorType=Window}}" Command="{Binding DataContext.RetryDownloadCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" IsEnabled="{Binding CanRetry}" /><Button Content="{Binding DataContext.OpenFolderText, RelativeSource={RelativeSource AncestorType=Window}}" Command="{Binding DataContext.RevealDownloadCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" IsEnabled="{Binding CanOpen}" /></WrapPanel></Grid></Border></DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
+            <ItemsControl ItemsSource="{Binding Downloads.Items}"><ItemsControl.ItemTemplate><DataTemplate><Border Background="White" BorderBrush="#E1E5EA" BorderThickness="1" CornerRadius="7" Padding="12" Margin="0,0,0,8"><Grid><Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition Width="170" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><StackPanel><TextBlock Text="{Binding Asset.Title}" FontWeight="SemiBold" /><TextBlock Text="{Binding Status}" Foreground="{StaticResource SubtleTextBrush}" /><TextBlock Text="{Binding WorkflowSummary}" Foreground="{StaticResource SubtleTextBrush}" TextWrapping="Wrap" /><TextBlock Text="{Binding ErrorMessage}" Foreground="#B42318" TextWrapping="Wrap" /></StackPanel><StackPanel Grid.Column="1"><ProgressBar Value="{Binding Progress}" Maximum="100" Height="8" Margin="8" /><TextBlock Text="{Binding Speed}" HorizontalAlignment="Center" /></StackPanel><WrapPanel Grid.Column="2"><Button Content="{Binding DataContext.CancelText, RelativeSource={RelativeSource AncestorType=Window}}" Command="{Binding DataContext.CancelDownloadCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" IsEnabled="{Binding CanCancel}" /><Button Content="{Binding DataContext.RetryText, RelativeSource={RelativeSource AncestorType=Window}}" Command="{Binding DataContext.RetryDownloadCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" IsEnabled="{Binding CanRetry}" /><Button Content="{Binding DataContext.OpenFolderText, RelativeSource={RelativeSource AncestorType=Window}}" Command="{Binding DataContext.RevealDownloadCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" IsEnabled="{Binding CanOpen}" /></WrapPanel></Grid></Border></DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
             <Separator Margin="0,8" />
-            <ItemsControl ItemsSource="{Binding DownloadRecordsView}"><ItemsControl.ItemTemplate><DataTemplate><Grid Margin="8"><Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><StackPanel><TextBlock Text="{Binding FileName}" FontWeight="SemiBold" /><TextBlock Text="{Binding DisplaySource}" Foreground="{StaticResource SubtleTextBrush}" /></StackPanel><WrapPanel Grid.Column="1"><Button Content="{Binding DataContext.OpenFileText, RelativeSource={RelativeSource AncestorType=Window}}" Command="{Binding DataContext.OpenRecordCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" /><Button Content="{Binding DataContext.OpenFolderText, RelativeSource={RelativeSource AncestorType=Window}}" Command="{Binding DataContext.RevealRecordCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" /><Button Content="{Binding DataContext.OpenSourceText, RelativeSource={RelativeSource AncestorType=Window}}" Command="{Binding DataContext.OpenRecordSourceCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" /><Button Content="{Binding DataContext.DeleteText, RelativeSource={RelativeSource AncestorType=Window}}" Command="{Binding DataContext.RemoveDownloadRecordCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" /></WrapPanel></Grid></DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
+            <ItemsControl ItemsSource="{Binding DownloadRecordsView}"><ItemsControl.ItemTemplate><DataTemplate><Grid Margin="8"><Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><StackPanel><TextBlock Text="{Binding FileName}" FontWeight="SemiBold" /><TextBlock Text="{Binding DisplaySource}" Foreground="{StaticResource SubtleTextBrush}" /><TextBlock Text="{Binding WorkflowSummary}" Foreground="{StaticResource SubtleTextBrush}" TextWrapping="Wrap" /></StackPanel><WrapPanel Grid.Column="1"><Button Content="{Binding DataContext.OpenFileText, RelativeSource={RelativeSource AncestorType=Window}}" Command="{Binding DataContext.OpenRecordCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" /><Button Content="{Binding DataContext.OpenFolderText, RelativeSource={RelativeSource AncestorType=Window}}" Command="{Binding DataContext.RevealRecordCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" /><Button Content="{Binding DataContext.OpenSourceText, RelativeSource={RelativeSource AncestorType=Window}}" Command="{Binding DataContext.OpenRecordSourceCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" /><Button Content="{Binding DataContext.DeleteText, RelativeSource={RelativeSource AncestorType=Window}}" Command="{Binding DataContext.RemoveDownloadRecordCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" /></WrapPanel></Grid></DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
           </StackPanel></ScrollViewer>
         </Grid>
 
@@ -344,6 +378,8 @@
             <DockPanel><Button DockPanel.Dock="Right" Content="{Binding ChooseText}" Click="ChooseDownloadFolder_Click" /><TextBox Text="{Binding DownloadRoot, Mode=OneWay}" IsReadOnly="True" /></DockPanel>
             <TextBlock Text="{Binding PrivacyTitle}" FontWeight="SemiBold" FontSize="16" Margin="0,20,0,6" />
             <TextBlock Text="{Binding PrivacyBody}" TextWrapping="Wrap" Foreground="{StaticResource SubtleTextBrush}" MaxWidth="850" HorizontalAlignment="Left" />
+            <CheckBox Content="{Binding ClipboardSettingText}" IsChecked="{Binding ClipboardDetectionEnabled}" FontWeight="SemiBold" Margin="0,14,0,4" />
+            <TextBlock Text="{Binding ClipboardPrivacyDetail}" TextWrapping="Wrap" Foreground="{StaticResource SubtleTextBrush}" MaxWidth="850" HorizontalAlignment="Left" />
           </StackPanel>
         </ScrollViewer>
       </Grid>

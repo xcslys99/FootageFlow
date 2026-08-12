@@ -39,6 +39,12 @@ public sealed class SettingsService
             Current.SearchExpansionProvidersV5Added = true;
             Save();
         }
+        if (!Current.CreatorWorkflowProvidersV6Added)
+        {
+            Current.EnabledProviders.UnionWith(["openverse", "dailymotion"]);
+            Current.CreatorWorkflowProvidersV6Added = true;
+            Save();
+        }
         if (string.IsNullOrWhiteSpace(Current.DownloadRoot)) Current.DownloadRoot = AppPaths.DefaultDownloadRoot;
     }
 

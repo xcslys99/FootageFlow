@@ -9,9 +9,9 @@
 - AppKit and AVKit only inside macOS integration points
 - Security.framework-backed credential store on macOS and Windows Credential Manager on Windows
 - Apple Translation where available, with a rule-based fallback
-- A checksum-pinned yt-dlp macOS executable is bundled for local, best-effort YouTube interoperability; no FFmpeg binary is bundled
+- Checksum-pinned yt-dlp plus redistributable GPL FFmpeg/FFprobe tooling are bundled for best-effort media analysis, clip extraction, merging, audio extraction, and editing-compatible output
 
-FootageFlow v0.5.0 targets Apple Silicon macOS 15+ and Windows 11 x64. SwiftUI, AppKit, AVKit, Apple Translation, and Security.framework remain macOS-only. The Windows WPF layer calls a local Swift Core Host over JSON stdin/stdout so all 15 search providers, pagination continuations, normalized models, rights rules, filters, attribution, feedback URLs, sidecars, and the Codable project database remain single-source Swift implementations. Credentials never appear in command-line arguments.
+FootageFlow v0.6.0 targets Apple Silicon macOS 15+ and Windows 11 x64. SwiftUI, AppKit, AVKit, Apple Translation, and Security.framework remain macOS-only. The Windows WPF layer calls a local Swift Core Host over JSON stdin/stdout so all 17 search providers, pagination continuations, normalized models, rights rules, smart keyword expansion, clip/output metadata, attribution, sidecars, and the Codable project database remain single-source Swift implementations. Credentials never appear in command-line arguments.
 
 ## Source layout
 
@@ -50,6 +50,8 @@ Current official interfaces:
 - Videvo, Videezy, and Mixkit: limited discovery that opens official search pages. FootageFlow does not scrape restricted pages or infer item licenses.
 - Coverr: official `/videos` API with a user-provided key, zero-based page pagination, signed preview/download URLs, and conservative attribution-required rights output. No key opens official search.
 - Vimeo: official `/videos` discovery with a user token and page pagination. Public discovery remains non-downloadable even when a metadata privacy flag mentions downloads; reuse rights come only from explicit license metadata.
+- Openverse: public anonymous `/v1/images/` and `/v1/audio/` search with independent pagination. Images and audio preserve item URLs, direct media, creator, license URL, attribution, dimensions/duration, and source metadata. Audio duration is normalized from API milliseconds. Rights are never inferred beyond each response.
+- Dailymotion: current public `/videos` discovery fields with page pagination. Results provide title, owner/creator, duration, thumbnail, and original page, remain discovery-only, and keep rights unknown unless explicit rights metadata becomes available. Link Downloader may separately attempt a public Dailymotion URL through yt-dlp.
 - Pexels/Pixabay direct mode reads only ordinary public result pages with a short timeout and no authentication, cookie import, CAPTCHA handling, Cloudflare bypass, or anti-bot parameter fabrication. A 403 is treated as a temporary block and suggests the optional official API mode.
 
 `ProviderRequestLimiter` centralizes minimum request spacing. `HTTPClient` uses an ephemeral session, bounded exponential retry for 429/5xx responses, readable errors, no cookies, and no URL cache. API keys are sent only in provider-required headers. Search state retains one continuation per provider/query pair, appends de-duplicated results, restores failed continuations for retry, and rejects late pages from an old query.
@@ -64,9 +66,13 @@ Run `FootageFlow --thumbnail-smoke <query>` to collect a sanitized live report. 
 
 ## Link Downloader
 
-`YTDLPService.analyze` is the shared metadata and format normalizer. It always passes `--ignore-config`, never imports browser cookies, rejects embedded URL credentials and sensitive query parameters, blocks loopback/local/private-network addresses, excludes DRM-marked formats, and maps unsupported, unavailable, login-gated, region-restricted, and rate-limited failures. Selected quality, subtitle language, and source name are stored as non-secret `MediaAsset.originalMetadata` fields. Source sidecars redact sensitive URL query values before writing either text or JSON metadata.
+`YTDLPService.analyze` is the shared metadata and format normalizer. It always passes `--ignore-config`, never imports browser cookies, rejects embedded URL credentials and sensitive query parameters, blocks loopback/local/private-network addresses, excludes DRM-marked formats, and maps unsupported, unavailable, login-gated, region-restricted, and rate-limited failures. Selected quality, subtitle language, source name, output preset, and validated clip range are stored as non-secret `MediaAsset.originalMetadata` fields. Source sidecars redact sensitive URL query values before writing either text or JSON metadata.
 
-The macOS `DownloadManager` and Windows `DownloadQueueService` read those fields and call their existing yt-dlp adapters. Link tasks therefore use the normal concurrency, cancellation, retry, progress, speed, sidecar, download-history, and folder-reveal paths. Audio Only selects an available audio stream without FFmpeg conversion. Separate-stream merging and subtitle embedding are not promised because FootageFlow does not bundle FFmpeg.
+The macOS `DownloadManager` and Windows `DownloadQueueService` read those fields and call their existing yt-dlp adapters. Link tasks therefore use the normal concurrency, cancellation, retry, progress, speed, sidecar, download-history, and folder-reveal paths. `ClipTimeRange` accepts seconds, `MM:SS`, or `HH:MM:SS`, rejects unknown/out-of-bounds duration and sub-0.5-second ranges, and is passed through yt-dlp's documented `--download-sections` path. Output presets retain the original, extract M4A, or produce a verified MP4 with H.264 video, AAC audio when present, yuv420p, and fast-start metadata. Compatible MP4 input is stream-copied; other input is transcoded and probed before completion.
+
+`SmartKeywordEngine` remains local and deterministic. It keeps the original query first, detects supported Chinese, Spanish, Portuguese, Japanese, Korean, German, French, Russian, and English concepts, produces at most five visible editable queries, and applies a provider-specific request budget. Disabled expansion uses only the original query. No cloud LLM or paid AI API is involved.
+
+Clipboard link detection is platform-specific only at the pasteboard boundary. The shared parser accepts public media URLs, rejects embedded credentials and local/private-network targets, de-duplicates the current session, honors ignore/cooldown, and never logs or uploads clipboard content. The preference defaults to off and polling occurs only while the app window is active.
 
 ## Rights, filtering, and batch behavior
 
@@ -96,7 +102,7 @@ Downloads are restricted to the configured root for app-initiated deletion. A su
 
 ## Localization
 
-English is the fixed first-launch default. `en.lproj` is the fallback for missing translations. v0.5.0 ships `en`, `zh-Hans`, `zh-Hant`, `es`, `pt-BR`, `ja`, `ko`, `de`, `fr`, and `ru`. SwiftPM may normalize language-directory casing in the built resource bundle, so locale lookup also checks normalized identifiers.
+English is the fixed first-launch default. `en.lproj` is the fallback for missing translations. v0.6.0 ships `en`, `zh-Hans`, `zh-Hant`, `es`, `pt-BR`, `ja`, `ko`, `de`, `fr`, and `ru`. SwiftPM may normalize language-directory casing in the built resource bundle, so locale lookup also checks normalized identifiers.
 
 Run `scripts/check_localizations.sh` after changing UI copy. `localization.fallbackProbe` intentionally exists only in English to exercise fallback behavior.
 
@@ -113,13 +119,13 @@ dist/FootageFlow.app/Contents/MacOS/FootageFlow --self-test
 dist/FootageFlow.app/Contents/MacOS/FootageFlow --live-smoke
 ```
 
-`--self-test` is fully offline. `--live-smoke` searches public providers and verifies no-key/limited modes. `--acceptance-test <directory>` additionally downloads a small Public Domain fixture, creates both sidecars, checks persistence, and simulates a friendly network error. Fixed JSON fixtures cover existing and v0.5.0 providers plus link analysis. Tests cover continuations, discovery/download boundaries, format selection, safe feedback URLs, localization, persistence, sidecars, and project/download behavior. The Windows runner also executes Credential Manager, Core Host, cancel/retry, packaging, clean-install, GUI-startup, and uninstall tests.
+`--self-test` is fully offline. `--live-smoke` searches public providers and verifies no-key/limited modes. `--acceptance-test <directory>` additionally downloads a small Public Domain fixture, creates both sidecars, checks persistence, and simulates a friendly network error. Fixed JSON fixtures cover all providers, including Openverse and Dailymotion. Tests cover clip validation, output metadata/history/sidecars, smart expansion and query budgets, clipboard safety, continuations, rights, localization, and project/download behavior. The Windows runner also executes Credential Manager, Core Host, cancel/retry, packaging, clean-install, GUI-startup, uninstall, and bundled-tool tests.
 
-This Mac currently has Command Line Tools rather than full Xcode. Release builds and offline self-tests work locally, while `swift test` reports that XCTest is unavailable. GitHub Actions runs XCTest on a full Xcode image.
+The package uses the official `swift-testing` dependency so the full platform-neutral test suite also runs with Command Line Tools. GitHub Actions additionally runs `swift test` with full Xcode on macOS and the official Swift toolchain on Windows.
 
 ## Packaging
 
-`scripts/build_app.sh` builds a Release executable, downloads the fixed yt-dlp release only when it is not already cached, verifies its SHA-256, creates the `.app`, copies localized resources without embedding a developer path, generates the original FootageFlow icon, and performs Ad Hoc signing. `scripts/binary_privacy_scan.sh` scans the app executable and bundled tool for credential-like strings. `scripts/build_dmg.sh` creates the drag-to-Applications DMG and SHA-256 checksum. No Developer ID certificate or notarization is claimed for v0.5.0.
+`scripts/build_app.sh` builds a Release executable; bundles checksum-pinned yt-dlp; builds static GPL FFmpeg 8.0.3 with pinned x264, Apple SecureTransport, and no `nonfree` component; copies all applicable license texts; creates the `.app`; and performs Ad Hoc signing. The FFmpeg configuration uses a neutral build prefix and the packaging scan rejects private developer paths. `scripts/binary_privacy_scan.sh` scans the app executable and bundled tools for credential-like strings. `scripts/build_dmg.sh` creates the drag-to-Applications DMG and SHA-256 checksum. No Developer ID certificate or notarization is claimed for v0.6.0.
 
 ## Windows architecture
 
@@ -127,7 +133,7 @@ Windows development remains in this repository and shares the same release histo
 
 The platform split is deliberate:
 
-- Shared Swift: all 15 search provider implementations and modes, pagination, networking/rate policy, `MediaAsset`, `RightsInfo`, capabilities, filters, attribution, feedback URL building, keyword rules, deduplication, filename suggestions, source sidecars, and project/favorite/history/download metadata.
+- Shared Swift: all 17 search provider implementations and modes, pagination, networking/rate policy, `MediaAsset`, `RightsInfo`, capabilities, filters, attribution, feedback URL building, smart keyword rules, clip/output models, clipboard URL safety, deduplication, filename suggestions, source sidecars, and project/favorite/history/download metadata.
 - macOS: SwiftUI/AppKit/AVKit, Keychain, Apple Translation, Finder integration, and URLSession download presentation.
 - Windows: WPF/MediaElement, Credential Manager, Explorer/file dialogs, a bounded `HttpClient` download queue, and yt-dlp process execution. yt-dlp JSON is mapped back into `MediaAsset` by the shared Swift mapper.
 

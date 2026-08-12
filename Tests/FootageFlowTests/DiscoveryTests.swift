@@ -14,7 +14,7 @@ import Foundation
 
     @Test("all search providers use the intended mode")
     func providerModes() {
-      #expect(ProviderID.searchCases.count == 15)
+      #expect(ProviderID.searchCases.count == 17)
       #expect(ProviderFactory.make(.nasa, apiKey: "").info.mode == .publicAPI)
       #expect(ProviderFactory.make(.libraryOfCongress, apiKey: "").info.mode == .publicAPI)
       #expect(ProviderFactory.make(.nationalArchives, apiKey: "").info.mode == .limited)
@@ -26,6 +26,185 @@ import Foundation
       #expect(ProviderFactory.make(.coverr, apiKey: "key").info.mode == .officialAPI)
       #expect(ProviderFactory.make(.vimeo, apiKey: "").info.mode == .limited)
       #expect(ProviderFactory.make(.vimeo, apiKey: "key").info.mode == .officialAPI)
+      #expect(ProviderFactory.make(.openverse, apiKey: "").info.mode == .publicAPI)
+      #expect(ProviderFactory.make(.dailymotion, apiKey: "").info.mode == .publicAPI)
+    }
+
+    @Test("Openverse preserves item rights and direct media metadata")
+    func openverseFixture() throws {
+      let response = try JSONDecoder().decode(
+        OpenverseSearchResponse.self, from: fixture("openverse"))
+      #expect(response.resultCount == 1)
+      #expect(response.pageCount == 2)
+      let item = try #require(response.results.first)
+      let asset = try #require(
+        OpenverseProvider.asset(item, type: .image, query: "coffee", index: 0))
+      #expect(asset.provider == .openverse)
+      #expect(asset.mediaType == .image)
+      #expect(asset.licenseStatus == .attributionRequired)
+      #expect(asset.effectiveRightsInfo.known)
+      #expect(asset.effectiveRightsInfo.attributionRequired)
+      #expect(asset.isDirectlyDownloadable)
+      #expect(asset.thumbnailURL?.scheme == "https")
+      #expect(asset.originalMetadata["attribution"]?.contains("CC BY-SA 4.0") == true)
+      let audio = try #require(
+        OpenverseProvider.asset(item, type: .audio, query: "coffee", index: 0))
+      #expect(audio.duration == 9)
+    }
+
+    @Test("Dailymotion is discovery-only and preserves public metadata")
+    func dailymotionFixture() throws {
+      let response = try JSONDecoder().decode(
+        DailymotionSearchResponse.self, from: fixture("dailymotion"))
+      #expect(response.hasMore)
+      #expect(response.total == 42)
+      let item = try #require(response.list.first)
+      let asset = try #require(DailymotionProvider.asset(item, query: "city", index: 0))
+      #expect(asset.provider == .dailymotion)
+      #expect(asset.duration == 95)
+      #expect(asset.creator == "Fixture Channel")
+      #expect(asset.sourcePageURL.host == "www.dailymotion.com")
+      #expect(!asset.downloadable)
+      #expect(asset.downloadURL == nil)
+      #expect(asset.licenseStatus == .unknown)
+      #expect(asset.originalMetadata["discoveryOnly"] == "true")
+    }
+
+    @Test("creator workflow time ranges and output metadata are validated")
+    func clipModels() throws {
+      #expect(TimecodeParser.seconds("00:01:20") == 80)
+      #expect(TimecodeParser.seconds("01:45.5") == 105.5)
+      #expect(TimecodeParser.seconds("80") == 80)
+      #expect(TimecodeParser.seconds("1:60") == nil)
+      let range = try ClipTimeRange.parse(
+        start: "00:01:20", end: "00:01:45", mediaDuration: 120)
+      #expect(range.duration == 25)
+      #expect(range.sectionArgument == "*80.000-105.000")
+      #expect(throws: ClipRangeError.invalidRange) {
+        try ClipTimeRange.parse(start: "20", end: "20", mediaDuration: 120)
+      }
+      #expect(throws: ClipRangeError.invalidRange) {
+        try ClipTimeRange.parse(start: "20", end: "20.25", mediaDuration: 120)
+      }
+      let longRange = try ClipTimeRange.parse(
+        start: "00:10:00", end: "01:10:00", mediaDuration: 5_000)
+      #expect(longRange.duration == 3_600)
+      #expect(throws: ClipRangeError.beyondDuration) {
+        try ClipTimeRange.parse(start: "20", end: "121", mediaDuration: 120)
+      }
+      #expect(throws: ClipRangeError.unknownDuration) {
+        try ClipTimeRange.parse(start: "20", end: "30", mediaDuration: nil)
+      }
+      #expect(YTDLPDownloadOptions.default.requiresFFmpeg)
+      #expect(
+        !YTDLPDownloadOptions(
+          formatSelector: "best", downloadSubtitles: false, subtitleLanguages: nil
+        ).requiresFFmpeg)
+      let editingOptions = YTDLPDownloadOptions(
+        formatSelector: LinkDownloadQuality.p720.formatSelector,
+        downloadSubtitles: false, subtitleLanguages: nil,
+        outputPreset: .editingCompatibleMP4, clipRange: range, mediaDuration: 120)
+      #expect(editingOptions.effectiveFormatSelector.contains("vcodec^=avc1"))
+      #expect(editingOptions.effectiveFormatSelector.contains("bestaudio[ext=m4a]"))
+      #expect(editingOptions.effectiveFormatSelector.contains("height<=720"))
+      let audioOptions = YTDLPDownloadOptions(
+        formatSelector: LinkDownloadQuality.audioOnly.formatSelector,
+        downloadSubtitles: false, subtitleLanguages: nil,
+        outputPreset: .audioOnly, clipRange: range, mediaDuration: 120)
+      #expect(audioOptions.effectiveFormatSelector == LinkDownloadQuality.audioOnly.formatSelector)
+    }
+
+    @Test("editing output survives download history and source sidecars")
+    func workflowMetadataPersistence() throws {
+      var asset = sampleAsset()
+      asset.downloadStrategy = .ytDLP
+      var prepared = asset.withEditingOutput(.editingCompatibleMP4)
+      prepared.originalMetadata["linkClipStart"] = "5"
+      prepared.originalMetadata["linkClipEnd"] = "15"
+      prepared.originalMetadata["linkClipDuration"] = "10"
+      #expect(prepared.stableID != asset.stableID)
+      let record = DownloadRecord(
+        asset: prepared, fileURL: URL(fileURLWithPath: "/tmp/fixture.mp4"), projectID: nil)
+      #expect(record.outputPresetRaw == EditingOutputPreset.editingCompatibleMP4.rawValue)
+      #expect(record.clipStartSeconds == 5)
+      #expect(record.clipDurationSeconds == 10)
+
+      let directory = FileManager.default.temporaryDirectory.appendingPathComponent(
+        UUID().uuidString, isDirectory: true)
+      try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+      defer { try? FileManager.default.removeItem(at: directory) }
+      let mediaURL = directory.appendingPathComponent("fixture.mp4")
+      try SourceSidecar.write(
+        asset: prepared, mediaURL: mediaURL, projectName: "Creator", segmentIndex: nil)
+      let data = try Data(contentsOf: directory.appendingPathComponent("fixture.source.json"))
+      let json = try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
+      #expect(json["outputPreset"] as? String == "editingCompatibleMP4")
+      #expect(json["clipStartSeconds"] as? Double == 5)
+      #expect(json["clipDurationSeconds"] as? Double == 10)
+    }
+
+    @Test("smart expansion is multilingual bounded and optional")
+    func smartExpansion() {
+      let cases = [
+        ("hamburger", "cheeseburger"), ("fries", "potato fries"),
+        ("coffee shop", "barista making coffee"), ("city night", "night traffic"),
+        ("factory worker", "manufacturing worker"),
+        ("Apollo 11", "1969 moon landing"), ("俄乌战争", "Ukraine conflict"),
+        ("台湾美食", "Taiwan street food"), ("台灣美食", "Taiwan street food"),
+        ("台湾料理", "Taiwan cuisine"), ("comida taiwanesa", "Taiwan cuisine"),
+        ("российско-украинская война", "Ukraine conflict"),
+      ]
+      for (query, expected) in cases {
+        let values = KeywordEngine.keywords(for: query).map(\.text)
+        #expect(values.first == query)
+        #expect(values.contains(expected))
+        #expect(values.count <= 5)
+      }
+      #expect(
+        KeywordEngine.keywords(for: "coffee shop", smartExpansion: false).map(\.text)
+          == ["coffee shop"])
+      let languageCases = [
+        ("城市夜景", "city night"), ("都市夜景", "city night"),
+        ("夜の街", "city night"), ("도시 야경", "city night"),
+        ("ciudad de noche", "city night"), ("cidade à noite", "city night"),
+        ("stadt bei nacht", "city night"), ("ville de nuit", "city night"),
+        ("ночной город", "city night"),
+      ]
+      for (query, expected) in languageCases {
+        #expect(KeywordEngine.keywords(for: query).map(\.text).contains(expected))
+      }
+      var disabled = KeywordEngine.keywords(for: "Apollo 11")
+      disabled[1].isEnabled = false
+      #expect(
+        !KeywordEngine.providerQueries(from: disabled, provider: .openverse, mode: .publicAPI)
+          .contains(disabled[1].text))
+      let duplicate = [SearchKeyword(text: "Apollo 11"), SearchKeyword(text: "apollo 11")]
+      #expect(
+        KeywordEngine.providerQueries(from: duplicate, provider: .wikimedia, mode: .publicAPI)
+          .count == 2)
+      let values = KeywordEngine.keywords(for: "Apollo 11")
+      #expect(
+        KeywordEngine.providerQueries(from: values, provider: .youtube, mode: .publicAPI).count
+          == 2)
+      #expect(
+        KeywordEngine.providerQueries(from: values, provider: .wikimedia, mode: .publicAPI).count
+          <= 4)
+      #expect(
+        KeywordEngine.providerQueries(from: values, provider: .europeana, mode: .limited).count
+          == 1)
+    }
+
+    @Test("clipboard parser accepts only public media links")
+    func clipboardLinks() {
+      let values = LinkURLParser.mediaURLs(
+        from:
+          "normal note\nhttps://youtu.be/example\nhttps://vimeo.com/123\nhttps://youtu.be/example"
+      )
+      #expect(values.count == 2)
+      #expect(LinkURLParser.mediaURLs(from: "").isEmpty)
+      #expect(LinkURLParser.mediaURLs(from: "secret password text").isEmpty)
+      #expect(LinkURLParser.mediaURLs(from: "http://127.0.0.1/private").isEmpty)
+      #expect(LinkURLParser.mediaURLs(from: "https://example.com/file.mp4").count == 1)
     }
 
     @Test("NASA manifest returns official HTTPS media without guessing rights")
@@ -178,6 +357,15 @@ import Foundation
         #expect(recommendation.contains("National Archives"))
         #expect(recommendation.contains("Europeana"))
         #expect(recommendation.contains("YouTube"))
+        #expect(
+          catalog.text("search.smartExpansion", language: language, arguments: [])
+            != "Smart Expansion" || language == .english)
+        #expect(
+          !catalog.text("link.scope.clip", language: language, arguments: []).contains(
+            "Unavailable"))
+        #expect(
+          !catalog.text("clipboard.setting", language: language, arguments: []).contains(
+            "Unavailable"))
       }
     }
 

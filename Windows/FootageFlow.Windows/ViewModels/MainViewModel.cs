@@ -41,6 +41,9 @@ public sealed class MainViewModel : ObservableObject
     private string _linkInput = "";
     private string _linkStatus = "";
     private bool _isLinkAnalyzing;
+    private string _keywordSourceQuery = "";
+    private string _clipboardSuggestion = "";
+    private string _ignoredClipboardValue = "";
 
     public MainViewModel()
     {
@@ -66,7 +69,8 @@ public sealed class MainViewModel : ObservableObject
             NewProvider("nationalArchives", "National Archives"), NewProvider("europeana", "Europeana"),
             NewProvider("peertube", "PeerTube / SepiaSearch"), NewProvider("videvo", "Videvo"),
             NewProvider("videezy", "Videezy"), NewProvider("mixkit", "Mixkit"),
-            NewProvider("coverr", "Coverr"), NewProvider("vimeo", "Vimeo")
+            NewProvider("coverr", "Coverr"), NewProvider("vimeo", "Vimeo"),
+            NewProvider("openverse", "Openverse"), NewProvider("dailymotion", "Dailymotion")
         });
         foreach (var provider in Providers)
             provider.PropertyChanged += (_, args) =>
@@ -79,12 +83,23 @@ public sealed class MainViewModel : ObservableObject
             };
         NavigateCommand = new RelayCommand(page => CurrentPage = page?.ToString() ?? "search");
         SearchCommand = new AsyncRelayCommand(_ => SearchAsync(), _ => !IsSearching);
+        AddSearchKeywordCommand = new RelayCommand(_ => SearchKeywords.Add(new SearchKeyword
+            { Id = Guid.NewGuid(), Text = "", IsEnabled = true }));
+        RemoveSearchKeywordCommand = new RelayCommand(value =>
+        {
+            if (value is SearchKeyword keyword) SearchKeywords.Remove(keyword);
+        });
+        RegenerateKeywordsCommand = new AsyncRelayCommand(_ => RegenerateKeywordsAsync());
         LoadMoreCommand = new AsyncRelayCommand(_ => LoadMoreAsync(), _ => CanLoadMore && !IsSearching && !IsLoadingMore);
         StopSearchCommand = new RelayCommand(_ => _searchCancellation?.Cancel(), _ => IsSearching);
         OpenSourceCommand = new RelayCommand(asset => ShellService.OpenUrl((asset as MediaAsset)?.SourcePageURL));
         PreviewCommand = new RelayCommand(asset => PreviewRequested?.Invoke(asset as MediaAsset));
         FavoriteCommand = new AsyncRelayCommand(asset => ToggleFavoriteAsync(asset as MediaAsset));
         DownloadCommand = new RelayCommand(asset => EnqueueDownload(asset as MediaAsset));
+        DownloadEditingCompatibleCommand = new RelayCommand(asset =>
+            EnqueueDownload(WithEditingOutput(asset as MediaAsset, "editingCompatibleMP4")));
+        DownloadAudioOnlyCommand = new RelayCommand(asset =>
+            EnqueueDownload(WithEditingOutput(asset as MediaAsset, "audioOnly")));
         SelectAllVisibleCommand = new RelayCommand(_ => SelectAllVisible());
         ClearSelectionCommand = new RelayCommand(_ => ClearSelection());
         DownloadSelectedCommand = new RelayCommand(_ => DownloadSelected());
@@ -125,6 +140,19 @@ public sealed class MainViewModel : ObservableObject
         DownloadLinkSelectedCommand = new RelayCommand(_ => DownloadLinkSelected());
         OpenLinkOriginalCommand = new RelayCommand(item =>
             ShellService.OpenUrl((item as LinkDownloadItem)?.Analysis?.OriginalURL));
+        ResetClipCommand = new RelayCommand(value =>
+        {
+            if (value is not LinkDownloadItem item) return;
+            item.ClipStart = "00:00:00";
+            item.InitializeClipEnd();
+        });
+        AnalyzeClipboardCommand = new AsyncRelayCommand(_ => AnalyzeClipboardAsync());
+        IgnoreClipboardCommand = new RelayCommand(_ => IgnoreClipboard());
+        DisableClipboardCommand = new RelayCommand(_ =>
+        {
+            ClipboardDetectionEnabled = false;
+            IgnoreClipboard();
+        });
         OpenFeedbackCommand = new AsyncRelayCommand(value => OpenFeedbackAsync(value?.ToString()));
         RefreshProviderModes();
         SearchStatus = T("search.initialStatus");
@@ -149,12 +177,17 @@ public sealed class MainViewModel : ObservableObject
 
     public ICommand NavigateCommand { get; }
     public ICommand SearchCommand { get; }
+    public ICommand AddSearchKeywordCommand { get; }
+    public ICommand RemoveSearchKeywordCommand { get; }
+    public ICommand RegenerateKeywordsCommand { get; }
     public ICommand LoadMoreCommand { get; }
     public ICommand StopSearchCommand { get; }
     public ICommand OpenSourceCommand { get; }
     public ICommand PreviewCommand { get; }
     public ICommand FavoriteCommand { get; }
     public ICommand DownloadCommand { get; }
+    public ICommand DownloadEditingCompatibleCommand { get; }
+    public ICommand DownloadAudioOnlyCommand { get; }
     public ICommand SelectAllVisibleCommand { get; }
     public ICommand ClearSelectionCommand { get; }
     public ICommand DownloadSelectedCommand { get; }
@@ -183,6 +216,10 @@ public sealed class MainViewModel : ObservableObject
     public ICommand AnalyzeLinksCommand { get; }
     public ICommand DownloadLinkSelectedCommand { get; }
     public ICommand OpenLinkOriginalCommand { get; }
+    public ICommand ResetClipCommand { get; }
+    public ICommand AnalyzeClipboardCommand { get; }
+    public ICommand IgnoreClipboardCommand { get; }
+    public ICommand DisableClipboardCommand { get; }
     public ICommand OpenFeedbackCommand { get; }
 
     public string CurrentPage
@@ -240,6 +277,34 @@ public sealed class MainViewModel : ObservableObject
     public string YearFrom { get => _yearFrom; set { if (Set(ref _yearFrom, Digits(value))) ResultsView.Refresh(); } }
     public string YearTo { get => _yearTo; set { if (Set(ref _yearTo, Digits(value))) ResultsView.Refresh(); } }
     public bool DownloadableOnly { get => _downloadableOnly; set { if (Set(ref _downloadableOnly, value)) ResultsView.Refresh(); } }
+    public bool SmartExpansionEnabled
+    {
+        get => _settings.Current.SmartSearchExpansionEnabled;
+        set
+        {
+            if (_settings.Current.SmartSearchExpansionEnabled == value) return;
+            _settings.Current.SmartSearchExpansionEnabled = value;
+            _settings.Save();
+            OnPropertyChanged();
+            _keywordSourceQuery = "";
+        }
+    }
+    public bool ClipboardDetectionEnabled
+    {
+        get => _settings.Current.ClipboardMediaLinkDetectionEnabled;
+        set
+        {
+            if (_settings.Current.ClipboardMediaLinkDetectionEnabled == value) return;
+            _settings.Current.ClipboardMediaLinkDetectionEnabled = value;
+            _settings.Save();
+            OnPropertyChanged();
+            if (!value) IgnoreClipboard();
+        }
+    }
+    public bool HasClipboardSuggestion => !string.IsNullOrWhiteSpace(_clipboardSuggestion);
+    public int ClipboardSuggestionCount => MediaLinkLines(_clipboardSuggestion).Count;
+    public string ClipboardSuggestionText => ClipboardSuggestionCount == 1
+        ? T("clipboard.mediaLinkDetected") : _localization.Text("clipboard.mediaLinksDetected", ClipboardSuggestionCount);
     public int SelectedCount
     {
         get => _selectedCount;
@@ -321,6 +386,9 @@ public sealed class MainViewModel : ObservableObject
     public string LoadingMoreText => T("search.loadingMore");
     public string StopText => T("common.stop");
     public string KeywordsTitle => T("search.currentKeywords");
+    public string SmartExpansionText => T("search.smartExpansion");
+    public string AddKeywordText => T("search.addKeyword");
+    public string RegenerateKeywordsText => T("search.regenerateKeywords");
     public string TypeTitle => T("filter.type");
     public string OrientationTitle => T("filter.orientation");
     public string ResolutionTitle => T("filter.resolution");
@@ -347,6 +415,8 @@ public sealed class MainViewModel : ObservableObject
     public string RetryThumbnailText => T("media.retryThumbnail");
     public string FavoriteText => T("media.favorite");
     public string DownloadText => T("media.download");
+    public string EditingCompatibleOutputText => T("link.output.editingCompatibleMP4");
+    public string AudioOnlyOutputText => T("link.output.audioOnly");
     public string OpenSourceText => T("media.openSource");
     public string AllText => T("common.all");
     public string VideoText => T("common.video");
@@ -405,6 +475,15 @@ public sealed class MainViewModel : ObservableObject
     public string LinkOpenOriginalText => T("link.openOriginal");
     public string LinkLegalNotice => T("link.legalNotice");
     public string LinkFormatsText => T("link.formatsCount");
+    public string LinkDownloadModeText => T("link.downloadMode");
+    public string LinkOutputFormatText => T("link.outputFormat");
+    public string LinkClipStartText => T("link.clip.start");
+    public string LinkClipEndText => T("link.clip.end");
+    public string ResetText => T("common.reset");
+    public string ClipboardSettingText => T("clipboard.setting");
+    public string ClipboardPrivacyDetail => T("clipboard.privacyDetail");
+    public string ClipboardIgnoreText => T("clipboard.ignore");
+    public string ClipboardDisableText => T("clipboard.disable");
     public string FeedbackIntro => T("feedback.intro");
     public string FeedbackReportBug => T("feedback.reportBug");
     public string FeedbackSuggestFeature => T("feedback.suggestFeature");
@@ -416,6 +495,52 @@ public sealed class MainViewModel : ObservableObject
     public string FeedbackPrivacy => T("feedback.privacy");
 
     public void SetLanguage(string language) => _localization.SetLanguage(language);
+
+    public void CheckClipboardCandidate(string text)
+    {
+        if (!ClipboardDetectionEnabled || !IsLinkDownloaderPage || string.IsNullOrWhiteSpace(text) ||
+            string.Equals(text, _ignoredClipboardValue, StringComparison.Ordinal)) return;
+        var links = MediaLinkLines(text);
+        if (links.Count == 0) return;
+        var existing = LinkURLLines().ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var fresh = links.Where(value => !existing.Contains(value)).ToArray();
+        if (fresh.Length == 0) return;
+        _clipboardSuggestion = string.Join(Environment.NewLine, fresh);
+        OnPropertyChanged(nameof(HasClipboardSuggestion)); OnPropertyChanged(nameof(ClipboardSuggestionCount));
+        OnPropertyChanged(nameof(ClipboardSuggestionText));
+    }
+
+    private async Task AnalyzeClipboardAsync()
+    {
+        if (!HasClipboardSuggestion) return;
+        LinkInput = _clipboardSuggestion;
+        _ignoredClipboardValue = _clipboardSuggestion;
+        _clipboardSuggestion = "";
+        OnPropertyChanged(nameof(HasClipboardSuggestion));
+        await AnalyzeLinksAsync();
+    }
+
+    private void IgnoreClipboard()
+    {
+        _ignoredClipboardValue = _clipboardSuggestion;
+        _clipboardSuggestion = "";
+        OnPropertyChanged(nameof(HasClipboardSuggestion)); OnPropertyChanged(nameof(ClipboardSuggestionCount));
+        OnPropertyChanged(nameof(ClipboardSuggestionText));
+    }
+
+    private static List<string> MediaLinkLines(string text)
+    {
+        string[] hosts = ["youtube.com", "youtu.be", "x.com", "twitter.com", "vimeo.com",
+            "dailymotion.com", "tiktok.com", "twitch.tv", "reddit.com", "soundcloud.com",
+            "facebook.com", "instagram.com"];
+        string[] extensions = [".mp4", ".mov", ".m4v", ".webm", ".mp3", ".m4a", ".wav", ".ogg"];
+        return text.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries).Select(value => value.Trim())
+            .Where(value => LinkUrlSafety.TryCreate(value, out var uri) &&
+                (hosts.Any(host => uri.Host.Equals(host, StringComparison.OrdinalIgnoreCase) ||
+                    uri.Host.EndsWith("." + host, StringComparison.OrdinalIgnoreCase)) ||
+                 extensions.Any(ext => uri.AbsolutePath.EndsWith(ext, StringComparison.OrdinalIgnoreCase))))
+            .Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+    }
 
     public void OpenOfficialSearch(string provider)
     {
@@ -432,6 +557,7 @@ public sealed class MainViewModel : ObservableObject
             "mixkit" => $"https://mixkit.co/free-stock-video/?q={query}",
             "coverr" => $"https://coverr.co/stock-video-footage?query={query}",
             "vimeo" => $"https://vimeo.com/search?q={query}",
+            "dailymotion" => $"https://www.dailymotion.com/search/{query}/videos",
             _ => null
         };
         ShellService.OpenUrl(url);
@@ -500,7 +626,7 @@ public sealed class MainViewModel : ObservableObject
         _searchCancellation = new CancellationTokenSource();
         var cancellationToken = _searchCancellation.Token;
         IsSearching = true;
-        Results.Clear(); SearchKeywords.Clear(); SelectedCount = 0;
+        Results.Clear(); SelectedCount = 0;
         _continuations.Clear();
         OnPropertyChanged(nameof(CanLoadMore));
         var selected = Providers.Where(x => x.Enabled).ToList();
@@ -508,14 +634,14 @@ public sealed class MainViewModel : ObservableObject
         SearchStatus = T("search.searchingOthers");
         try
         {
-            var keywords = await _core.SendAsync(new CoreRequest
-            {
-                Action = "keywords", Query = clean, Language = _settings.Current.Language
-            }, cancellationToken: cancellationToken);
-            foreach (var keyword in keywords.Keywords ?? []) SearchKeywords.Add(keyword);
-            var effectiveQuery = SearchKeywords.FirstOrDefault(x => x.IsEnabled)?.Text ?? clean;
-            _lastEffectiveQuery = effectiveQuery;
-            var tasks = selected.ToDictionary(option => option.Id, option => SearchProviderAsync(option, effectiveQuery, cancellationToken));
+            if (!string.Equals(_keywordSourceQuery, clean, StringComparison.Ordinal) || SearchKeywords.Count == 0)
+                await RegenerateKeywordsAsync(cancellationToken);
+            var effectiveQueries = SearchKeywords.Where(x => x.IsEnabled && !string.IsNullOrWhiteSpace(x.Text))
+                .Select(x => x.Text.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+            if (effectiveQueries.Length == 0) effectiveQueries = [clean];
+            _lastEffectiveQuery = effectiveQueries[0];
+            var tasks = selected.ToDictionary(option => option.Id,
+                option => SearchProviderExpandedAsync(option, effectiveQueries, cancellationToken));
             var pending = tasks.Values.ToList();
             var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             while (pending.Count > 0)
@@ -548,6 +674,56 @@ public sealed class MainViewModel : ObservableObject
         catch (OperationCanceledException) { SearchStatus = T("search.stopped"); }
         catch (Exception error) { SearchStatus = error.Message; }
         finally { IsSearching = false; }
+    }
+
+    private async Task RegenerateKeywordsAsync(CancellationToken cancellationToken = default)
+    {
+        var clean = Query.Trim();
+        if (clean.Length == 0) return;
+        var keywords = await _core.SendAsync(new CoreRequest
+        {
+            Action = "keywords", Query = clean, SmartExpansion = SmartExpansionEnabled,
+            Language = _settings.Current.Language
+        }, cancellationToken: cancellationToken);
+        SearchKeywords.Clear();
+        foreach (var keyword in keywords.Keywords ?? []) SearchKeywords.Add(keyword);
+        _keywordSourceQuery = clean;
+    }
+
+    private async Task<ProviderBatch> SearchProviderExpandedAsync(
+        ProviderOption option, IReadOnlyList<string> queries, CancellationToken cancellationToken)
+    {
+        var budget = option.Id switch
+        {
+            "youtube" or "dailymotion" or "vimeo" or "peertube" => 2,
+            "wikimedia" or "internetArchive" or "nasa" or "libraryOfCongress" or
+                "nationalArchives" or "europeana" => 4,
+            _ => 3
+        };
+        var selectedQueries = queries.Take(budget).ToArray();
+        var assets = new List<MediaAsset>();
+        ProviderBatch? primary = null;
+        foreach (var query in selectedQueries)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var batch = await SearchProviderAsync(option, query, cancellationToken);
+            primary ??= batch;
+            assets.AddRange(batch.Assets);
+            if (batch.State.Availability is "rateLimited" or "temporarilyBlocked") break;
+        }
+        var first = primary ?? new ProviderBatch
+        {
+            Provider = option.Id, DisplayName = option.DisplayName,
+            State = new ProviderState { Availability = "unavailable" }
+        };
+        return new ProviderBatch
+        {
+            Provider = first.Provider, DisplayName = first.DisplayName, Mode = first.Mode,
+            State = first.State, Continuation = first.Continuation, TotalResults = first.TotalResults,
+            ErrorCode = first.ErrorCode,
+            Assets = assets.GroupBy(value => value.StableId, StringComparer.OrdinalIgnoreCase)
+                .Select(group => group.First()).ToArray()
+        };
     }
 
     private async Task<ProviderBatch> SearchProviderAsync(
@@ -671,6 +847,26 @@ public sealed class MainViewModel : ObservableObject
         }
         Downloads.Enqueue(asset, CurrentProject?.Id, CurrentProject?.Name ?? T("common.uncategorized"));
         CurrentPage = "downloads";
+    }
+
+    private static MediaAsset? WithEditingOutput(MediaAsset? asset, string preset)
+    {
+        if (asset is null || asset.DownloadStrategy != "ytDLP") return asset;
+        var metadata = new Dictionary<string, string>(asset.OriginalMetadata)
+        {
+            ["linkOutputPreset"] = preset,
+            ["workflowVariantID"] = preset,
+            ["linkMediaDuration"] = asset.Duration?.ToString(
+                System.Globalization.CultureInfo.InvariantCulture) ?? "",
+            ["linkAudioOnly"] = preset == "audioOnly" ? "true" : "false"
+        };
+        if (preset == "audioOnly")
+            metadata["linkFormatSelector"] = "bestaudio[acodec!=none]/best";
+        return asset.CloneForWorkflow(
+            $"{asset.Id}:{preset}", metadata,
+            preset == "audioOnly" ? "audio" : asset.MediaType,
+            preset == "audioOnly" ? "m4a" :
+                preset == "editingCompatibleMP4" ? "mp4" : asset.FileType);
     }
 
     private void ResultPropertyChanged(object? sender, PropertyChangedEventArgs args)
@@ -852,6 +1048,10 @@ public sealed class MainViewModel : ObservableObject
                     item.SelectedQuality = item.AvailableQualities.FirstOrDefault() ?? "best";
                     item.SubtitleLanguage = item.SubtitleLanguages.FirstOrDefault() ?? "";
                     item.ConfigureQualityLabels(QualityLabel);
+                    item.ConfigureCreatorLabels(
+                        value => T($"link.scope.{value}"), value => T($"link.output.{value}"),
+                        value => T($"link.clip.{value}"));
+                    item.InitializeClipEnd();
                 }
                 catch (Exception error)
                 {
@@ -873,20 +1073,30 @@ public sealed class MainViewModel : ObservableObject
             var analysis = item.Analysis!;
             var selector = item.SelectedQuality switch
             {
-                "p1080" => "best[height<=1080][acodec!=none][vcodec!=none]/best[height<=1080]",
-                "p720" => "best[height<=720][acodec!=none][vcodec!=none]/best[height<=720]",
-                "p480" => "best[height<=480][acodec!=none][vcodec!=none]/best[height<=480]",
+                "p1080" => "bestvideo[height<=1080]+bestaudio/best[height<=1080]",
+                "p720" => "bestvideo[height<=720]+bestaudio/best[height<=720]",
+                "p480" => "bestvideo[height<=480]+bestaudio/best[height<=480]",
                 "audioOnly" => "bestaudio[acodec!=none]/best",
-                _ => "best[acodec!=none][vcodec!=none]/best"
+                _ => "bestvideo+bestaudio/best"
             };
+            if (item.OutputPreset == "audioOnly") selector = "bestaudio[acodec!=none]/best";
             var metadata = new Dictionary<string, string>
             {
                 ["sourceName"] = analysis.SourceName, ["linkDownloader"] = "true",
                 ["linkFormatSelector"] = selector, ["linkQuality"] = item.SelectedQuality,
                 ["linkDownloadSubtitles"] = item.DownloadSubtitles ? "true" : "false",
                 ["linkSubtitleLanguages"] = item.SubtitleLanguage,
-                ["linkAudioOnly"] = item.SelectedQuality == "audioOnly" ? "true" : "false"
+                ["linkAudioOnly"] = item.OutputPreset == "audioOnly" || item.SelectedQuality == "audioOnly" ? "true" : "false",
+                ["linkOutputPreset"] = item.OutputPreset,
+                ["linkMediaDuration"] = analysis.Duration?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? ""
             };
+            if (item.SelectedScope == "clip")
+            {
+                metadata["linkClipStart"] = item.ClipStartSeconds?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "";
+                metadata["linkClipEnd"] = item.ClipEndSeconds?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "";
+                metadata["linkClipDuration"] = item.ClipDuration?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "";
+            }
+            var audioOnly = item.OutputPreset == "audioOnly" || item.SelectedQuality == "audioOnly";
             var asset = new MediaAsset
             {
                 Id = item.DownloadIdentity,
@@ -895,8 +1105,8 @@ public sealed class MainViewModel : ObservableObject
                 DownloadURL = analysis.OriginalURL, Creator = analysis.Creator,
                 LicenseStatus = "UNKNOWN", Duration = analysis.Duration,
                 Height = item.SelectedQuality switch { "p1080" => 1080, "p720" => 720, "p480" => 480, _ => null },
-                FileType = item.SelectedQuality == "audioOnly" ? "audio" : "video",
-                MediaType = item.SelectedQuality == "audioOnly" ? "audio" : "video",
+                FileType = audioOnly ? "m4a" : item.OutputPreset == "editingCompatibleMP4" ? "mp4" : "video",
+                MediaType = audioOnly ? "audio" : "video",
                 Downloadable = true, OriginalMetadata = metadata, SearchKeyword = analysis.OriginalURL,
                 RelevanceScore = 1, DownloadStrategy = "ytDLP", DownloadAvailability = "conditional",
                 RightsInfo = new RightsInfo { Source = analysis.SourceName, Known = false }
@@ -950,6 +1160,7 @@ public sealed class MainViewModel : ObservableObject
         Replace(Projects, database.Projects.OrderByDescending(x => x.UpdatedAt));
         Replace(Favorites, database.Favorites.OrderByDescending(x => x.SavedAt));
         Replace(History, database.History.OrderByDescending(x => x.SearchedAt));
+        foreach (var record in database.Downloads) record.WorkflowSummary = DownloadWorkflowSummary(record);
         Replace(DownloadRecords, database.Downloads.OrderByDescending(x => x.DownloadedAt));
         if (CurrentProject is not null) CurrentProject = Projects.FirstOrDefault(x => x.Id == CurrentProject.Id);
     }
@@ -1036,14 +1247,14 @@ public sealed class MainViewModel : ObservableObject
             {
                 "pexels" or "pixabay" => T("provider.mode.directSearch"),
                 "youtube" => T("provider.mode.ytDLP"),
-                "nasa" or "libraryOfCongress" or "peertube" => T("provider.mode.publicAPI"),
+                "nasa" or "libraryOfCongress" or "peertube" or "openverse" or "dailymotion" => T("provider.mode.publicAPI"),
                 "nationalArchives" or "europeana" or "videvo" or "videezy" or "mixkit" or "coverr" or "vimeo" => T("provider.mode.limited"),
                 _ => T("provider.mode.publicInterface")
             };
             provider.Status = hasKey ? T("settings.configured") :
                 provider.Id is "nationalArchives" or "europeana" or "videvo" or "videezy" or "mixkit" or "coverr" or "vimeo" ? T("provider.limitedMode") :
                 provider.Id is "pexels" or "pixabay" or "youtube" ? T("provider.bestEffort") :
-                provider.Id is "nasa" or "libraryOfCongress" or "peertube" ? T("provider.noKeyRequired") :
+                provider.Id is "nasa" or "libraryOfCongress" or "peertube" or "openverse" or "dailymotion" ? T("provider.noKeyRequired") :
                 T("provider.available");
             var values = provider.Id is "nationalArchives" or "europeana" or "videvo" or "videezy" or "mixkit" or "coverr" or "vimeo" && !hasKey
                 ? new[] { T("provider.openOfficialSearch") }
@@ -1072,9 +1283,37 @@ public sealed class MainViewModel : ObservableObject
     private void RefreshLanguage()
     {
         OnPropertyChanged(null);
-        foreach (var item in LinkItems) item.ConfigureQualityLabels(QualityLabel);
+        foreach (var item in LinkItems)
+        {
+            item.ConfigureQualityLabels(QualityLabel);
+            item.ConfigureCreatorLabels(
+                value => T($"link.scope.{value}"), value => T($"link.output.{value}"),
+                value => T($"link.clip.{value}"));
+        }
         RefreshProviderModes();
         Downloads.RefreshLocalizedStatus();
+        foreach (var record in DownloadRecords) record.WorkflowSummary = DownloadWorkflowSummary(record);
+        DownloadRecordsView.Refresh();
         SearchStatus = T("search.initialStatus");
     }
+
+    private string DownloadWorkflowSummary(DownloadRecord record)
+    {
+        if (string.IsNullOrWhiteSpace(record.OutputPresetRaw)) return "";
+        var values = new List<string>
+        {
+            $"{T("link.outputFormat")}: {T($"link.output.{record.OutputPresetRaw}")}"
+        };
+        if (record.ClipStartSeconds is { } start && record.ClipEndSeconds is { } end)
+        {
+            values.Add($"{T("link.clip.start")}: {Timecode(start)}");
+            values.Add($"{T("link.clip.end")}: {Timecode(end)}");
+            if (record.ClipDurationSeconds is { } duration)
+                values.Add(_localization.Text("link.clip.duration", Timecode(duration)));
+        }
+        return string.Join(" · ", values);
+    }
+
+    private static string Timecode(double seconds) =>
+        TimeSpan.FromSeconds(Math.Max(0, Math.Floor(seconds))).ToString(@"hh\:mm\:ss");
 }

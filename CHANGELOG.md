@@ -2,7 +2,31 @@
 
 All notable FootageFlow changes are documented here.
 
-## [Unreleased]
+## [0.6.0] - 2026-08-12
+
+### Added
+
+- Validated full-media or start/end clip downloads through the existing Link Downloader and Download Manager
+- Rule-based Smart Search Expansion with visible, editable queries, provider budgets, and no paid AI dependency
+- Original, editing-compatible H.264/AAC MP4, and M4A audio output presets
+- Optional, foreground-only, local clipboard media-link detection with cooldown, ignore, and disable controls
+- Openverse public image/audio search with pagination and item-specific license/attribution metadata
+- Dailymotion public video discovery with pagination, unknown-rights handling, and Open Original behavior
+
+### Improved
+
+- Creator output and clip metadata now persist in filenames, source sidecars, queue rows, and download history
+- Bundled FFmpeg/FFprobe support on macOS and Windows, including macOS system HTTPS support for HLS media
+- Keyword coverage, provider-specific query budgets, cross-query de-duplication, and result ranking
+- Cross-platform Link Downloader controls and Download Manager parity
+
+### Security
+
+- Clipboard detection is disabled by default, runs only while the app is active, and never uploads or logs clipboard contents
+- Clip/download processing still ignores browser cookies and user yt-dlp configuration and never bypasses DRM, sign-in, private, paid, or regional controls
+- FFmpeg and x264 are built or fetched from checksum-pinned GPL-compatible sources with bundled notices
+
+## [0.5.0] - 2026-08-11
 
 ### Added
 

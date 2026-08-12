@@ -1,10 +1,10 @@
 # Windows architecture audit
 
-Status: Windows 11 x64 is supported from FootageFlow v0.2.0. The v0.5.0 candidate keeps the same shared-core boundary and adds Provider pagination, six discovery sources, Feedback & Community, and Link Downloader to both desktop interfaces. Windows-native installation and runtime checks are performed on a clean Windows GitHub Actions runner before release.
+Status: Windows 11 x64 is supported from FootageFlow v0.2.0. The v0.6.0 candidate keeps the same shared-core boundary and adds clip downloads, smart search expansion, creator output presets, optional local clipboard detection, Openverse, and Dailymotion to both desktop interfaces. Windows-native installation and runtime checks are performed on a clean Windows GitHub Actions runner before release.
 
 ## Current shared code
 
-All 15 search Provider implementations, API/direct-mode selection, pagination continuations, `HTTPClient`, normalized `MediaAsset`, rights mapping, Provider capabilities and errors, keyword rules, deduplication, filters, filename suggestions, feedback URLs, source-sidecar generation, path roots, log redaction, and Codable persistence are platform-neutral Swift. macOS and Windows therefore use one business implementation for Pexels, Pixabay, Wikimedia Commons, Internet Archive, YouTube, NASA, Library of Congress, National Archives, Europeana, PeerTube, Videvo, Videezy, Mixkit, Coverr, and Vimeo.
+All 17 search Provider implementations, API/direct-mode selection, pagination continuations, `HTTPClient`, normalized `MediaAsset`, rights mapping, Provider capabilities and errors, smart keyword rules, clip/output models, clipboard URL parsing, deduplication, filters, filename suggestions, feedback URLs, source-sidecar generation, path roots, log redaction, and Codable persistence are platform-neutral Swift. macOS and Windows therefore use one business implementation for the existing providers plus Openverse and Dailymotion.
 
 `PersistentStore` owns project, segment, favorite, history, and download-record behavior. The macOS `DataStore` is a small Combine presentation facade over this shared repository. Windows calls the same repository through the local Core Host.
 
@@ -29,8 +29,8 @@ WPF UI and Windows adapters
         v
 Swift FootageFlowCore.exe
         |
-        +-- ProviderFactory and 15 search providers
-        +-- pagination, models, rights, filters, keywords, dedupe
+        +-- ProviderFactory and 17 search providers
+        +-- pagination, models, rights, filters, smart keywords, clip/output metadata, dedupe
         +-- PersistentStore, feedback URLs and source sidecars
 
 macOS SwiftUI UI
@@ -42,7 +42,7 @@ The WPF orchestrator launches Provider requests independently. Results can appea
 
 Pexels and Pixabay still use best-effort direct search without a key and only their official APIs with a configured key. National Archives, Europeana, Coverr, and Vimeo similarly select their supported key/no-key mode in `ProviderFactory`. The Windows yt-dlp adapter uses `--ignore-config`, does not import browser cookies, rejects embedded credentials/private network addresses, and maps errors to the same user-facing states as macOS.
 
-Link Downloader uses the existing Windows `DownloadQueueService`, cancellation tokens, progress, retry, project folder, source sidecars, and download history. Only yt-dlp process control and WPF presentation are Windows-specific; media metadata and file-source records use the same shared models.
+Link Downloader uses the existing Windows `DownloadQueueService`, cancellation tokens, progress, retry, project folder, source sidecars, and download history. Full/clip scope and output presets create normal queue assets rather than a second queue. Only yt-dlp/FFmpeg process control and WPF presentation are Windows-specific; media metadata and file-source records use the same shared models.
 
 ## Windows-only responsibilities
 
@@ -51,7 +51,7 @@ Link Downloader uses the existing Windows `DownloadQueueService`, cancellation t
 - Windows-invalid and reserved filename protection, long-path manifest support, and conflict-safe filenames.
 - Explorer open/reveal, folder chooser, WPF MediaElement/image preview.
 - Bounded direct-download queue and yt-dlp child-process cancellation.
-- Self-contained .NET publish, Swift runtime DLL collection, bundled pinned yt-dlp, and Inno Setup installer.
+- Self-contained .NET publish, Swift runtime DLL collection, bundled pinned yt-dlp and GPL FFmpeg/FFprobe, and Inno Setup installer.
 
 ## Migration and release risks
 
@@ -64,22 +64,23 @@ Link Downloader uses the existing Windows `DownloadQueueService`, cancellation t
 
 ## Expected macOS impact
 
-The v0.5.0 work adds shared models and narrow UI entries without replacing the existing macOS stack. Every Windows change continues to run the macOS Release build, XCTest suite, app-bundle signing check, binary privacy scan, and offline self-test.
+The v0.6.0 work adds shared models and narrow UI entries without replacing the existing macOS stack. Every Windows change continues to run the macOS Release build, test suite, app-bundle signing check, binary privacy scan, and offline self-test.
 
 ## Version plan
 
 - v0.1.0 remains unchanged and macOS-only.
 - v0.2.0 introduced Windows 11 x64 support.
-- v0.5.0 is one feature release for Search Expansion, Provider pagination, Link Downloader, and Feedback & Community on both supported platforms.
+- v0.5.0 added Search Expansion, Provider pagination, Link Downloader, and Feedback & Community on both supported platforms.
+- v0.6.0 is one creator-workflow release for clip downloads, smart expansion, output presets, local clipboard detection, Openverse, and Dailymotion.
 - Windows 10 x64 is not declared supported because it has not completed the same validation.
 
-## v0.5.0 release validation gate
+## v0.6.0 release validation gate
 
-Before publishing v0.5.0, CI must complete all of the following on a clean Windows runner:
+Before publishing v0.6.0, CI must complete all of the following on a clean Windows runner:
 
 - Shared Swift Release build, Core Host health check, and cross-platform tests.
 - Native WPF Release build and Windows platform acceptance checks.
-- Self-contained publish, Swift runtime collection, pinned yt-dlp checksum verification, and Inno Setup compilation.
+- Self-contained publish, Swift runtime collection, pinned yt-dlp/FFmpeg checksum verification, and Inno Setup compilation.
 - Clean per-user installation, installed Core Host health check, native WPF startup-liveness check, and clean uninstall.
 - Real public Provider smoke tests; optional key paths run only when repository secrets are configured.
 - Portable archive, installer, SHA-256 verification, runtime/license inventory, tracked-secret scan, and candidate artifact upload.

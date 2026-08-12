@@ -171,13 +171,25 @@ import Foundation
       let asset = analysis.mediaAsset(
         quality: .audioOnly, downloadSubtitles: true, subtitleLanguage: "en")
       XCTAssertEqual(asset.provider, .linkDownloader)
-      XCTAssertTrue(asset.id.hasSuffix(":audioOnly:subs:en"))
+      XCTAssertTrue(asset.id.hasSuffix(":audioOnly:original:subs:en"))
       XCTAssertEqual(asset.effectiveDownloadStrategy, .ytDLP)
       XCTAssertEqual(asset.originalMetadata["linkFormatSelector"], "bestaudio[acodec!=none]/best")
       XCTAssertEqual(asset.originalMetadata["linkDownloadSubtitles"], "true")
       let record = DownloadRecord(
         asset: asset, fileURL: URL(fileURLWithPath: "/tmp/fixture.webm"), projectID: nil)
       XCTAssertEqual(record.sourceName, "YouTube")
+
+      let range = try ClipTimeRange(start: 20, end: 45, mediaDuration: analysis.duration)
+      let clip = analysis.mediaAsset(
+        quality: .p720, downloadSubtitles: false, subtitleLanguage: nil,
+        outputPreset: .editingCompatibleMP4, clipRange: range)
+      let options = YTDLPDownloadOptions(asset: clip)
+      XCTAssertEqual(options.outputPreset, .editingCompatibleMP4)
+      XCTAssertEqual(options.clipRange, range)
+      XCTAssertTrue(options.effectiveFormatSelector.contains("vcodec^=avc1"))
+      XCTAssertTrue(options.effectiveFormatSelector.contains("bestaudio[ext=m4a]"))
+      XCTAssertTrue(FileNameSanitizer.fileName(asset: clip).contains("00-00-20_to_00-00-45"))
+      XCTAssertTrue(FileNameSanitizer.fileName(asset: clip).hasSuffix(".mp4"))
     }
 
     func testLinkURLBatchValidationAndFriendlyFailures() {
@@ -196,6 +208,10 @@ import Foundation
       XCTAssertTrue(LinkURLParser.urls(from: "http://127.0.0.1/private").isEmpty)
       XCTAssertTrue(LinkURLParser.urls(from: "https://example.com/watch?token=secret").isEmpty)
       XCTAssertTrue(LinkURLParser.urls(from: "https://user:pass@example.com/watch").isEmpty)
+      XCTAssertEqual(
+        LinkURLParser.mediaURLs(
+          from: "note\nhttps://youtu.be/example\nhttps://vimeo.com/123\nhttps://youtu.be/example"
+        ).count, 2)
       XCTAssertEqual(
         LinkURLSecurity.redactedString(URL(string: "https://example.com/watch?token=secret&id=1")),
         "https://example.com/watch?token=%5BREDACTED%5D&id=1")
@@ -416,7 +432,9 @@ import Foundation
         executableURL: try executableFixture())
       let saved = try await service.download(
         sourceURL: URL(string: "https://www.youtube.com/watch?v=abc123")!, directory: directory,
-        fileStem: "fixture")
+        fileStem: "fixture",
+        options: YTDLPDownloadOptions(
+          formatSelector: "best", downloadSubtitles: false, subtitleLanguages: nil))
       XCTAssertEqual(saved.standardizedFileURL, destination.standardizedFileURL)
       XCTAssertTrue(FileManager.default.fileExists(atPath: saved.path))
     }

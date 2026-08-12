@@ -15,12 +15,108 @@ enum LinkDownloadQuality: String, Codable, CaseIterable, Identifiable, Sendable 
 
   var formatSelector: String {
     switch self {
-    case .best: "best[acodec!=none][vcodec!=none]/best"
-    case .p1080: "best[height<=1080][acodec!=none][vcodec!=none]/best[height<=1080]"
-    case .p720: "best[height<=720][acodec!=none][vcodec!=none]/best[height<=720]"
-    case .p480: "best[height<=480][acodec!=none][vcodec!=none]/best[height<=480]"
+    case .best: "bestvideo+bestaudio/best"
+    case .p1080: "bestvideo[height<=1080]+bestaudio/best[height<=1080]"
+    case .p720: "bestvideo[height<=720]+bestaudio/best[height<=720]"
+    case .p480: "bestvideo[height<=480]+bestaudio/best[height<=480]"
     case .audioOnly: "bestaudio[acodec!=none]/best"
     }
+  }
+}
+
+enum LinkDownloadScope: String, Codable, CaseIterable, Identifiable, Sendable {
+  case full, clip
+  var id: String { rawValue }
+  var label: String { tr("link.scope.\(rawValue)") }
+}
+
+enum EditingOutputPreset: String, Codable, CaseIterable, Identifiable, Sendable {
+  case original
+  case editingCompatibleMP4
+  case audioOnly
+
+  var id: String { rawValue }
+  var label: String { tr("link.output.\(rawValue)") }
+  var requiresFFmpeg: Bool { self != .original }
+}
+
+enum ClipRangeError: Error, Equatable, Sendable {
+  case invalidFormat
+  case invalidRange
+  case beyondDuration
+  case unknownDuration
+
+  var localizationKey: String {
+    switch self {
+    case .invalidFormat: "link.clip.invalidFormat"
+    case .invalidRange: "link.clip.invalidRange"
+    case .beyondDuration: "link.clip.beyondDuration"
+    case .unknownDuration: "link.clip.unknownDuration"
+    }
+  }
+}
+
+struct ClipTimeRange: Codable, Hashable, Sendable {
+  let start: Double
+  let end: Double
+
+  var duration: Double { end - start }
+
+  init(start: Double, end: Double, mediaDuration: Double?) throws {
+    guard start.isFinite, end.isFinite, start >= 0, end > start, end - start >= 0.5 else {
+      throw ClipRangeError.invalidRange
+    }
+    guard let mediaDuration, mediaDuration.isFinite, mediaDuration > 0 else {
+      throw ClipRangeError.unknownDuration
+    }
+    guard end <= mediaDuration + 0.05 else { throw ClipRangeError.beyondDuration }
+    self.start = start
+    self.end = end
+  }
+
+  static func parse(start: String, end: String, mediaDuration: Double?) throws -> ClipTimeRange {
+    guard let startValue = TimecodeParser.seconds(start), let endValue = TimecodeParser.seconds(end)
+    else { throw ClipRangeError.invalidFormat }
+    return try ClipTimeRange(start: startValue, end: endValue, mediaDuration: mediaDuration)
+  }
+
+  var sectionArgument: String {
+    "*\(TimecodeParser.decimalSeconds(start))-\(TimecodeParser.decimalSeconds(end))"
+  }
+}
+
+enum TimecodeParser {
+  static func seconds(_ raw: String) -> Double? {
+    let value = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !value.isEmpty else { return nil }
+    let fields = value.split(separator: ":", omittingEmptySubsequences: false)
+    guard (1...3).contains(fields.count), fields.allSatisfy({ Double($0) != nil }) else {
+      return nil
+    }
+    let values = fields.compactMap { Double($0) }
+    guard values.count == fields.count, values.allSatisfy({ $0 >= 0 && $0.isFinite }) else {
+      return nil
+    }
+    if fields.count > 1, values.dropFirst().contains(where: { $0 >= 60 }) { return nil }
+    return switch values.count {
+    case 1: values[0]
+    case 2: values[0] * 60 + values[1]
+    case 3: values[0] * 3_600 + values[1] * 60 + values[2]
+    default: nil
+    }
+  }
+
+  static func string(_ seconds: Double) -> String {
+    let total = max(0, Int(seconds.rounded(.down)))
+    return String(format: "%02d:%02d:%02d", total / 3_600, (total / 60) % 60, total % 60)
+  }
+
+  static func fileNameString(_ seconds: Double) -> String {
+    string(seconds).replacingOccurrences(of: ":", with: "-")
+  }
+
+  static func decimalSeconds(_ seconds: Double) -> String {
+    String(format: "%.3f", locale: Locale(identifier: "en_US_POSIX"), seconds)
   }
 }
 
@@ -55,36 +151,48 @@ struct LinkMediaAnalysis: Identifiable, Codable, Hashable, Sendable {
 
   var availableQualities: [LinkDownloadQuality] {
     var values: [LinkDownloadQuality] = [.best]
-    let progressiveHeights = formats.filter { $0.hasVideo && $0.hasAudio }.compactMap(\.height)
-    if progressiveHeights.contains(where: { $0 >= 1080 }) { values.append(.p1080) }
-    if progressiveHeights.contains(where: { $0 >= 720 }) { values.append(.p720) }
-    if progressiveHeights.contains(where: { $0 >= 480 }) { values.append(.p480) }
+    let videoHeights = formats.filter(\.hasVideo).compactMap(\.height)
+    if videoHeights.contains(where: { $0 >= 1080 }) { values.append(.p1080) }
+    if videoHeights.contains(where: { $0 >= 720 }) { values.append(.p720) }
+    if videoHeights.contains(where: { $0 >= 480 }) { values.append(.p480) }
     if formats.contains(where: { $0.hasAudio }) { values.append(.audioOnly) }
     return values
   }
 
   func mediaAsset(
-    quality: LinkDownloadQuality, downloadSubtitles: Bool, subtitleLanguage: String?
+    quality: LinkDownloadQuality, downloadSubtitles: Bool, subtitleLanguage: String?,
+    outputPreset: EditingOutputPreset = .original, clipRange: ClipTimeRange? = nil
   ) -> MediaAsset {
     let subtitleIdentity =
       downloadSubtitles ? ":subs:\(subtitleLanguage?.nilIfEmpty ?? "all")" : ""
+    let audioOnly = outputPreset == .audioOnly || quality == .audioOnly
     var metadata = [
       "sourceName": sourceName,
-      "linkFormatSelector": quality.formatSelector,
+      "linkFormatSelector": audioOnly
+        ? LinkDownloadQuality.audioOnly.formatSelector : quality.formatSelector,
       "linkQuality": quality.rawValue,
       "linkDownloadSubtitles": downloadSubtitles ? "true" : "false",
       "linkSubtitleLanguages": subtitleLanguage ?? "",
       "linkAudioOnly": quality == .audioOnly ? "true" : "false",
+      "linkOutputPreset": outputPreset.rawValue,
+      "linkMediaDuration": duration.map { String($0) } ?? "",
     ]
+    if let clipRange {
+      metadata["linkClipStart"] = String(clipRange.start)
+      metadata["linkClipEnd"] = String(clipRange.end)
+      metadata["linkClipDuration"] = String(clipRange.duration)
+    }
     metadata["linkDownloader"] = "true"
+    let clipIdentity = clipRange.map { ":clip:\($0.start)-\($0.end)" } ?? ""
     return MediaAsset(
-      id: "\(id):\(quality.rawValue)\(subtitleIdentity)", provider: .linkDownloader, title: title,
+      id: "\(id):\(quality.rawValue):\(outputPreset.rawValue)\(clipIdentity)\(subtitleIdentity)",
+      provider: .linkDownloader, title: title,
       description: nil,
       thumbnailURL: thumbnailURL, previewURL: nil, downloadURL: originalURL,
       sourcePageURL: originalURL, creator: creator, license: nil, licenseURL: nil,
       licenseStatus: .unknown, width: nil, height: quality.maximumHeight, duration: duration,
-      fileType: quality == .audioOnly ? "audio" : "video",
-      mediaType: quality == .audioOnly ? .audio : .video,
+      fileType: audioOnly ? "m4a" : (outputPreset == .editingCompatibleMP4 ? "mp4" : "video"),
+      mediaType: audioOnly ? .audio : .video,
       publishedDate: nil, downloadable: true, originalMetadata: metadata,
       searchKeyword: originalURL.absoluteString, relevanceScore: 1, downloadStrategy: .ytDLP,
       rightsInfo: RightsInfo(statement: nil, source: sourceName, known: false),
@@ -96,15 +204,26 @@ struct YTDLPDownloadOptions: Sendable, Equatable {
   var formatSelector: String
   var downloadSubtitles: Bool
   var subtitleLanguages: String?
+  var outputPreset: EditingOutputPreset
+  var clipRange: ClipTimeRange?
+  var mediaDuration: Double?
 
   static let `default` = YTDLPDownloadOptions(
     formatSelector: LinkDownloadQuality.p720.formatSelector,
-    downloadSubtitles: false, subtitleLanguages: nil)
+    downloadSubtitles: false, subtitleLanguages: nil, outputPreset: .original, clipRange: nil,
+    mediaDuration: nil)
 
-  init(formatSelector: String, downloadSubtitles: Bool, subtitleLanguages: String?) {
+  init(
+    formatSelector: String, downloadSubtitles: Bool, subtitleLanguages: String?,
+    outputPreset: EditingOutputPreset = .original, clipRange: ClipTimeRange? = nil,
+    mediaDuration: Double? = nil
+  ) {
     self.formatSelector = formatSelector
     self.downloadSubtitles = downloadSubtitles
     self.subtitleLanguages = subtitleLanguages
+    self.outputPreset = outputPreset
+    self.clipRange = clipRange
+    self.mediaDuration = mediaDuration
   }
 
   init(asset: MediaAsset) {
@@ -113,12 +232,69 @@ struct YTDLPDownloadOptions: Sendable, Equatable {
       ?? LinkDownloadQuality.p720.formatSelector
     downloadSubtitles = asset.originalMetadata["linkDownloadSubtitles"] == "true"
     subtitleLanguages = asset.originalMetadata["linkSubtitleLanguages"]?.nilIfEmpty
+    mediaDuration = asset.originalMetadata["linkMediaDuration"].flatMap(Double.init)
+    outputPreset =
+      EditingOutputPreset(
+        rawValue: asset.originalMetadata["linkOutputPreset"] ?? "")
+      ?? (asset.originalMetadata["linkAudioOnly"] == "true" ? .audioOnly : .original)
+    if let start = asset.originalMetadata["linkClipStart"].flatMap(Double.init),
+      let end = asset.originalMetadata["linkClipEnd"].flatMap(Double.init), end > start
+    {
+      clipRange = try? ClipTimeRange(start: start, end: end, mediaDuration: end)
+    } else {
+      clipRange = nil
+    }
+  }
+
+  var requiresFFmpeg: Bool {
+    outputPreset.requiresFFmpeg || clipRange != nil || formatSelector.contains("+")
+  }
+
+  /// Precise clipping and editing-compatible output require FFmpeg to decode
+  /// the selected source. Prefer AVC + M4A when those formats are available;
+  /// the original selector remains the final fallback for other sites.
+  var effectiveFormatSelector: String {
+    guard outputPreset != .audioOnly,
+      clipRange != nil || outputPreset == .editingCompatibleMP4
+    else { return formatSelector }
+    let height: String
+    if formatSelector.contains("height<=1080") {
+      height = "[height<=1080]"
+    } else if formatSelector.contains("height<=720") {
+      height = "[height<=720]"
+    } else if formatSelector.contains("height<=480") {
+      height = "[height<=480]"
+    } else {
+      height = ""
+    }
+    return
+      "bestvideo[vcodec^=avc1]\(height)+bestaudio[ext=m4a]/best[ext=mp4][vcodec^=avc1]\(height)/\(formatSelector)"
   }
 }
 
 struct YTDLPDownloadUpdate: Sendable {
   let fraction: Double
   let bytesPerSecond: Double
+}
+
+extension MediaAsset {
+  /// Adds a creator-workflow output choice to an existing yt-dlp search result
+  /// while keeping it in the same download queue and provider pipeline.
+  func withEditingOutput(_ preset: EditingOutputPreset) -> MediaAsset {
+    var value = self
+    value.originalMetadata["linkOutputPreset"] = preset.rawValue
+    value.originalMetadata["workflowVariantID"] = preset.rawValue
+    value.originalMetadata["linkMediaDuration"] = duration.map { String($0) } ?? ""
+    value.originalMetadata["linkAudioOnly"] = preset == .audioOnly ? "true" : "false"
+    if preset == .audioOnly {
+      value.originalMetadata["linkFormatSelector"] = LinkDownloadQuality.audioOnly.formatSelector
+      value.mediaType = .audio
+      value.fileType = "m4a"
+    } else if preset == .editingCompatibleMP4 {
+      value.fileType = "mp4"
+    }
+    return value
+  }
 }
 
 enum LinkURLParser {
@@ -130,6 +306,20 @@ enum LinkURLParser {
         let url = components.url, seen.insert(url.absoluteString).inserted
       else { return nil }
       return url
+    }
+  }
+
+  static func mediaURLs(from text: String) -> [URL] {
+    let recognizedHosts = [
+      "youtube.com", "youtu.be", "x.com", "twitter.com", "vimeo.com", "dailymotion.com",
+      "tiktok.com", "twitch.tv", "reddit.com", "soundcloud.com", "facebook.com",
+      "instagram.com",
+    ]
+    let mediaExtensions = ["mp4", "mov", "m4v", "webm", "mp3", "m4a", "wav", "ogg"]
+    return urls(from: text).filter { url in
+      let host = url.host?.lowercased() ?? ""
+      return recognizedHosts.contains { host == $0 || host.hasSuffix(".\($0)") }
+        || mediaExtensions.contains(url.pathExtension.lowercased())
     }
   }
 }
