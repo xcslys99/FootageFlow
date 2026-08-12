@@ -1,6 +1,12 @@
 #!/bin/zsh
 set -euo pipefail
 
+# build_app.sh captures this script's stdout to obtain the finished tools
+# directory. Keep configure/make progress on stderr so a fresh source build
+# cannot accidentally become part of that path.
+exec 3>&1
+exec 1>&2
+
 # Builds redistributable GPL FFmpeg tools from checksummed upstream sources.
 # No --enable-nonfree component is used. The result is cached outside the app bundle.
 project_dir="${0:A:h:h}"
@@ -28,7 +34,7 @@ if [[ -x "$tool_dir/ffmpeg" && -x "$tool_dir/ffprobe" && -f "$tool_dir/LICENSE_F
     print -u2 -- "Cached FFmpeg build contains a private developer path"
     exit 1
   fi
-  print -r -- "$tool_dir"
+  print -u3 -r -- "$tool_dir"
   exit 0
 fi
 
@@ -96,4 +102,4 @@ if strings "$tool_dir/ffmpeg" "$tool_dir/ffprobe" | grep -Fq "$private_home_patt
   print -u2 -- "FFmpeg build unexpectedly contains a private developer path"
   exit 1
 fi
-print -r -- "$tool_dir"
+print -u3 -r -- "$tool_dir"

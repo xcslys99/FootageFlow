@@ -155,7 +155,7 @@ Check(linkItem.HasSubtitles && linkItem.IsReady, "Windows link subtitle and read
 linkItem.SelectedQuality = "audioOnly";
 linkItem.DownloadSubtitles = true;
 linkItem.SubtitleLanguage = "en";
-Check(linkItem.DownloadIdentity == "vimeo:123:audioOnly:subs:en",
+Check(linkItem.DownloadIdentity == "vimeo:123:audioOnly:original:subs:en",
     "Windows link quality-specific download identity");
 linkItem.SelectedQuality = "p720";
 linkItem.OutputPreset = "editingCompatibleMP4";
