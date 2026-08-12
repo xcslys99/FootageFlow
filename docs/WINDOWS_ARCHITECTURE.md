@@ -1,6 +1,6 @@
 # Windows architecture audit
 
-Status: Windows 11 x64 is supported from FootageFlow v0.2.0. The v0.7.0 candidate keeps the same shared-core boundary and adds a notification-only update checker to both desktop interfaces. Windows-native installation and runtime checks are performed on a clean Windows GitHub Actions runner before release.
+Status: Windows 11 x64 is supported from FootageFlow v0.2.0. The v0.7.1 candidate keeps the same shared-core boundary, including the v0.7.0 notification-only update checker, and adds the shared concept-aware relevance ranker to both desktop interfaces. Windows-native installation and runtime checks are performed on a clean Windows GitHub Actions runner before release.
 
 ## Current shared code
 
@@ -66,7 +66,7 @@ The Windows WPF shell sends `checkUpdate` to the same Core Host. The Swift core 
 
 ## Expected macOS impact
 
-The v0.7.0 work adds shared update models and narrow UI entries without replacing the existing macOS stack. Every Windows change continues to run the macOS Release build, test suite, app-bundle signing check, binary privacy scan, and offline self-test.
+The v0.7.1 work adds the shared `rankAssets` Core Host action and a narrow WPF relevance selector without replacing the existing macOS stack. Every Windows change continues to run the macOS Release build, test suite, app-bundle signing check, binary privacy scan, and offline self-test.
 
 ## Version plan
 
@@ -75,11 +75,12 @@ The v0.7.0 work adds shared update models and narrow UI entries without replacin
 - v0.5.0 added Search Expansion, Provider pagination, Link Downloader, and Feedback & Community on both supported platforms.
 - v0.6.0 is one creator-workflow release for clip downloads, smart expansion, output presets, local clipboard detection, Openverse, and Dailymotion.
 - v0.7.0 adds cross-platform update notifications, visible official release notes, View Update, Remind Later, and a manual Settings check without automatic installation.
+- v0.7.1 adds Precise, Balanced, and Broad modes backed by the same Swift `SearchRelevanceEngine` used on macOS. The Windows client retains high-recall candidates and sends them to the Core Host for filtering and ranking; no relevance rules are duplicated in C#.
 - Windows 10 x64 is not declared supported because it has not completed the same validation.
 
-## v0.7.0 release validation gate
+## v0.7.1 release validation gate
 
-Before publishing v0.7.0, CI must complete all of the following on a clean Windows runner:
+Before publishing v0.7.1, CI must complete all of the following on a clean Windows runner:
 
 - Shared Swift Release build, Core Host health check, and cross-platform tests.
 - Native WPF Release build and Windows platform acceptance checks.

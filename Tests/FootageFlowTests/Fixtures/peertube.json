@@ -17,6 +17,8 @@
     "duration": 42,
     "views": 100,
     "licence": { "id": 1, "label": "Attribution" },
+    "category": { "id": 10, "label": "Food" },
+    "tags": ["Taiwan", "street food"],
     "channel": { "name": "history", "displayName": "History Channel", "url": null, "host": "video.example.org" }
   }]
 }

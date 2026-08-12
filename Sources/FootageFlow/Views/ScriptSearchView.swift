@@ -212,9 +212,10 @@ enum BatchSearchService {
       for await result in group { values.append(result) }
       return values
     }
-    var seen = Set<String>()
-    return batches.flatMap { $0 }.filter { seen.insert($0.stableID).inserted }.prefix(24).map {
-      $0
-    }
+    let candidates = SearchDeduplicator.apply(batches.flatMap { $0 })
+    return Array(
+      SearchRelevanceEngine.rank(
+        candidates, query: keyword, mode: AppSettings.searchRelevanceMode
+      ).prefix(24))
   }
 }

@@ -13,6 +13,7 @@ public sealed class AppSettingsModel
     public bool SearchExpansionProvidersV5Added { get; set; }
     public bool CreatorWorkflowProvidersV6Added { get; set; }
     public bool SmartSearchExpansionEnabled { get; set; } = true;
+    public string SearchRelevanceMode { get; set; } = "balanced";
     public bool ClipboardMediaLinkDetectionEnabled { get; set; }
     public string? DeferredUpdateVersion { get; set; }
     public DateTimeOffset? DeferredUpdateUntil { get; set; }

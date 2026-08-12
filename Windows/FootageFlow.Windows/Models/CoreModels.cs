@@ -22,6 +22,8 @@ public sealed class CoreRequest
     public IReadOnlyDictionary<string, string>? ApiKeys { get; init; }
     public string? Language { get; init; }
     public MediaAsset? Asset { get; init; }
+    public IReadOnlyList<MediaAsset>? Assets { get; init; }
+    public string? RelevanceMode { get; init; }
     public string? MediaPath { get; init; }
     public string? ProjectName { get; init; }
     public string? ProjectID { get; init; }

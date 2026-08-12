@@ -10,7 +10,7 @@ A free and open-source desktop app for macOS and Windows that helps video creato
 
 [Download for macOS or Windows — Latest Release](https://github.com/xcslys99/FootageFlow/releases/latest) · [All Releases](https://github.com/xcslys99/FootageFlow/releases)
 
-FootageFlow is privacy-friendly and built for documentary, history, country profile, finance, science, and social-video research. FootageFlow v0.7.0 supports **macOS 15+ on Apple Silicon** and **Windows 11 x64**. Both editions share all 17 search providers, pagination, normalized metadata and rights, smart keyword rules, creator output metadata, source sidecars, project persistence, and update-version logic.
+FootageFlow is privacy-friendly and built for documentary, history, country profile, finance, science, and social-video research. FootageFlow v0.7.1 supports **macOS 15+ on Apple Silicon** and **Windows 11 x64**. Both editions share all 17 search providers, pagination, normalized metadata and rights, smart keyword rules, local relevance ranking, creator output metadata, source sidecars, project persistence, and update-version logic.
 
 ## Two ways to use FootageFlow
 
@@ -49,6 +49,7 @@ Availability depends on the source, individual media, permissions, regional rest
 
 - Concurrent, progressive search across 17 sources, including Pexels, Pixabay, Wikimedia Commons, Internet Archive, YouTube, NASA, Library of Congress, National Archives, Europeana, PeerTube/SepiaSearch, Coverr, Vimeo, Openverse, and Dailymotion
 - Visible, editable Smart Search Expansion with bounded provider query budgets and an off switch
+- Two-stage retrieval with local concept-aware reranking and Precise, Balanced, or Broad modes; Balanced is the default and filters results that match only one broad part of a compound query
 - Provider-aware pagination and **Load More** append results without clearing the current search; a failed next page does not discard earlier results
 - **Link Downloader** analyzes one or more public media URLs, supports full/clip scope and output presets, and sends selected items into the existing Download Manager
 - Advanced filters for source, media type, year, duration, resolution, rights, and direct-download availability
@@ -84,15 +85,15 @@ These screenshots are from FootageFlow on macOS. The Windows edition follows the
 
 ## Install on macOS
 
-1. Download `FootageFlow-0.7.0-macOS-arm64.dmg` from Releases.
+1. Download `FootageFlow-0.7.1-macOS-arm64.dmg` from Releases.
 2. Open the DMG and drag FootageFlow to Applications.
-3. Open FootageFlow. The v0.7.0 build is Ad Hoc signed, not notarized; if macOS blocks the first launch, use **System Settings → Privacy & Security → Open Anyway**.
+3. Open FootageFlow. The v0.7.1 build is Ad Hoc signed, not notarized; if macOS blocks the first launch, use **System Settings → Privacy & Security → Open Anyway**.
 
 No terminal command is required for normal use.
 
 ## Install on Windows
 
-1. On a Windows 11 x64 PC, download `FootageFlow-Setup-0.7.0-Windows-x64.exe` from Releases.
+1. On a Windows 11 x64 PC, download `FootageFlow-Setup-0.7.1-Windows-x64.exe` from Releases.
 2. Verify it against the attached `.sha256` file, then double-click the installer.
 3. Complete the setup wizard and open FootageFlow from the Start menu.
 

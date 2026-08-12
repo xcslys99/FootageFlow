@@ -201,6 +201,9 @@ struct QuickSearchView: View {
         Picker(tr("filter.sort"), selection: $viewModel.sort) {
           ForEach(SearchSort.allCases) { Text($0.label).tag($0) }
         }.id(localization.language).frame(width: 150)
+        Picker(tr("search.relevance.mode"), selection: $viewModel.relevanceMode) {
+          ForEach(SearchRelevanceMode.allCases) { Text($0.label).tag($0) }
+        }.id(localization.language).frame(width: 155)
         Spacer()
         Picker(tr("common.project"), selection: $viewModel.currentProjectID) {
           Text(tr("common.uncategorized")).tag(Optional<UUID>.none)

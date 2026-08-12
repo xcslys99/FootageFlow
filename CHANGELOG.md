@@ -2,6 +2,28 @@
 
 All notable FootageFlow changes are documented here.
 
+## [0.7.1] - 2026-08-12
+
+### Fixed
+
+- Added a shared two-stage relevance pipeline so broad Provider matches no longer dominate composite searches
+- Added local concept-group coverage and weighted title, tags, category, description, creator/channel, matched-query, and bounded Provider relevance scoring
+- Filtered entity-only results such as Taiwan politics from Balanced `台湾美食` searches while retaining semantic matches such as Taipei beef noodle soup
+- Preserved PeerTube tags/category, Internet Archive subjects/collection, Pixabay tags, and Wikimedia categories for local ranking
+
+### Added
+
+- Precise, Balanced, and Broad relevance modes on macOS and Windows, with Balanced as the persisted default
+- Fixed Precision@20 relevance tests and a sanitized real-provider `--relevance-smoke` diagnostic
+- Localized relevance controls in all ten interface languages
+
+### Validation
+
+- The fixed `台湾美食` evaluation returns 20 relevant items in the Top 20 without requiring the exact query phrase
+- A live 122-candidate public-provider run removed all judged-irrelevant default results: the old provider order had 2 relevant items in its Top 20, while Balanced returned 14/14 relevant items
+- Added concept proximity, conflicting-place, distractor-category, oversized-description, and noisy-tag safeguards for sparse archive metadata
+- The installed macOS app returned 35 real `台湾美食` results; the first 20 were manually reviewed in the GUI and all 20 matched both core concepts
+
 ## [0.7.0] - 2026-08-12
 
 ### Added

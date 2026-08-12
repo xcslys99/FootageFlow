@@ -171,6 +171,10 @@
               <ComboBox SelectedValue="{Binding Sort}" SelectedValuePath="Tag" Width="140">
                 <ComboBoxItem Content="{Binding DataContext.SortRelevanceText, RelativeSource={RelativeSource AncestorType=Window}}" Tag="relevance" /><ComboBoxItem Content="{Binding DataContext.SortNewestText, RelativeSource={RelativeSource AncestorType=Window}}" Tag="newest" /><ComboBoxItem Content="{Binding DataContext.SortResolutionText, RelativeSource={RelativeSource AncestorType=Window}}" Tag="resolution" /><ComboBoxItem Content="{Binding DataContext.SortDurationText, RelativeSource={RelativeSource AncestorType=Window}}" Tag="duration" />
               </ComboBox>
+              <TextBlock Text="{Binding RelevanceModeTitle}" VerticalAlignment="Center" Margin="15,0,6,0" />
+              <ComboBox SelectedValue="{Binding RelevanceMode}" SelectedValuePath="Tag" Width="130">
+                <ComboBoxItem Content="{Binding DataContext.RelevancePreciseText, RelativeSource={RelativeSource AncestorType=Window}}" Tag="precise" /><ComboBoxItem Content="{Binding DataContext.RelevanceBalancedText, RelativeSource={RelativeSource AncestorType=Window}}" Tag="balanced" /><ComboBoxItem Content="{Binding DataContext.RelevanceBroadText, RelativeSource={RelativeSource AncestorType=Window}}" Tag="broad" />
+              </ComboBox>
             </WrapPanel>
             <ItemsControl ItemsSource="{Binding Providers}" Margin="0,8,0,0">
               <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>

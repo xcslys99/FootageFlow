@@ -41,6 +41,8 @@ struct InternetArchiveProvider: MediaProvider {
       URLQueryItem(name: "fl[]", value: "mediatype"),
       URLQueryItem(name: "fl[]", value: "licenseurl"),
       URLQueryItem(name: "fl[]", value: "rights"),
+      URLQueryItem(name: "fl[]", value: "subject"),
+      URLQueryItem(name: "fl[]", value: "collection"),
       URLQueryItem(name: "rows", value: String(min(request.pageSize, 12))),
       URLQueryItem(name: "page", value: String(page)),
       URLQueryItem(name: "output", value: "json"),
@@ -167,7 +169,11 @@ struct InternetArchiveProvider: MediaProvider {
         fileType: chosen.map { URL(fileURLWithPath: $0.name).pathExtension.lowercased() },
         mediaType: type, publishedDate: ProviderUtilities.parseDate(dateText),
         downloadable: download != nil,
-        originalMetadata: ["identifier": identifier, "rights": rights ?? ""],
+        originalMetadata: [
+          "identifier": identifier, "rights": rights ?? "",
+          "subjects": string(metadata["subject"]) ?? string(doc["subject"]) ?? "",
+          "collection": string(metadata["collection"]) ?? string(doc["collection"]) ?? "",
+        ],
         searchKeyword: request.query, relevanceScore: relevance + (1 - Double(rank) * 0.01) * 0.1,
         thumbnailCandidates: thumbnails)
     } catch { return nil }

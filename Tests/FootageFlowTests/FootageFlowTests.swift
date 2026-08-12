@@ -121,6 +121,8 @@ import Foundation
         peer.data.first.flatMap { PeerTubeProvider.asset($0, query: "history", index: 0) })
       XCTAssertEqual(peerAsset.provider, .peertube)
       XCTAssertFalse(peerAsset.downloadable)
+      XCTAssertEqual(peerAsset.originalMetadata["category"], "Food")
+      XCTAssertEqual(peerAsset.originalMetadata["tags"], "Taiwan, street food")
       XCTAssertEqual(peerAsset.effectiveThumbnailCandidates.first?.host, "video.example.org")
       XCTAssertTrue(
         peerAsset.effectiveThumbnailCandidates.contains {

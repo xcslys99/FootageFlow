@@ -13,6 +13,7 @@ void Check(bool condition, string name)
 }
 
 Check(new AppSettingsModel().Language == "en", "English is the first-launch default");
+Check(new AppSettingsModel().SearchRelevanceMode == "balanced", "Balanced relevance is the default");
 Check(new AppSettingsModel().EnabledProviders.Count == 17, "Seventeen providers enabled by default");
 Check(LocalizationService.SupportedLanguages.Count == 10, "Ten interface languages are available");
 var settingsDirectory = Path.Combine(Path.GetTempPath(), "FootageFlowSettingsTest", Guid.NewGuid().ToString("N"));
@@ -248,6 +249,28 @@ if (OperatingSystem.IsWindows())
         Check(health.Providers?.Count == 17, "Windows core exposes seventeen shared providers");
         var keywords = await core.SendAsync(new CoreRequest { Action = "keywords", Query = "2001年阿根廷银行挤兑" });
         Check((keywords.Keywords?.Count ?? 0) >= 3, "Shared keyword engine");
+        var relevanceCandidates = new[]
+        {
+            new MediaAsset
+            {
+                Id = "food", Provider = "peertube", Title = "Taipei beef noodle soup",
+                SourcePageURL = "https://example.com/food", LicenseStatus = "UNKNOWN",
+                MediaType = "video", SearchKeyword = "Taiwan cuisine", RelevanceScore = 0.5
+            },
+            new MediaAsset
+            {
+                Id = "politics", Provider = "peertube", Title = "Taiwan politics debate",
+                SourcePageURL = "https://example.com/politics", LicenseStatus = "UNKNOWN",
+                MediaType = "video", SearchKeyword = "Taiwan cuisine", RelevanceScore = 1
+            }
+        };
+        var ranked = await core.SendAsync(new CoreRequest
+        {
+            Action = "rankAssets", Query = "台湾美食", Assets = relevanceCandidates,
+            RelevanceMode = "balanced"
+        });
+        Check(ranked.Assets?.Count == 1 && ranked.Assets[0].Id == "food",
+            "Windows uses the shared concept relevance ranker");
         var attribution = await core.SendAsync(new CoreRequest { Action = "formatAttribution", Asset = media });
         Check(attribution.Text?.Contains("CC BY", StringComparison.Ordinal) == true,
             "Shared attribution formatter");

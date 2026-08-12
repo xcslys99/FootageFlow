@@ -107,7 +107,7 @@ jobs:
 
       - name: Build self-contained Windows package
         shell: pwsh
-        run: scripts/windows/build-package.ps1 -Version "0.7.0"
+        run: scripts/windows/build-package.ps1 -Version "0.7.1"
 
       - name: Verify packaged runtimes
         shell: pwsh
@@ -141,6 +141,11 @@ jobs:
           if (-not $health.success -or $health.platform -ne "windows") {
             throw "The packaged Windows core health check failed."
           }
+          $rankRequest = '{"id":"packaged-rank","action":"rankAssets","query":"台湾美食","relevanceMode":"balanced","assets":[{"id":"food","provider":"peertube","title":"Taipei beef noodle soup","sourcePageURL":"https://example.com/food","licenseStatus":"UNKNOWN","mediaType":"video","downloadable":false,"originalMetadata":{},"searchKeyword":"Taiwan cuisine","relevanceScore":0.5},{"id":"politics","provider":"peertube","title":"Taiwan politics debate","sourcePageURL":"https://example.com/politics","licenseStatus":"UNKNOWN","mediaType":"video","downloadable":false,"originalMetadata":{},"searchKeyword":"Taiwan cuisine","relevanceScore":1.0}]}'
+          $ranked = $rankRequest | & (Join-Path $stage "Core\FootageFlowCore.exe") --core-request | ConvertFrom-Json
+          if (-not $ranked.success -or $ranked.assets.Count -ne 1 -or $ranked.assets[0].id -ne "food") {
+            throw "The packaged shared relevance ranker failed."
+          }
           $toolVersion = & (Join-Path $stage "Tools\yt-dlp.exe") --version
           if ($toolVersion -ne "2026.07.04") { throw "The bundled yt-dlp version is not the pinned release." }
 
@@ -160,16 +165,16 @@ jobs:
           $compiler = (& scripts/windows/install-inno.ps1 | Select-Object -Last 1)
           $stage = (Resolve-Path ".build\windows-stage").Path
           $output = (Resolve-Path "dist\windows").Path
-          & $compiler "/DAppVersion=0.7.0" "/DSourceDirectory=$stage" "/DOutputDirectory=$output" "Windows\Installer\FootageFlow.iss"
+          & $compiler "/DAppVersion=0.7.1" "/DSourceDirectory=$stage" "/DOutputDirectory=$output" "Windows\Installer\FootageFlow.iss"
           if ($LASTEXITCODE -ne 0) { throw "The Windows installer could not be compiled." }
-          $installer = Join-Path $output "FootageFlow-Setup-0.7.0-Windows-x64.exe"
+          $installer = Join-Path $output "FootageFlow-Setup-0.7.1-Windows-x64.exe"
           if (-not (Test-Path $installer -PathType Leaf)) { throw "The Windows installer is missing." }
           $signature = Get-AuthenticodeSignature $installer
           Write-Host "Installer signature status: $($signature.Status) (unsigned development build expected)"
           (Get-FileHash $installer -Algorithm SHA256).Hash.ToLowerInvariant() + "  " + (Split-Path $installer -Leaf) |
             Set-Content ($installer + ".sha256") -Encoding ascii -NoNewline
           $checksumFiles = @(
-            Join-Path $output "FootageFlow-0.7.0-Windows-x64-portable.zip.sha256"
+            Join-Path $output "FootageFlow-0.7.1-Windows-x64-portable.zip.sha256"
             $installer + ".sha256"
           )
           foreach ($checksumFile in $checksumFiles) {
@@ -188,7 +193,7 @@ jobs:
       - name: Clean install, launch, and uninstall test
         shell: pwsh
         run: |
-          $installer = (Resolve-Path "dist\windows\FootageFlow-Setup-0.7.0-Windows-x64.exe").Path
+          $installer = (Resolve-Path "dist\windows\FootageFlow-Setup-0.7.1-Windows-x64.exe").Path
           $installRoot = Join-Path $env:RUNNER_TEMP "FootageFlow-Clean-Install"
           if (Test-Path $installRoot) { Remove-Item $installRoot -Recurse -Force }
           $install = Start-Process $installer -ArgumentList @(
@@ -221,7 +226,7 @@ jobs:
       - name: Upload Windows candidate artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: FootageFlow-0.7.0-Windows-x64
+          name: FootageFlow-0.7.1-Windows-x64
           path: dist/windows/*
           if-no-files-found: error
           retention-days: 14

@@ -23,6 +23,7 @@ public sealed class MainViewModel : ObservableObject
     private bool _isSearching;
     private bool _isLoadingMore;
     private string _lastEffectiveQuery = "";
+    private string[] _lastSearchQueries = [];
     private readonly Dictionary<string, ProviderContinuation> _continuations = new(StringComparer.OrdinalIgnoreCase);
     private string _mediaType = "video";
     private string _orientation = "all";
@@ -34,6 +35,7 @@ public sealed class MainViewModel : ObservableObject
     private bool _downloadableOnly;
     private int _selectedCount;
     private string _sort = "relevance";
+    private readonly List<MediaAsset> _candidateResults = [];
     private ProjectRecord? _currentProject;
     private string _newProjectName = "";
     private string _projectEditName = "";
@@ -294,6 +296,19 @@ public sealed class MainViewModel : ObservableObject
             _keywordSourceQuery = "";
         }
     }
+    public string RelevanceMode
+    {
+        get => _settings.Current.SearchRelevanceMode;
+        set
+        {
+            var normalized = value is "precise" or "broad" ? value : "balanced";
+            if (_settings.Current.SearchRelevanceMode == normalized) return;
+            _settings.Current.SearchRelevanceMode = normalized;
+            _settings.Save();
+            OnPropertyChanged();
+            _ = RerankCurrentAsync();
+        }
+    }
     public bool ClipboardDetectionEnabled
     {
         get => _settings.Current.ClipboardMediaLinkDetectionEnabled;
@@ -377,7 +392,7 @@ public sealed class MainViewModel : ObservableObject
         get
         {
             var version = typeof(MainViewModel).Assembly.GetName().Version;
-            return version is null ? "0.7.0" : $"{version.Major}.{version.Minor}.{Math.Max(0, version.Build)}";
+            return version is null ? "0.7.1" : $"{version.Major}.{version.Minor}.{Math.Max(0, version.Build)}";
         }
     }
     public bool IsUpdateChecking
@@ -427,6 +442,10 @@ public sealed class MainViewModel : ObservableObject
     public string DurationTitle => T("filter.duration");
     public string LicenseTitle => T("filter.license");
     public string SortTitle => T("filter.sort");
+    public string RelevanceModeTitle => T("search.relevance.mode");
+    public string RelevancePreciseText => T("search.relevance.precise");
+    public string RelevanceBalancedText => T("search.relevance.balanced");
+    public string RelevanceBroadText => T("search.relevance.broad");
     public string ProjectTitle => T("common.project");
     public string ProjectAllText => T("project.all");
     public string ScriptTitle => T("script.title");
@@ -724,7 +743,7 @@ public sealed class MainViewModel : ObservableObject
         _searchCancellation = new CancellationTokenSource();
         var cancellationToken = _searchCancellation.Token;
         IsSearching = true;
-        Results.Clear(); SelectedCount = 0;
+        Results.Clear(); _candidateResults.Clear(); SelectedCount = 0;
         _continuations.Clear();
         OnPropertyChanged(nameof(CanLoadMore));
         var selected = Providers.Where(x => x.Enabled).ToList();
@@ -737,6 +756,7 @@ public sealed class MainViewModel : ObservableObject
             var effectiveQueries = SearchKeywords.Where(x => x.IsEnabled && !string.IsNullOrWhiteSpace(x.Text))
                 .Select(x => x.Text.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
             if (effectiveQueries.Length == 0) effectiveQueries = [clean];
+            _lastSearchQueries = effectiveQueries;
             _lastEffectiveQuery = effectiveQueries[0];
             var tasks = selected.ToDictionary(option => option.Id,
                 option => SearchProviderExpandedAsync(option, effectiveQueries, cancellationToken));
@@ -751,10 +771,8 @@ public sealed class MainViewModel : ObservableObject
                 else _continuations.Remove(batch.Provider);
                 foreach (var asset in batch.Assets)
                     if (seen.Add(asset.StableId))
-                    {
-                        asset.PropertyChanged += ResultPropertyChanged;
-                        Results.Add(asset);
-                    }
+                        _candidateResults.Add(asset);
+                await ApplyRankedCandidatesAsync(clean, cancellationToken);
                 SearchStatus = pending.Count > 0
                     ? $"{T("search.searchingOthers")}  {Results.Count}"
                     : _localization.Text("search.found", Results.Count);
@@ -891,7 +909,8 @@ public sealed class MainViewModel : ObservableObject
             var batch = await SearchProviderAsync(option, _lastEffectiveQuery, cancellationToken, continuation);
             return (Batch: batch, Previous: continuation);
         }).ToList();
-        var seen = Results.Select(asset => asset.StableId).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var seen = _candidateResults.Select(asset => asset.StableId)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
         try
         {
             while (tasks.Count > 0)
@@ -906,10 +925,8 @@ public sealed class MainViewModel : ObservableObject
                 else _continuations.Remove(batch.Provider);
                 foreach (var asset in batch.Assets)
                     if (seen.Add(asset.StableId))
-                    {
-                        asset.PropertyChanged += ResultPropertyChanged;
-                        Results.Add(asset);
-                    }
+                        _candidateResults.Add(asset);
+                await ApplyRankedCandidatesAsync(Query.Trim(), cancellationToken);
                 SearchStatus = _localization.Text("search.found", Results.Count);
             }
         }
@@ -920,6 +937,36 @@ public sealed class MainViewModel : ObservableObject
             OnPropertyChanged(nameof(CanLoadMore));
             (LoadMoreCommand as AsyncRelayCommand)?.RaiseCanExecuteChanged();
         }
+    }
+
+    private async Task RerankCurrentAsync()
+    {
+        var query = Query.Trim();
+        if (query.Length == 0 || _candidateResults.Count == 0) return;
+        try { await ApplyRankedCandidatesAsync(query, CancellationToken.None); }
+        catch { }
+    }
+
+    private async Task ApplyRankedCandidatesAsync(string query, CancellationToken cancellationToken)
+    {
+        if (query.Length == 0) return;
+        var selected = Results.Where(asset => asset.IsSelected).Select(asset => asset.StableId)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var response = await _core.SendAsync(new CoreRequest
+        {
+            Action = "rankAssets", Query = query, Assets = _candidateResults.ToArray(),
+            RelevanceMode = RelevanceMode, Keywords = _lastSearchQueries,
+            Language = _settings.Current.Language
+        }, cancellationToken: cancellationToken);
+        Results.Clear();
+        foreach (var asset in response.Assets ?? [])
+        {
+            asset.IsSelected = selected.Contains(asset.StableId);
+            asset.PropertyChanged += ResultPropertyChanged;
+            Results.Add(asset);
+        }
+        SelectedCount = Results.Count(asset => asset.IsSelected);
+        ResultsView.Refresh();
     }
 
     private async Task ToggleFavoriteAsync(MediaAsset? asset)

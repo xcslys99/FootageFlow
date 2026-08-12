@@ -89,7 +89,8 @@ struct PixabayProvider: MediaProvider {
         licenseURL: URLValidator.remote("https://pixabay.com/service/license-summary/"),
         licenseStatus: .safe, width: best.width, height: best.height,
         duration: hit.duration.map(Double.init), fileType: "video/mp4", mediaType: .video,
-        publishedDate: nil, downloadable: true, originalMetadata: [:], searchKeyword: request.query,
+        publishedDate: nil, downloadable: true, originalMetadata: ["tags": hit.tags ?? ""],
+        searchKeyword: request.query,
         relevanceScore: 1 - Double(index) * 0.01, thumbnailCandidates: thumbnails)
     }
     let total = response.totalHits ?? response.total ?? assets.count
@@ -122,7 +123,7 @@ struct PixabayProvider: MediaProvider {
         licenseURL: URLValidator.remote("https://pixabay.com/service/license-summary/"),
         licenseStatus: .safe, width: hit.imageWidth, height: hit.imageHeight, duration: nil,
         fileType: "image/jpeg", mediaType: .image, publishedDate: nil, downloadable: true,
-        originalMetadata: [:], searchKeyword: request.query,
+        originalMetadata: ["tags": hit.tags ?? ""], searchKeyword: request.query,
         relevanceScore: 1 - Double(index) * 0.01, thumbnailCandidates: thumbnails)
     }
     let total = response.totalHits ?? response.total ?? assets.count

@@ -369,6 +369,10 @@
 "feedback.privacy" = "FootageFlow ne joint jamais aux liens de clés API, chemins locaux, historiques, téléchargements ou contenus de projet.";
 "common.reset" = "Réinitialiser";
 "search.smartExpansion" = "Extension intelligente";
+"search.relevance.mode" = "Mode de pertinence";
+"search.relevance.precise" = "Précis";
+"search.relevance.balanced" = "Équilibré";
+"search.relevance.broad" = "Large";
 "search.regenerateKeywords" = "Régénérer";
 "search.expandedQueries" = "Requêtes étendues";
 "link.scope.full" = "Télécharger le média complet";

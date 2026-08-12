@@ -369,6 +369,10 @@
 "feedback.privacy" = "API 키, 로컬 경로, 검색 기록, 다운로드 또는 프로젝트 내용은 링크에 포함되지 않습니다.";
 "common.reset" = "재설정";
 "search.smartExpansion" = "스마트 확장";
+"search.relevance.mode" = "관련성 모드";
+"search.relevance.precise" = "정밀";
+"search.relevance.balanced" = "균형";
+"search.relevance.broad" = "광범위";
 "search.regenerateKeywords" = "다시 생성";
 "search.expandedQueries" = "확장 검색어";
 "link.scope.full" = "전체 미디어 다운로드";

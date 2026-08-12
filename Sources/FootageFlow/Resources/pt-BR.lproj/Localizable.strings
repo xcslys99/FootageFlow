@@ -369,6 +369,10 @@
 "feedback.privacy" = "O FootageFlow nunca anexa chaves API, caminhos locais, histórico, downloads ou projetos a esses links.";
 "common.reset" = "Redefinir";
 "search.smartExpansion" = "Expansão inteligente";
+"search.relevance.mode" = "Modo de relevância";
+"search.relevance.precise" = "Preciso";
+"search.relevance.balanced" = "Equilibrado";
+"search.relevance.broad" = "Amplo";
 "search.regenerateKeywords" = "Gerar novamente";
 "search.expandedQueries" = "Consultas expandidas";
 "link.scope.full" = "Baixar mídia completa";

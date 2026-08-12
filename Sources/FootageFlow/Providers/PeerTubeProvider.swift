@@ -110,6 +110,8 @@ struct PeerTubeProvider: MediaProvider {
         "host": source.host ?? "", "instanceHost": instance?.host ?? "", "uuid": item.uuid,
         "thumbnailRaw": item.thumbnailUrl ?? item.thumbnailPath ?? "",
         "views": item.views.map(String.init) ?? "",
+        "tags": (item.tags ?? []).joined(separator: ", "),
+        "category": item.category?.label ?? "",
       ], searchKeyword: query, relevanceScore: 1 - Double(index) * 0.01,
       rightsInfo: rights, downloadAvailability: .unavailable,
       thumbnailCandidates: candidates)
@@ -129,6 +131,8 @@ struct PeerTubeVideo: Decodable {
   let duration: Double?
   let views: Int?
   let licence: PeerTubeLabel?
+  let category: PeerTubeLabel?
+  let tags: [String]?
   let account, channel: PeerTubeOwner?
   let thumbnails: [PeerTubeThumbnail]?
 }

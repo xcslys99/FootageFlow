@@ -6,6 +6,21 @@ struct SearchKeyword: Identifiable, Codable, Hashable, Sendable {
   var isEnabled = true
 }
 
+enum SearchRelevanceMode: String, Codable, CaseIterable, Identifiable, Sendable {
+  case precise
+  case balanced
+  case broad
+
+  var id: String { rawValue }
+  var label: String {
+    switch self {
+    case .precise: tr("search.relevance.precise")
+    case .balanced: tr("search.relevance.balanced")
+    case .broad: tr("search.relevance.broad")
+    }
+  }
+}
+
 struct SearchRequest: Sendable {
   var query: String
   var mediaType: MediaType = .video

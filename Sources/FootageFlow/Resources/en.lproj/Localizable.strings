@@ -388,6 +388,10 @@
 "feedback.privacy" = "FootageFlow never attaches API keys, local paths, search history, downloads, or project content to these links.";
 "common.reset" = "Reset";
 "search.smartExpansion" = "Smart Expansion";
+"search.relevance.mode" = "Relevance";
+"search.relevance.precise" = "Precise";
+"search.relevance.balanced" = "Balanced";
+"search.relevance.broad" = "Broad";
 "search.regenerateKeywords" = "Regenerate";
 "search.expandedQueries" = "Expanded Queries";
 "link.scope.full" = "Download Full Media";
