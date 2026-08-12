@@ -10,7 +10,7 @@
 
 [下载 macOS 或 Windows 最新正式版](https://github.com/xcslys99/FootageFlow/releases/latest) · [查看全部版本](https://github.com/xcslys99/FootageFlow/releases)
 
-FootageFlow 注重隐私，适合历史、国家、财经、人物、科普、纪录片和短视频创作。FootageFlow v0.6.0 正式支持 **macOS 15+ Apple Silicon** 和 **Windows 11 x64**。两个版本共用全部 17 个搜索 Provider、分页、统一 Metadata/Rights、智能关键词规则、创作者输出元数据、来源 Sidecar 和项目持久化核心。
+FootageFlow 注重隐私，适合历史、国家、财经、人物、科普、纪录片和短视频创作。FootageFlow v0.7.0 正式支持 **macOS 15+ Apple Silicon** 和 **Windows 11 x64**。两个版本共用全部 17 个搜索 Provider、分页、统一 Metadata/Rights、智能关键词规则、创作者输出元数据、来源 Sidecar、项目持久化和版本判断核心。
 
 ## FootageFlow 的两种核心用法
 
@@ -61,6 +61,7 @@ FootageFlow 注重隐私，适合历史、国家、财经、人物、科普、�
 - 明显的“反馈与社区”页面集成 GitHub Issues 和 Discussions，可报告问题、提出建议、提问并查看仓库与正式版本
 - 可选 API Key 只保存在 macOS Keychain 或 Windows Credential Manager
 - 可选的前台剪贴板媒体链接检测；默认关闭且完全在本机进行
+- 跨平台更新提示会在启动时显示官方版本说明，并提供“查看更新”与“稍后提醒”；FootageFlow 绝不会自动安装更新
 - 不含分析、广告、跟踪、云端账号、付费大模型，也不依赖 OpenAI API、Codex 或终端脚本
 
 配置 Key 后，YouTube 搜索可使用官方 Data API。FootageFlow 也内置本地 yt-dlp，用于尽力搜索和下载公开内容。由于平台限流、地区限制、登录要求、版权限制或接口变化，部分视频可能无法下载。FootageFlow 不读取浏览器 Cookie、不绕过 DRM，也不承诺每个视频都能下载。
@@ -83,15 +84,15 @@ FootageFlow 注重隐私，适合历史、国家、财经、人物、科普、�
 
 ## 在 macOS 安装
 
-1. 从 Releases 下载 `FootageFlow-0.6.0-macOS-arm64.dmg`。
+1. 从 Releases 下载 `FootageFlow-0.7.0-macOS-arm64.dmg`。
 2. 打开 DMG，把 FootageFlow 拖入“应用程序”。
-3. 打开 FootageFlow。v0.6.0 使用 Ad Hoc 签名，尚未公证；如果首次启动被系统拦截，请前往“系统设置 → 隐私与安全性 → 仍要打开”。
+3. 打开 FootageFlow。v0.7.0 使用 Ad Hoc 签名，尚未公证；如果首次启动被系统拦截，请前往“系统设置 → 隐私与安全性 → 仍要打开”。
 
 日常使用不需要打开终端。
 
 ## 在 Windows 安装
 
-1. 在 Windows 11 x64 电脑上下载 `FootageFlow-Setup-0.6.0-Windows-x64.exe`。
+1. 在 Windows 11 x64 电脑上下载 `FootageFlow-Setup-0.7.0-Windows-x64.exe`。
 2. 使用同时提供的 `.sha256` 文件核对安装包，然后双击安装。
 3. 完成安装向导，从“开始”菜单打开 FootageFlow。
 
@@ -107,6 +108,12 @@ FootageFlow 注重隐私，适合历史、国家、财经、人物、科普、�
 6. 如需从公开媒体页面下载，进入“链接下载”，粘贴一个或多个 URL，选择实际可用格式后点击“下载所选”。
 
 macOS 默认下载目录为 `~/Movies/FootageFlow/<项目名>/`，Windows 默认为 `%USERPROFILE%\Videos\FootageFlow\<项目名>\`，均可在设置中修改。删除数据库记录不会删除已经下载的素材文件。
+
+## 软件更新
+
+从 v0.7.0 开始，FootageFlow 每次启动只检查一次本仓库最新的 GitHub 正式 Release。发现更高版本时，应用会显示版本号、发布日期和完整版本说明，让你选择“查看更新”或“稍后提醒”。“查看更新”只会打开官方 GitHub Release 页面，FootageFlow 不会静默下载或自动安装。“稍后提醒”会把同一版本延后 24 小时；如果期间发布了更高版本，新版本仍可立即提示。也可以在“设置 → 软件更新”中手动检查。
+
+v0.6.0 及更早版本本身没有更新检查代码，因此无法被远程补上提示。这些用户需要手动安装一次 v0.7.0；此后的新版本才能在应用内被发现。
 
 ## 支持来源与 Provider 模式
 

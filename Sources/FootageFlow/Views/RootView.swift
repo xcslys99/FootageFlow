@@ -32,6 +32,7 @@ enum AppSection: String, CaseIterable, Identifiable {
 struct RootView: View {
   @State private var selection: AppSection? = .quickSearch
   @EnvironmentObject private var localization: LocalizationManager
+  @EnvironmentObject private var updates: AppUpdateController
 
   var body: some View {
     NavigationSplitView {
@@ -71,6 +72,11 @@ struct RootView: View {
         }
         .help(tr("language.menu"))
       }
+    }
+    .task { await updates.checkAtLaunch() }
+    .sheet(item: $updates.availableRelease) { release in
+      UpdateAvailableView(
+        release: release, remindLater: updates.remindLater, viewUpdate: updates.viewUpdate)
     }
   }
 }

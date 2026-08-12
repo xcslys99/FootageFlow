@@ -30,6 +30,9 @@
     var externalToolOutputBase64: String? = nil
     var feedbackDestination: FeedbackDestination? = nil
     var smartExpansion: Bool? = nil
+    var deferredUpdateVersion: String? = nil
+    var deferredUpdateUntil: Date? = nil
+    var forceUpdatePrompt: Bool? = nil
   }
 
   private struct WindowsCoreResponse: Encodable {
@@ -48,6 +51,8 @@
     var errorCode: String? = nil
     var errorMessage: String? = nil
     var text: String? = nil
+    var updateStatus: String? = nil
+    var release: AppRelease? = nil
   }
 
   private struct WindowsProviderDescriptor: Encodable {
@@ -100,7 +105,9 @@
 
       do {
         let data = FileHandle.standardInput.readDataToEndOfFile()
-        let request = try JSONDecoder().decode(WindowsCoreRequest.self, from: data)
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        let request = try decoder.decode(WindowsCoreRequest.self, from: data)
         configureLanguage(request.language)
         write(await handle(request))
       } catch {
@@ -133,6 +140,8 @@
               platform: "Windows", osVersion: ProcessInfo.processInfo.operatingSystemVersionString,
               language: request.language ?? "en")
           ).absoluteString)
+      case "checkUpdate":
+        return await checkUpdate(request)
       case "search":
         return await search(request)
       case "providerTest":
@@ -177,6 +186,35 @@
         return WindowsCoreResponse(
           id: request.id, success: false, errorCode: "unsupportedAction",
           errorMessage: "Unsupported core action.")
+      }
+    }
+
+    private static func checkUpdate(_ request: WindowsCoreRequest) async -> WindowsCoreResponse {
+      do {
+        switch try await AppUpdateService.shared.check() {
+        case .upToDate:
+          return WindowsCoreResponse(id: request.id, success: true, updateStatus: "upToDate")
+        case .updateAvailable(let release):
+          let shouldPrompt =
+            request.forceUpdatePrompt == true
+            || AppUpdateReminderPolicy.shouldPrompt(
+              releaseVersion: release.version,
+              currentVersion: FootageFlowVersion.current,
+              deferredVersion: request.deferredUpdateVersion,
+              deferredUntil: request.deferredUpdateUntil)
+          return WindowsCoreResponse(
+            id: request.id, success: true,
+            updateStatus: shouldPrompt ? "available" : "deferred",
+            release: shouldPrompt ? release : nil)
+        }
+      } catch let error as AppUpdateCheckError {
+        return WindowsCoreResponse(
+          id: request.id, success: false, errorCode: error.code,
+          errorMessage: "Unable to check for updates.")
+      } catch {
+        return WindowsCoreResponse(
+          id: request.id, success: false, errorCode: "invalidResponse",
+          errorMessage: "Unable to check for updates.")
       }
     }
 

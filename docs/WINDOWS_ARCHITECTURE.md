@@ -1,10 +1,10 @@
 # Windows architecture audit
 
-Status: Windows 11 x64 is supported from FootageFlow v0.2.0. The v0.6.0 candidate keeps the same shared-core boundary and adds clip downloads, smart search expansion, creator output presets, optional local clipboard detection, Openverse, and Dailymotion to both desktop interfaces. Windows-native installation and runtime checks are performed on a clean Windows GitHub Actions runner before release.
+Status: Windows 11 x64 is supported from FootageFlow v0.2.0. The v0.7.0 candidate keeps the same shared-core boundary and adds a notification-only update checker to both desktop interfaces. Windows-native installation and runtime checks are performed on a clean Windows GitHub Actions runner before release.
 
 ## Current shared code
 
-All 17 search Provider implementations, API/direct-mode selection, pagination continuations, `HTTPClient`, normalized `MediaAsset`, rights mapping, Provider capabilities and errors, smart keyword rules, clip/output models, clipboard URL parsing, deduplication, filters, filename suggestions, feedback URLs, source-sidecar generation, path roots, log redaction, and Codable persistence are platform-neutral Swift. macOS and Windows therefore use one business implementation for the existing providers plus Openverse and Dailymotion.
+All 17 search Provider implementations, API/direct-mode selection, pagination continuations, `HTTPClient`, normalized `MediaAsset`, rights mapping, Provider capabilities and errors, smart keyword rules, clip/output models, clipboard URL parsing, update release parsing/version/reminder policy, deduplication, filters, filename suggestions, feedback URLs, source-sidecar generation, path roots, log redaction, and Codable persistence are platform-neutral Swift. macOS and Windows therefore use one business implementation for the existing providers plus Openverse and Dailymotion.
 
 `PersistentStore` owns project, segment, favorite, history, and download-record behavior. The macOS `DataStore` is a small Combine presentation facade over this shared repository. Windows calls the same repository through the local Core Host.
 
@@ -30,7 +30,7 @@ WPF UI and Windows adapters
 Swift FootageFlowCore.exe
         |
         +-- ProviderFactory and 17 search providers
-        +-- pagination, models, rights, filters, smart keywords, clip/output metadata, dedupe
+        +-- pagination, models, rights, filters, smart keywords, clip/output metadata, updates, dedupe
         +-- PersistentStore, feedback URLs and source sidecars
 
 macOS SwiftUI UI
@@ -43,6 +43,8 @@ The WPF orchestrator launches Provider requests independently. Results can appea
 Pexels and Pixabay still use best-effort direct search without a key and only their official APIs with a configured key. National Archives, Europeana, Coverr, and Vimeo similarly select their supported key/no-key mode in `ProviderFactory`. The Windows yt-dlp adapter uses `--ignore-config`, does not import browser cookies, rejects embedded credentials/private network addresses, and maps errors to the same user-facing states as macOS.
 
 Link Downloader uses the existing Windows `DownloadQueueService`, cancellation tokens, progress, retry, project folder, source sidecars, and download history. Full/clip scope and output presets create normal queue assets rather than a second queue. Only yt-dlp/FFmpeg process control and WPF presentation are Windows-specific; media metadata and file-source records use the same shared models.
+
+The Windows WPF shell sends `checkUpdate` to the same Core Host. The Swift core calls GitHub's latest official Release API, validates the version and repository URL, and applies the shared reminder policy. WPF only renders the release notes and user choices. It does not download or install application packages.
 
 ## Windows-only responsibilities
 
@@ -64,7 +66,7 @@ Link Downloader uses the existing Windows `DownloadQueueService`, cancellation t
 
 ## Expected macOS impact
 
-The v0.6.0 work adds shared models and narrow UI entries without replacing the existing macOS stack. Every Windows change continues to run the macOS Release build, test suite, app-bundle signing check, binary privacy scan, and offline self-test.
+The v0.7.0 work adds shared update models and narrow UI entries without replacing the existing macOS stack. Every Windows change continues to run the macOS Release build, test suite, app-bundle signing check, binary privacy scan, and offline self-test.
 
 ## Version plan
 
@@ -72,11 +74,12 @@ The v0.6.0 work adds shared models and narrow UI entries without replacing the e
 - v0.2.0 introduced Windows 11 x64 support.
 - v0.5.0 added Search Expansion, Provider pagination, Link Downloader, and Feedback & Community on both supported platforms.
 - v0.6.0 is one creator-workflow release for clip downloads, smart expansion, output presets, local clipboard detection, Openverse, and Dailymotion.
+- v0.7.0 adds cross-platform update notifications, visible official release notes, View Update, Remind Later, and a manual Settings check without automatic installation.
 - Windows 10 x64 is not declared supported because it has not completed the same validation.
 
-## v0.6.0 release validation gate
+## v0.7.0 release validation gate
 
-Before publishing v0.6.0, CI must complete all of the following on a clean Windows runner:
+Before publishing v0.7.0, CI must complete all of the following on a clean Windows runner:
 
 - Shared Swift Release build, Core Host health check, and cross-platform tests.
 - Native WPF Release build and Windows platform acceptance checks.

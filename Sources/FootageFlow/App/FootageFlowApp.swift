@@ -8,12 +8,17 @@ struct FootageFlowApp: App {
   @StateObject private var search = SearchViewModel()
   @StateObject private var downloads = DownloadManager.shared
   @StateObject private var localization = LocalizationManager.shared
+  @StateObject private var updates = AppUpdateController()
 
   init() {
     AppSettings.migrateLegacySettingsIfNeeded()
     if CommandLine.arguments.contains("--self-test") { Darwin.exit(SelfTestRunner.run()) }
     if CommandLine.arguments.contains("--live-smoke") {
       Task.detached { Darwin.exit(await LiveSmokeRunner.run()) }
+      dispatchMain()
+    }
+    if CommandLine.arguments.contains("--update-smoke") {
+      Task.detached { Darwin.exit(await UpdateSmokeRunner.run()) }
       dispatchMain()
     }
     if CommandLine.arguments.contains("--thumbnail-smoke") {
@@ -43,6 +48,7 @@ struct FootageFlowApp: App {
         .environmentObject(search)
         .environmentObject(downloads)
         .environmentObject(localization)
+        .environmentObject(updates)
         .environment(\.locale, localization.locale)
         .frame(minWidth: 1080, minHeight: 700)
         .onAppear {

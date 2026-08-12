@@ -1,6 +1,6 @@
 # FootageFlow privacy policy
 
-Effective: August 10, 2026
+Effective: August 12, 2026
 
 FootageFlow is a local desktop application. It has no FootageFlow account, analytics, advertising, tracking SDK, crash-report upload, telemetry, or background behavioral collection.
 
@@ -20,6 +20,7 @@ Those services process requests under their own policies:
 - [Internet Archive Privacy Policy](https://archive.org/about/terms.php)
 - [Google Privacy Policy](https://policies.google.com/privacy)
 - [YouTube API Services Terms](https://developers.google.com/youtube/terms/api-services-terms-of-service)
+- [GitHub Privacy Statement](https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement)
 
 FootageFlow uses YouTube API Services only to search public video metadata and show thumbnails when the user configures a Data API key. Its separate local yt-dlp adapter can attempt public search and download. It runs with user configuration disabled and does not import browser cookies, use Google OAuth, access a private YouTube account, modify YouTube data, bypass DRM, or bypass login and access controls.
 
@@ -35,7 +36,9 @@ Removing an app database record does not silently delete downloaded media. Unins
 
 ## Network and retention
 
-FootageFlow makes requests only when needed for a user action such as search, connection testing, preview, or download. Search results are cached locally for a limited period; Pixabay results are cached for 24 hours. FootageFlow does not operate a server and therefore does not retain a server-side copy of user data.
+FootageFlow makes provider requests only when needed for a user action such as search, connection testing, preview, or download. Starting with v0.7.0, it also makes one HTTPS request at app launch to GitHub's public latest-Release endpoint. That request contains the current FootageFlow version in its User-Agent plus normal network metadata; it does not contain API keys, search terms, projects, download history, clipboard contents, local paths, or other user content. A manual update check makes the same request. Update failures are not uploaded anywhere.
+
+Search results are cached locally for a limited period; Pixabay results are cached for 24 hours. FootageFlow does not operate a server and therefore does not retain a server-side copy of user data. Choosing **View Update** opens the official GitHub Release page. FootageFlow never silently downloads or installs an application update.
 
 ## Changes
 

@@ -34,6 +34,9 @@ public sealed class CoreRequest
     public string? ExternalToolOutputBase64 { get; init; }
     public string? FeedbackDestination { get; init; }
     public bool? SmartExpansion { get; init; }
+    public string? DeferredUpdateVersion { get; init; }
+    public DateTimeOffset? DeferredUpdateUntil { get; init; }
+    public bool? ForceUpdatePrompt { get; init; }
 }
 
 public sealed class CoreResponse
@@ -53,6 +56,17 @@ public sealed class CoreResponse
     public string? ErrorCode { get; init; }
     public string? ErrorMessage { get; init; }
     public string? Text { get; init; }
+    public string? UpdateStatus { get; init; }
+    public AppReleaseInfo? Release { get; init; }
+}
+
+public sealed class AppReleaseInfo
+{
+    public string Version { get; init; } = "";
+    public string Title { get; init; } = "";
+    public string Notes { get; init; } = "";
+    public string PageURL { get; init; } = "";
+    public DateTimeOffset? PublishedAt { get; init; }
 }
 
 public sealed class PersistentDatabase

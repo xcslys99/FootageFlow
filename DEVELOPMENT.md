@@ -11,7 +11,7 @@
 - Apple Translation where available, with a rule-based fallback
 - Checksum-pinned yt-dlp plus redistributable GPL FFmpeg/FFprobe tooling are bundled for best-effort media analysis, clip extraction, merging, audio extraction, and editing-compatible output
 
-FootageFlow v0.6.0 targets Apple Silicon macOS 15+ and Windows 11 x64. SwiftUI, AppKit, AVKit, Apple Translation, and Security.framework remain macOS-only. The Windows WPF layer calls a local Swift Core Host over JSON stdin/stdout so all 17 search providers, pagination continuations, normalized models, rights rules, smart keyword expansion, clip/output metadata, attribution, sidecars, and the Codable project database remain single-source Swift implementations. Credentials never appear in command-line arguments.
+FootageFlow v0.7.0 targets Apple Silicon macOS 15+ and Windows 11 x64. SwiftUI, AppKit, AVKit, Apple Translation, and Security.framework remain macOS-only. The Windows WPF layer calls a local Swift Core Host over JSON stdin/stdout so all 17 search providers, pagination continuations, normalized models, rights rules, smart keyword expansion, clip/output metadata, attribution, sidecars, update-version logic, and the Codable project database remain single-source Swift implementations. Credentials never appear in command-line arguments.
 
 ## Source layout
 
@@ -74,6 +74,12 @@ The macOS `DownloadManager` and Windows `DownloadQueueService` read those fields
 
 Clipboard link detection is platform-specific only at the pasteboard boundary. The shared parser accepts public media URLs, rejects embedded credentials and local/private-network targets, de-duplicates the current session, honors ignore/cooldown, and never logs or uploads clipboard content. The preference defaults to off and polling occurs only while the app window is active.
 
+## Update checking
+
+`AppUpdateService` is a platform-neutral actor that reads only the latest non-draft, non-prerelease item from GitHub's public Releases API. It validates semantic versions, caps release-note length, accepts only this repository's HTTPS release links, and maps offline, timeout, rate-limit, server, and response failures into stable error codes. `AppUpdateReminderPolicy` owns the shared 24-hour same-release deferral rule. A newly published higher version bypasses an older release's deferral.
+
+macOS uses `AppUpdateController` and a SwiftUI sheet; Windows sends `checkUpdate` to the same Swift Core Host and presents the result in a WPF dialog. Both shells check once at startup, keep startup failures unobtrusive, offer a manual Settings action, and only open the official release page after **View Update**. Neither shell contains an installer or automatic-download path.
+
 ## Rights, filtering, and batch behavior
 
 `RightsInfo` keeps the provider statement, URI, metadata source, known/public-domain/open-license/attribution facts, and optional commercial-use knowledge. Legacy v0.2.0 `MediaAsset` JSON without these fields remains decodable. Unknown data stays unknown; provider identity and download success never imply reuse rights.
@@ -102,7 +108,7 @@ Downloads are restricted to the configured root for app-initiated deletion. A su
 
 ## Localization
 
-English is the fixed first-launch default. `en.lproj` is the fallback for missing translations. v0.6.0 ships `en`, `zh-Hans`, `zh-Hant`, `es`, `pt-BR`, `ja`, `ko`, `de`, `fr`, and `ru`. SwiftPM may normalize language-directory casing in the built resource bundle, so locale lookup also checks normalized identifiers.
+English is the fixed first-launch default. `en.lproj` is the fallback for missing translations. v0.7.0 ships `en`, `zh-Hans`, `zh-Hant`, `es`, `pt-BR`, `ja`, `ko`, `de`, `fr`, and `ru`. SwiftPM may normalize language-directory casing in the built resource bundle, so locale lookup also checks normalized identifiers.
 
 Run `scripts/check_localizations.sh` after changing UI copy. `localization.fallbackProbe` intentionally exists only in English to exercise fallback behavior.
 
@@ -117,15 +123,16 @@ scripts/build_app.sh
 scripts/verify_app.sh
 dist/FootageFlow.app/Contents/MacOS/FootageFlow --self-test
 dist/FootageFlow.app/Contents/MacOS/FootageFlow --live-smoke
+dist/FootageFlow.app/Contents/MacOS/FootageFlow --update-smoke
 ```
 
-`--self-test` is fully offline. `--live-smoke` searches public providers and verifies no-key/limited modes. `--acceptance-test <directory>` additionally downloads a small Public Domain fixture, creates both sidecars, checks persistence, and simulates a friendly network error. Fixed JSON fixtures cover all providers, including Openverse and Dailymotion. Tests cover clip validation, output metadata/history/sidecars, smart expansion and query budgets, clipboard safety, continuations, rights, localization, and project/download behavior. The Windows runner also executes Credential Manager, Core Host, cancel/retry, packaging, clean-install, GUI-startup, uninstall, and bundled-tool tests.
+`--self-test` is fully offline. `--live-smoke` searches public providers and verifies no-key/limited modes. `--update-smoke` performs an end-to-end read of the latest official GitHub Release without changing local state. `--acceptance-test <directory>` additionally downloads a small Public Domain fixture, creates both sidecars, checks persistence, and simulates a friendly network error. Fixed JSON fixtures cover all providers, including Openverse, Dailymotion, and GitHub release metadata. Tests cover update version comparison/reminders/link validation, clip validation, output metadata/history/sidecars, smart expansion and query budgets, clipboard safety, continuations, rights, localization, and project/download behavior. The Windows runner also executes Credential Manager, Core Host, cancel/retry, packaging, clean-install, GUI-startup, uninstall, and bundled-tool tests.
 
 The package uses the official `swift-testing` dependency so the full platform-neutral test suite also runs with Command Line Tools. GitHub Actions additionally runs `swift test` with full Xcode on macOS and the official Swift toolchain on Windows.
 
 ## Packaging
 
-`scripts/build_app.sh` builds a Release executable; bundles checksum-pinned yt-dlp; builds static GPL FFmpeg 8.0.3 with pinned x264, Apple SecureTransport, and no `nonfree` component; copies all applicable license texts; creates the `.app`; and performs Ad Hoc signing. The FFmpeg configuration uses a neutral build prefix and the packaging scan rejects private developer paths. `scripts/binary_privacy_scan.sh` scans the app executable and bundled tools for credential-like strings. `scripts/build_dmg.sh` creates the drag-to-Applications DMG and SHA-256 checksum. No Developer ID certificate or notarization is claimed for v0.6.0.
+`scripts/build_app.sh` builds a Release executable; bundles checksum-pinned yt-dlp; builds static GPL FFmpeg 8.0.3 with pinned x264, Apple SecureTransport, and no `nonfree` component; copies all applicable license texts; creates the `.app`; and performs Ad Hoc signing. The FFmpeg configuration uses a neutral build prefix and the packaging scan rejects private developer paths. `scripts/binary_privacy_scan.sh` scans the app executable and bundled tools for credential-like strings. `scripts/build_dmg.sh` creates the drag-to-Applications DMG and SHA-256 checksum. No Developer ID certificate or notarization is claimed for v0.7.0.
 
 ## Windows architecture
 
@@ -133,7 +140,7 @@ Windows development remains in this repository and shares the same release histo
 
 The platform split is deliberate:
 
-- Shared Swift: all 17 search provider implementations and modes, pagination, networking/rate policy, `MediaAsset`, `RightsInfo`, capabilities, filters, attribution, feedback URL building, smart keyword rules, clip/output models, clipboard URL safety, deduplication, filename suggestions, source sidecars, and project/favorite/history/download metadata.
+- Shared Swift: all 17 search provider implementations and modes, pagination, networking/rate policy, `MediaAsset`, `RightsInfo`, capabilities, filters, attribution, feedback URL building, smart keyword rules, clip/output models, clipboard URL safety, update release parsing/version/reminder policy, deduplication, filename suggestions, source sidecars, and project/favorite/history/download metadata.
 - macOS: SwiftUI/AppKit/AVKit, Keychain, Apple Translation, Finder integration, and URLSession download presentation.
 - Windows: WPF/MediaElement, Credential Manager, Explorer/file dialogs, a bounded `HttpClient` download queue, and yt-dlp process execution. yt-dlp JSON is mapped back into `MediaAsset` by the shared Swift mapper.
 
