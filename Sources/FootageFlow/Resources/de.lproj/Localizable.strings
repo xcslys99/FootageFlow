@@ -141,7 +141,7 @@
 "error.externalToolUnavailable" = "Der lokale Best-Effort-Downloader ist nicht verfügbar.";
 "error.videoUnavailable" = "Dieses Video ist nicht verfügbar.";
 "error.regionalRestriction" = "Dieses Video ist in Ihrer Region nicht verfügbar.";
-"error.ytDLPFailed" = "YouTube konnte keinen herunterladbaren öffentlichen Stream bereitstellen. Versuchen Sie es später erneut oder öffnen Sie die Quellseite.";
+"error.ytDLPFailed" = "Die Medienquelle konnte keinen herunterladbaren öffentlichen Stream bereitstellen. Versuchen Sie es später erneut oder öffnen Sie die Quellseite.";
 "error.unsupported" = "Diese Quelle unterstützt diese Aktion nicht.";
 "error.cancelled" = "Vorgang abgebrochen.";
 "error.timeout" = "Bei der Netzwerkanforderung ist eine Zeitüberschreitung aufgetreten. Bitte versuchen Sie es erneut.";

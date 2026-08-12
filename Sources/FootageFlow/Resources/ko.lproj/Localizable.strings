@@ -141,7 +141,7 @@
 "error.externalToolUnavailable" = "로컬 최선형 다운로더를 사용할 수 없습니다.";
 "error.videoUnavailable" = "볼 수 없는 동영상입니다.";
 "error.regionalRestriction" = "해당 지역에서는 볼 수 없는 동영상입니다.";
-"error.ytDLPFailed" = "YouTube는 다운로드 가능한 공개 스트림을 제공할 수 없습니다. 나중에 다시 시도하거나 소스 페이지를 열어보세요.";
+"error.ytDLPFailed" = "미디어 소스에서 다운로드 가능한 공개 스트림을 제공하지 못했습니다. 나중에 다시 시도하거나 원본 페이지를 여세요.";
 "error.unsupported" = "이 소스는 해당 작업을 지원하지 않습니다.";
 "error.cancelled" = "작업이 취소되었습니다.";
 "error.timeout" = "네트워크 요청 시간이 초과되었습니다. 다시 시도해 주세요.";

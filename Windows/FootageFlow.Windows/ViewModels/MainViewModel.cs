@@ -45,7 +45,7 @@ public sealed class MainViewModel : ObservableObject
     private bool _isLinkAnalyzing;
     private string _keywordSourceQuery = "";
     private string _clipboardSuggestion = "";
-    private string _ignoredClipboardValue = "";
+    private readonly ClipboardSuggestionSession _clipboardSession = new();
     private bool _isUpdateChecking;
     private string _updateStatusCode = "";
     private bool _showAllSearchLanguages;
@@ -419,7 +419,7 @@ public sealed class MainViewModel : ObservableObject
         get
         {
             var version = typeof(MainViewModel).Assembly.GetName().Version;
-            return version is null ? "0.7.2" : $"{version.Major}.{version.Minor}.{Math.Max(0, version.Build)}";
+            return version is null ? "0.7.3" : $"{version.Major}.{version.Minor}.{Math.Max(0, version.Build)}";
         }
     }
     public bool IsUpdateChecking
@@ -644,13 +644,11 @@ public sealed class MainViewModel : ObservableObject
 
     public void CheckClipboardCandidate(string text)
     {
-        if (!ClipboardDetectionEnabled || !IsLinkDownloaderPage || string.IsNullOrWhiteSpace(text) ||
-            string.Equals(text, _ignoredClipboardValue, StringComparison.Ordinal)) return;
+        if (!ClipboardDetectionEnabled || !IsLinkDownloaderPage || string.IsNullOrWhiteSpace(text)) return;
         var links = MediaLinkLines(text);
         if (links.Count == 0) return;
-        var existing = LinkURLLines().ToHashSet(StringComparer.OrdinalIgnoreCase);
-        var fresh = links.Where(value => !existing.Contains(value)).ToArray();
-        if (fresh.Length == 0) return;
+        var fresh = _clipboardSession.FreshCandidates(links, LinkURLLines());
+        if (fresh.Count == 0) return;
         _clipboardSuggestion = string.Join(Environment.NewLine, fresh);
         OnPropertyChanged(nameof(HasClipboardSuggestion)); OnPropertyChanged(nameof(ClipboardSuggestionCount));
         OnPropertyChanged(nameof(ClipboardSuggestionText));
@@ -660,7 +658,6 @@ public sealed class MainViewModel : ObservableObject
     {
         if (!HasClipboardSuggestion) return;
         LinkInput = _clipboardSuggestion;
-        _ignoredClipboardValue = _clipboardSuggestion;
         _clipboardSuggestion = "";
         OnPropertyChanged(nameof(HasClipboardSuggestion));
         await AnalyzeLinksAsync();
@@ -668,7 +665,6 @@ public sealed class MainViewModel : ObservableObject
 
     private void IgnoreClipboard()
     {
-        _ignoredClipboardValue = _clipboardSuggestion;
         _clipboardSuggestion = "";
         OnPropertyChanged(nameof(HasClipboardSuggestion)); OnPropertyChanged(nameof(ClipboardSuggestionCount));
         OnPropertyChanged(nameof(ClipboardSuggestionText));

@@ -150,7 +150,7 @@
 "error.externalToolUnavailable" = "The local best-effort downloader is unavailable.";
 "error.videoUnavailable" = "This video is unavailable.";
 "error.regionalRestriction" = "This video is unavailable in your region.";
-"error.ytDLPFailed" = "YouTube could not provide a downloadable public stream. Try again later or open the source page.";
+"error.ytDLPFailed" = "The media source could not provide a downloadable public stream. Try again later or open the source page.";
 "error.unsupported" = "This source does not support that action.";
 "error.cancelled" = "Operation cancelled.";
 "error.timeout" = "The network request timed out. Please try again.";

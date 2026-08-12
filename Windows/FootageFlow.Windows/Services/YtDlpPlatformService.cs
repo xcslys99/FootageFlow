@@ -9,10 +9,18 @@ namespace FootageFlow.Windows.Services;
 
 public sealed class YtDlpPlatformService
 {
-    private readonly string _executable = Path.Combine(AppContext.BaseDirectory, "Tools", "yt-dlp.exe");
-    private readonly string _ffmpeg = Path.Combine(AppContext.BaseDirectory, "Tools", "ffmpeg.exe");
-    private readonly string _ffprobe = Path.Combine(AppContext.BaseDirectory, "Tools", "ffprobe.exe");
+    private readonly string _executable;
+    private readonly string _ffmpeg;
+    private readonly string _ffprobe;
     public bool IsAvailable => File.Exists(_executable);
+
+    public YtDlpPlatformService(string? toolRoot = null)
+    {
+        var root = toolRoot ?? Path.Combine(AppContext.BaseDirectory, "Tools");
+        _executable = Path.Combine(root, "yt-dlp.exe");
+        _ffmpeg = Path.Combine(root, "ffmpeg.exe");
+        _ffprobe = Path.Combine(root, "ffprobe.exe");
+    }
 
     public async Task<byte[]> SearchAsync(string query, int limit, CancellationToken cancellationToken)
     {
@@ -170,13 +178,13 @@ public sealed class YtDlpPlatformService
         return candidate;
     }
 
-    internal static string EditingCompatibleSelector(string fallback)
+    public static string EditingCompatibleSelector(string fallback)
     {
         var height = fallback.Contains("height<=1080", StringComparison.Ordinal) ? "[height<=1080]" :
             fallback.Contains("height<=720", StringComparison.Ordinal) ? "[height<=720]" :
             fallback.Contains("height<=480", StringComparison.Ordinal) ? "[height<=480]" : "";
         return $"bestvideo[vcodec^=avc1]{height}+bestaudio[ext=m4a]/" +
-            $"best[ext=mp4][vcodec^=avc1]{height}/{fallback}";
+            $"best[ext=mp4][vcodec^=avc1]{height}/{fallback}/best";
     }
 
     private async Task<string> TranscodeEditingCompatibleAsync(
@@ -367,19 +375,33 @@ public sealed class YtDlpPlatformService
     private static void EnsureSuccess(ToolResult result)
     {
         if (result.ExitCode == 0) return;
-        var message = result.Error.ToLowerInvariant();
-        if (message.Contains("429") || message.Contains("too many requests"))
+        var code = ClassifyFailureCode(result.Error);
+        if (code == "rateLimited")
             throw new ExternalToolException("rateLimited", "Too many requests. Please try again later.");
-        if (message.Contains("video unavailable") || message.Contains("has been removed"))
+        if (code == "videoUnavailable")
             throw new ExternalToolException("videoUnavailable", "This video is no longer available.");
-        if (message.Contains("not available in your country") || message.Contains("geo-restricted"))
+        if (code == "regionalRestriction")
             throw new ExternalToolException("regionalRestriction", "This video is unavailable in your region.");
-        if (message.Contains("sign in") || message.Contains("login") || message.Contains("private video") ||
-            message.Contains("members-only") || message.Contains("age-restricted"))
+        if (code == "temporarilyBlocked")
             throw new ExternalToolException("temporarilyBlocked", "This video requires access that FootageFlow does not use.");
-        if (message.Contains("unsupported url") || message.Contains("no suitable extractor"))
+        if (code == "unsupportedURL")
             throw new ExternalToolException("unsupportedURL", "Unsupported URL");
         throw new ExternalToolException("requestFailed", "The media site could not complete this request. Open the source page or try again later.");
+    }
+
+    public static string ClassifyFailureCode(string rawMessage)
+    {
+        var message = rawMessage.ToLowerInvariant();
+        if (message.Contains("429") || message.Contains("too many requests")) return "rateLimited";
+        if (message.Contains("video unavailable") || message.Contains("has been removed")) return "videoUnavailable";
+        if (message.Contains("not available in your country") || message.Contains("geo-restricted"))
+            return "regionalRestriction";
+        if ((message.Contains("oauth") && (message.Contains("401") || message.Contains("unauthorized"))) ||
+            message.Contains("web client only works when logged-in") || message.Contains("sign in") ||
+            message.Contains("login") || message.Contains("private video") || message.Contains("members-only") ||
+            message.Contains("age-restricted")) return "temporarilyBlocked";
+        if (message.Contains("unsupported url") || message.Contains("no suitable extractor")) return "unsupportedURL";
+        return "requestFailed";
     }
 
     private static YtDlpProgress? ParseProgress(string line)

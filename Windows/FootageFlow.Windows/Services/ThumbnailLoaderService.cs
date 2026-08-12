@@ -118,7 +118,7 @@ public sealed class ThumbnailLoaderService : IDisposable
         for (var redirect = 0; redirect <= 5; redirect++)
         {
             using var request = new HttpRequestMessage(HttpMethod.Get, current);
-            request.Headers.UserAgent.ParseAdd("FootageFlow/0.7.2 (thumbnail loader)");
+            request.Headers.UserAgent.ParseAdd("FootageFlow/0.7.3 (thumbnail loader)");
             request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("image/jpeg"));
             request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("image/png"));
             request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("image/gif", 0.9));

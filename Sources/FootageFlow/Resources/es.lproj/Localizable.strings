@@ -141,7 +141,7 @@
 "error.externalToolUnavailable" = "El descargador local de mejor esfuerzo no está disponible.";
 "error.videoUnavailable" = "Este vídeo no está disponible.";
 "error.regionalRestriction" = "Este vídeo no está disponible en su región.";
-"error.ytDLPFailed" = "YouTube no pudo proporcionar una transmisión pública descargable. Vuelva a intentarlo más tarde o abra la página de origen.";
+"error.ytDLPFailed" = "La fuente multimedia no pudo proporcionar una transmisión pública descargable. Inténtalo más tarde o abre la página de origen.";
 "error.unsupported" = "Esta fuente no respalda esa acción.";
 "error.cancelled" = "Operación cancelada.";
 "error.timeout" = "Se agotó el tiempo de espera de la solicitud de red. Por favor inténtalo de nuevo.";

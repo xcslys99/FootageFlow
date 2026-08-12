@@ -10,7 +10,7 @@
 
 [下载 macOS 或 Windows 最新正式版](https://github.com/xcslys99/FootageFlow/releases/latest) · [查看全部版本](https://github.com/xcslys99/FootageFlow/releases)
 
-FootageFlow 注重隐私，适合历史、国家、财经、人物、科普、纪录片和短视频创作。FootageFlow v0.7.2 正式支持 **macOS 15+ Apple Silicon** 和 **Windows 11 x64**。两个版本共用全部 17 个搜索 Provider、十语复合主题检索、分页、统一 Metadata/Rights、本地相关性重排、创作者输出元数据、来源 Sidecar、项目持久化和版本判断核心。
+FootageFlow 注重隐私，适合历史、国家、财经、人物、科普、纪录片和短视频创作。FootageFlow v0.7.3 正式支持 **macOS 15+ Apple Silicon** 和 **Windows 11 x64**。两个版本共用全部 17 个搜索 Provider、十语复合主题检索、分页、统一 Metadata/Rights、本地相关性重排、创作者输出元数据、来源 Sidecar、项目持久化和版本判断核心。
 
 ## FootageFlow 的两种核心用法
 
@@ -71,29 +71,29 @@ FootageFlow 注重隐私，适合历史、国家、财经、人物、科普、�
 
 以下截图来自 macOS 版 FootageFlow。Windows 版采用相同产品结构，并使用符合 Windows 习惯的原生控件。
 
-![FootageFlow v0.6.0 智能搜索扩展与可编辑本地关键词](docs/images/smart-search-expansion.png)
+![FootageFlow 智能搜索扩展与可编辑本地关键词](docs/images/smart-search-expansion.png)
 
-![FootageFlow v0.6.0 链接下载的有效片段范围与剪辑兼容输出](docs/images/link-clip-output.png)
+![FootageFlow 链接下载的有效片段范围与剪辑兼容输出](docs/images/link-clip-output.png)
 
-![FootageFlow v0.6.0 Openverse 真实搜索结果与已加载缩略图](docs/images/openverse-results.png)
+![FootageFlow Openverse 真实搜索结果与已加载缩略图](docs/images/openverse-results.png)
 
-![FootageFlow v0.6.0 Dailymotion 发现结果](docs/images/dailymotion-results.png)
+![FootageFlow Dailymotion 发现结果](docs/images/dailymotion-results.png)
 
-![FootageFlow v0.6.0 可选且仅限本机的剪贴板检测设置](docs/images/clipboard-settings.png)
+![FootageFlow 可选且仅限本机的剪贴板检测设置](docs/images/clipboard-settings.png)
 
 ![FootageFlow Provider 模式与十种界面语言](docs/images/provider-settings.png)
 
 ## 在 macOS 安装
 
-1. 从 Releases 下载 `FootageFlow-0.7.2-macOS-arm64.dmg`。
+1. 从 Releases 下载 `FootageFlow-0.7.3-macOS-arm64.dmg`。
 2. 打开 DMG，把 FootageFlow 拖入“应用程序”。
-3. 打开 FootageFlow。v0.7.2 使用 Ad Hoc 签名，尚未公证；如果首次启动被系统拦截，请前往“系统设置 → 隐私与安全性 → 仍要打开”。
+3. 打开 FootageFlow。v0.7.3 使用 Ad Hoc 签名，尚未公证；如果首次启动被系统拦截，请前往“系统设置 → 隐私与安全性 → 仍要打开”。
 
 日常使用不需要打开终端。
 
 ## 在 Windows 安装
 
-1. 在 Windows 11 x64 电脑上下载 `FootageFlow-Setup-0.7.2-Windows-x64.exe`。
+1. 在 Windows 11 x64 电脑上下载 `FootageFlow-Setup-0.7.3-Windows-x64.exe`。
 2. 使用同时提供的 `.sha256` 文件核对安装包，然后双击安装。
 3. 完成安装向导，从“开始”菜单打开 FootageFlow。
 

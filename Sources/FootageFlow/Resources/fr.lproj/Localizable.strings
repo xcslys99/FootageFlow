@@ -141,7 +141,7 @@
 "error.externalToolUnavailable" = "Le téléchargeur local au mieux est indisponible.";
 "error.videoUnavailable" = "Cette vidéo n'est pas disponible.";
 "error.regionalRestriction" = "Cette vidéo n'est pas disponible dans votre région.";
-"error.ytDLPFailed" = "YouTube n'a pas pu proposer de flux public téléchargeable. Réessayez plus tard ou ouvrez la page source.";
+"error.ytDLPFailed" = "La source multimédia n'a pas pu proposer de flux public téléchargeable. Réessayez plus tard ou ouvrez la page source.";
 "error.unsupported" = "Cette source ne prend pas en charge cette action.";
 "error.cancelled" = "Opération annulée.";
 "error.timeout" = "La requête réseau a expiré. Veuillez réessayer.";

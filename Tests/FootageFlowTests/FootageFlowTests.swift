@@ -459,6 +459,12 @@ import Foundation
       } else {
         XCTFail("Login-gated video should be access restricted")
       }
+      if case .temporarilyBlocked(.vimeo) = YTDLPService.mapFailure(
+        "Failed to fetch macos OAuth token: HTTP Error 401: Unauthorized")
+      {
+      } else {
+        XCTFail("Vimeo OAuth 401 should request login or authorization")
+      }
       let progress = YTDLPService.progressUpdate(from: "FFPROGRESS: 52.5%|1048576")
       XCTAssertEqual(progress?.fraction, 0.525)
       XCTAssertEqual(progress?.bytesPerSecond, 1_048_576)

@@ -1,6 +1,6 @@
 #define AppName "FootageFlow"
 #ifndef AppVersion
-#define AppVersion "0.7.2"
+#define AppVersion "0.7.3"
 #endif
 #ifndef SourceDirectory
   #define SourceDirectory "..\..\.build\windows-stage"
