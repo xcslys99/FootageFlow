@@ -416,3 +416,5 @@
 "update.timeout" = "La recherche de mise à jour a expiré. Réessayez.";
 "update.rateLimited" = "La recherche de mises à jour est temporairement limitée. Réessayez plus tard.";
 "update.checkFailed" = "Impossible de rechercher des mises à jour pour le moment.";
+"search.showAllLanguages" = "Voir toutes les langues";
+"search.hideAllLanguages" = "Afficher moins de langues";

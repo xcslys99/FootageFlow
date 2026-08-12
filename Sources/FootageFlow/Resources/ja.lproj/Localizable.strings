@@ -416,3 +416,5 @@
 "update.timeout" = "アップデートの確認がタイムアウトしました。再試行してください。";
 "update.rateLimited" = "アップデートの確認は一時的に制限されています。後でもう一度お試しください。";
 "update.checkFailed" = "現在アップデートを確認できません。";
+"search.showAllLanguages" = "すべての言語を表示";
+"search.hideAllLanguages" = "言語を折りたたむ";

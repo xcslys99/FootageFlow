@@ -416,3 +416,5 @@
 "update.timeout" = "A verificação de atualização expirou. Tente novamente.";
 "update.rateLimited" = "As verificações estão temporariamente limitadas. Tente mais tarde.";
 "update.checkFailed" = "Não foi possível verificar atualizações agora.";
+"search.showAllLanguages" = "Ver todos os idiomas";
+"search.hideAllLanguages" = "Mostrar menos idiomas";

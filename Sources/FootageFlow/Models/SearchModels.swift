@@ -1,9 +1,22 @@
 import Foundation
 
+enum SearchQueryOrigin: String, Codable, Hashable, Sendable {
+  case input
+  case multilingualCanonical
+  case visualExpansion
+  case systemTranslation
+  case userAdded
+}
+
 struct SearchKeyword: Identifiable, Codable, Hashable, Sendable {
-  var id = UUID()
+  var id: UUID = UUID()
   var text: String
-  var isEnabled = true
+  var isEnabled: Bool = true
+  /// Optional so projects and history written before v0.7.2 continue to decode unchanged.
+  var language: AppLanguage? = nil
+  var origin: SearchQueryOrigin? = nil
+  var priority: Int? = nil
+
 }
 
 enum SearchRelevanceMode: String, Codable, CaseIterable, Identifiable, Sendable {

@@ -2,6 +2,28 @@
 
 All notable FootageFlow changes are documented here.
 
+## [0.7.2] - 2026-08-12
+
+### Fixed
+
+- Fixed `广州美食` being reduced to zero results when Apple Translation returned `Guangzhou delicacies`
+- Translation and visual expansion phrases are now retrieval hints only and can no longer create new mandatory relevance concepts
+- Added Guangzhou/Canton and food aliases for Cantonese cuisine, dim sum, yum cha, morning tea, street food, and seafood
+
+### Added
+
+- Added the shared `MultilingualQueryEngine` for English, Simplified Chinese, Traditional Chinese, Spanish, Brazilian Portuguese, Japanese, Korean, German, French, and Russian
+- Every search now builds one complete compound query per language, with at most two input-language and two English visual expansions (14 total)
+- Query records now preserve language, origin, and priority; old project and search-history data remains decodable
+- Added **View all languages** to the macOS and Windows search editors; input-language and English queries remain visible by default
+- Added language-aware ranking after semantic eligibility, plus global 12-request, official/public API two-request, and direct-search one-request concurrency limits
+
+### Validation
+
+- 43 offline unit and fixture tests pass, including Guangzhou concept coverage, ten canonical queries, language priority, legacy history decoding, and the v0.7.1 relevance regression set
+- The real public-provider `广州美食` run retrieved 323 candidates; Provider order measured 7/20 relevant, while Balanced local ranking measured 20/20 relevant
+- The installed macOS GUI displayed all ten editable language queries and returned real Guangzhou cuisine, dim sum, morning tea, seafood-market, and street-food results
+
 ## [0.7.1] - 2026-08-12
 
 ### Fixed

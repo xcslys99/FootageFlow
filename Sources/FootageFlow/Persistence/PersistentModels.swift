@@ -50,6 +50,7 @@ struct SearchHistoryRecord: Identifiable, Codable, Hashable {
   var id: UUID = UUID()
   var originalQuery: String
   var keywords: [String]
+  var keywordDetails: [SearchKeyword]?
   var providerIDs: [String]
   var projectID: UUID?
   var searchedAt: Date = .now
@@ -57,10 +58,11 @@ struct SearchHistoryRecord: Identifiable, Codable, Hashable {
 
   init(
     originalQuery: String, keywords: [String], providers: Set<ProviderID>, projectID: UUID?,
-    resultCount: Int
+    resultCount: Int, keywordDetails: [SearchKeyword]? = nil
   ) {
     self.originalQuery = originalQuery
     self.keywords = keywords
+    self.keywordDetails = keywordDetails
     providerIDs = providers.map(\.rawValue).sorted()
     self.projectID = projectID
     self.resultCount = resultCount

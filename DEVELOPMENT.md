@@ -11,7 +11,15 @@
 - Apple Translation where available, with a rule-based fallback
 - Checksum-pinned yt-dlp plus redistributable GPL FFmpeg/FFprobe tooling are bundled for best-effort media analysis, clip extraction, merging, audio extraction, and editing-compatible output
 
-FootageFlow v0.7.1 targets Apple Silicon macOS 15+ and Windows 11 x64. SwiftUI, AppKit, AVKit, Apple Translation, and Security.framework remain macOS-only. The Windows WPF layer calls a local Swift Core Host over JSON stdin/stdout so all 17 search providers, pagination continuations, normalized models, rights rules, smart keyword expansion, local relevance ranking, clip/output metadata, attribution, sidecars, update-version logic, and the Codable project database remain single-source Swift implementations. Credentials never appear in command-line arguments.
+FootageFlow v0.7.2 targets Apple Silicon macOS 15+ and Windows 11 x64. SwiftUI, AppKit, AVKit, Apple Translation, and Security.framework remain macOS-only. The Windows WPF layer calls a local Swift Core Host over JSON stdin/stdout so all 17 search providers, ten-language query planning, pagination continuations, normalized models, rights rules, local relevance ranking, clip/output metadata, attribution, sidecars, update-version logic, and the Codable project database remain single-source Swift implementations. Credentials never appear in command-line arguments.
+
+## Multilingual search
+
+`MultilingualQueryEngine` is the only source of the ten-language query plan. It detects the input language, maps the original query to local concept groups, creates one complete compound query for every supported UI language, and optionally adds at most two visual queries in the input language and English. The plan is capped at 14 records. Each `SearchKeyword` carries an optional language, origin, and priority so data written before v0.7.2 still decodes without migration.
+
+macOS consumes the plan in-process. Windows requests it from the Swift Core Host's `keywords` action; the WPF layer does not duplicate the language dictionary. Apple Translation may add a macOS retrieval hint for an unknown phrase, but supporting queries never create mandatory relevance groups.
+
+Searches use a global 12-request gate. Official/public APIs run at most two query requests per Provider; direct and yt-dlp searches run one. A 429, temporary block, invalid key, or missing key stops that Provider's remaining language wave without affecting other Providers. Results preserve matched-query language metadata, pass concept coverage first, and only then receive a small language preference in input-language, interface-language, English, other order.
 
 ## Source layout
 
@@ -116,7 +124,7 @@ Downloads are restricted to the configured root for app-initiated deletion. A su
 
 ## Localization
 
-English is the fixed first-launch default. `en.lproj` is the fallback for missing translations. v0.7.1 ships `en`, `zh-Hans`, `zh-Hant`, `es`, `pt-BR`, `ja`, `ko`, `de`, `fr`, and `ru`. SwiftPM may normalize language-directory casing in the built resource bundle, so locale lookup also checks normalized identifiers.
+English is the fixed first-launch default. `en.lproj` is the fallback for missing translations. v0.7.2 ships `en`, `zh-Hans`, `zh-Hant`, `es`, `pt-BR`, `ja`, `ko`, `de`, `fr`, and `ru`. SwiftPM may normalize language-directory casing in the built resource bundle, so locale lookup also checks normalized identifiers.
 
 Run `scripts/check_localizations.sh` after changing UI copy. `localization.fallbackProbe` intentionally exists only in English to exercise fallback behavior.
 
@@ -132,7 +140,7 @@ scripts/verify_app.sh
 dist/FootageFlow.app/Contents/MacOS/FootageFlow --self-test
 dist/FootageFlow.app/Contents/MacOS/FootageFlow --live-smoke
 dist/FootageFlow.app/Contents/MacOS/FootageFlow --update-smoke
-dist/FootageFlow.app/Contents/MacOS/FootageFlow --relevance-smoke "台湾美食"
+dist/FootageFlow.app/Contents/MacOS/FootageFlow --relevance-smoke "广州美食"
 ```
 
 `--self-test` is fully offline. `--live-smoke` searches public providers and verifies no-key/limited modes. `--update-smoke` performs an end-to-end read of the latest official GitHub Release without changing local state. `--relevance-smoke` measures Provider-order and local-ranked Top-20 concept coverage across public sources. `--acceptance-test <directory>` additionally downloads a small Public Domain fixture, creates both sidecars, checks persistence, and simulates a friendly network error. Fixed JSON fixtures cover all providers, including Openverse, Dailymotion, and GitHub release metadata. Tests cover update version comparison/reminders/link validation, clip validation, output metadata/history/sidecars, concept relevance, search modes, smart expansion and query budgets, clipboard safety, continuations, rights, localization, and project/download behavior. The Windows runner also executes Credential Manager, the shared `rankAssets` Core Host action, cancel/retry, packaging, clean-install, GUI-startup, uninstall, and bundled-tool tests.
@@ -141,7 +149,7 @@ The package uses the official `swift-testing` dependency so the full platform-ne
 
 ## Packaging
 
-`scripts/build_app.sh` builds a Release executable; bundles checksum-pinned yt-dlp; builds static GPL FFmpeg 8.0.3 with pinned x264, Apple SecureTransport, and no `nonfree` component; copies all applicable license texts; creates the `.app`; and performs Ad Hoc signing. The FFmpeg configuration uses a neutral build prefix and the packaging scan rejects private developer paths. `scripts/binary_privacy_scan.sh` scans the app executable and bundled tools for credential-like strings. `scripts/build_dmg.sh` creates the drag-to-Applications DMG and SHA-256 checksum. No Developer ID certificate or notarization is claimed for v0.7.1.
+`scripts/build_app.sh` builds a Release executable; bundles checksum-pinned yt-dlp; builds static GPL FFmpeg 8.0.3 with pinned x264, Apple SecureTransport, and no `nonfree` component; copies all applicable license texts; creates the `.app`; and performs Ad Hoc signing. The FFmpeg configuration uses a neutral build prefix and the packaging scan rejects private developer paths. `scripts/binary_privacy_scan.sh` scans the app executable and bundled tools for credential-like strings. `scripts/build_dmg.sh` creates the drag-to-Applications DMG and SHA-256 checksum. No Developer ID certificate or notarization is claimed for v0.7.2.
 
 ## Windows architecture
 

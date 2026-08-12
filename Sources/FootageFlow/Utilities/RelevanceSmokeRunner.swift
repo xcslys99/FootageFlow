@@ -19,26 +19,26 @@ enum RelevanceSmokeRunner {
       for id in ids {
         group.addTask {
           let provider = ProviderFactory.make(id, apiKey: "")
-          let queries = KeywordEngine.providerQueries(
+          let queries = KeywordEngine.providerKeywordPlan(
             from: keywords, provider: id, mode: provider.info.mode)
+          let outcomes = await boundedSearch(provider: provider, keywords: queries)
           var candidates: [MediaAsset] = []
-          do {
-            for keyword in queries {
-              let page = try await provider.searchPage(
-                SearchRequest(query: keyword, mediaType: .video, pageSize: 12),
-                continuation: nil)
-              candidates += page.assets.map { value in
-                var asset = value
-                asset.originalMetadata["matchedQuery"] = keyword
-                return asset
-              }
+          var firstError: String?
+          for outcome in outcomes {
+            if let error = outcome.error {
+              firstError = firstError ?? String(describing: type(of: error))
+              continue
             }
-            return Probe(provider: id, assets: SearchDeduplicator.apply(candidates), error: nil)
-          } catch {
-            return Probe(
-              provider: id, assets: SearchDeduplicator.apply(candidates),
-              error: String(describing: type(of: error)))
+            candidates += (outcome.assets ?? []).map { value in
+              var asset = value
+              asset.originalMetadata["matchedQuery"] = outcome.keyword.text
+              asset.originalMetadata["matchedQueryLanguage"] =
+                outcome.keyword.language?.rawValue ?? ""
+              return asset
+            }
           }
+          return Probe(
+            provider: id, assets: SearchDeduplicator.apply(candidates), error: firstError)
         }
       }
       for await probe in group { probes.append(probe) }
@@ -74,5 +74,52 @@ enum RelevanceSmokeRunner {
       "RELEVANCE_SMOKE candidates=\(candidates.count) before_top20=\(before.count) before_relevant=\(beforeRelevant) before_precision=\(String(format: "%.3f", beforePrecision)) after_top20=\(after.count) after_relevant=\(afterRelevant) after_precision=\(String(format: "%.3f", afterPrecision))"
     )
     return !after.isEmpty && afterRelevant == after.count ? 0 : 1
+  }
+
+  private struct QueryOutcome: Sendable {
+    let keyword: SearchKeyword
+    let assets: [MediaAsset]?
+    let error: Error?
+  }
+
+  private static func boundedSearch(
+    provider: any MediaProvider, keywords: [SearchKeyword]
+  ) async -> [QueryOutcome] {
+    await withTaskGroup(of: QueryOutcome.self) { group in
+      var next = 0
+      func enqueue(_ index: Int) {
+        let keyword = keywords[index]
+        group.addTask {
+          do {
+            let page = try await provider.searchPage(
+              SearchRequest(query: keyword.text, mediaType: .video, pageSize: 12),
+              continuation: nil)
+            return QueryOutcome(keyword: keyword, assets: page.assets, error: nil)
+          } catch {
+            return QueryOutcome(keyword: keyword, assets: nil, error: error)
+          }
+        }
+      }
+      while next < min(2, keywords.count) {
+        enqueue(next)
+        next += 1
+      }
+      var values: [QueryOutcome] = []
+      var halted = false
+      for await value in group {
+        values.append(value)
+        if let error = value.error as? ProviderError {
+          switch error {
+          case .rateLimited, .temporarilyBlocked: halted = true
+          default: break
+          }
+        }
+        if !halted, next < keywords.count {
+          enqueue(next)
+          next += 1
+        }
+      }
+      return values
+    }
   }
 }

@@ -434,3 +434,5 @@
 "update.timeout" = "检查更新超时，请重试。";
 "update.rateLimited" = "检查更新的请求暂时受限，请稍后再试。";
 "update.checkFailed" = "现在无法检查更新。";
+"search.showAllLanguages" = "查看全部语言";
+"search.hideAllLanguages" = "收起其他语言";

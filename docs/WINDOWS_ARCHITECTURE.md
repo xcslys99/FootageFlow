@@ -1,6 +1,6 @@
 # Windows architecture audit
 
-Status: Windows 11 x64 is supported from FootageFlow v0.2.0. The v0.7.1 candidate keeps the same shared-core boundary, including the v0.7.0 notification-only update checker, and adds the shared concept-aware relevance ranker to both desktop interfaces. Windows-native installation and runtime checks are performed on a clean Windows GitHub Actions runner before release.
+Status: Windows 11 x64 is supported from FootageFlow v0.2.0. The v0.7.2 candidate keeps the same shared-core boundary and adds one shared ten-language compound-query engine to both desktop interfaces. Windows-native installation and runtime checks are performed on a clean Windows GitHub Actions runner before release.
 
 ## Current shared code
 
@@ -30,7 +30,7 @@ WPF UI and Windows adapters
 Swift FootageFlowCore.exe
         |
         +-- ProviderFactory and 17 search providers
-        +-- pagination, models, rights, filters, smart keywords, clip/output metadata, updates, dedupe
+        +-- multilingual queries, pagination, models, rights, filters, clip/output metadata, updates, dedupe
         +-- PersistentStore, feedback URLs and source sidecars
 
 macOS SwiftUI UI
@@ -64,9 +64,11 @@ The Windows WPF shell sends `checkUpdate` to the same Core Host. The Swift core 
 - Windows path rules, Chinese/space paths, cancellation, clean install, and uninstall require Windows-native acceptance tests.
 - Provider websites can rate-limit or change independently. One source failure never fails the aggregate search.
 
-## Expected macOS impact
+## v0.7.2 cross-platform query boundary
 
-The v0.7.1 work adds the shared `rankAssets` Core Host action and a narrow WPF relevance selector without replacing the existing macOS stack. Every Windows change continues to run the macOS Release build, test suite, app-bundle signing check, binary privacy scan, and offline self-test.
+Windows requests structured `SearchKeyword` records from the Swift Core Host. Language, origin, and priority are optional Codable fields, preserving old history and project data. WPF renders and schedules those records but has no second translation dictionary. Both shells use the same ten canonical compound queries, relevance intent, language ordering, de-duplication, and matched-query metadata.
+
+The Windows scheduler enforces the same 12-request global limit, two requests per official/public Provider, and one per direct/yt-dlp Provider. A rate-limit or temporary-block state halts that Provider's remaining wave without cancelling successful sources. macOS applies the equivalent in-process limits.
 
 ## Version plan
 
@@ -76,11 +78,12 @@ The v0.7.1 work adds the shared `rankAssets` Core Host action and a narrow WPF r
 - v0.6.0 is one creator-workflow release for clip downloads, smart expansion, output presets, local clipboard detection, Openverse, and Dailymotion.
 - v0.7.0 adds cross-platform update notifications, visible official release notes, View Update, Remind Later, and a manual Settings check without automatic installation.
 - v0.7.1 adds Precise, Balanced, and Broad modes backed by the same Swift `SearchRelevanceEngine` used on macOS. The Windows client retains high-recall candidates and sends them to the Core Host for filtering and ranking; no relevance rules are duplicated in C#.
+- v0.7.2 adds shared ten-language compound search, structured query metadata, and language-aware ranking without duplicating the lexicon in C#.
 - Windows 10 x64 is not declared supported because it has not completed the same validation.
 
-## v0.7.1 release validation gate
+## v0.7.2 release validation gate
 
-Before publishing v0.7.1, CI must complete all of the following on a clean Windows runner:
+Before publishing v0.7.2, CI must complete all of the following on a clean Windows runner:
 
 - Shared Swift Release build, Core Host health check, and cross-platform tests.
 - Native WPF Release build and Windows platform acceptance checks.

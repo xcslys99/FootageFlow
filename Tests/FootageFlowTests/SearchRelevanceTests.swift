@@ -7,6 +7,72 @@ import Foundation
 
   @Suite("Local Search Relevance")
   struct SearchRelevanceTests {
+    @Test("Guangzhou food builds ten complete compound queries without a delicacies concept")
+    func guangzhouFoodPlan() {
+      let plan = MultilingualQueryEngine.plan(
+        for: "广州美食", interfaceLanguage: .simplifiedChinese)
+      #expect(plan.inputLanguage == .simplifiedChinese)
+      #expect(Set(plan.conceptGroupIDs) == ["place.guangzhou", "topic.food"])
+      #expect(plan.keywords.count == 14)
+      let values = Set(plan.keywords.map(\.text))
+      let required: Set<String> = [
+        "广州美食", "廣州美食", "Guangzhou cuisine", "gastronomía de Guangzhou",
+        "culinária de Guangzhou", "広州料理", "광저우 음식", "Guangzhou-Küche",
+        "cuisine de Guangzhou", "кухня Гуанчжоу",
+      ]
+      #expect(required.isSubset(of: values))
+      #expect(!plan.conceptGroupIDs.contains("literal.delicacies"))
+      #expect(Set(plan.keywords.compactMap(\.language)).count == 10)
+
+      let intent = SearchRelevanceEngine.intent(
+        for: "广州美食", supportingQueries: ["Guangzhou delicacies"])
+      #expect(Set(intent.conceptGroups.map(\.id)) == ["place.guangzhou", "topic.food"])
+    }
+
+    @Test("Guangzhou food keeps cuisine and filters single-concept results")
+    func guangzhouFoodRelevance() {
+      let positives = [
+        "Cantonese cuisine in Guangzhou", "Guangzhou dim sum and yum cha",
+        "广州早茶和粤菜", "廣州街頭小吃", "Guangzhou seafood market",
+      ]
+      let negatives = [
+        "Guangzhou evening news", "Guangzhou military exercise", "Taipei street food",
+        "Guangzhou city skyline", "Chinese cuisine in Beijing",
+      ]
+      let intent = SearchRelevanceEngine.intent(for: "广州美食")
+      for title in positives {
+        #expect(
+          SearchRelevanceEngine.assess(asset(title), intent: intent, mode: .balanced).eligible,
+          Comment(rawValue: title))
+      }
+      for title in negatives {
+        #expect(
+          !SearchRelevanceEngine.assess(asset(title), intent: intent, mode: .balanced).eligible,
+          Comment(rawValue: title))
+      }
+    }
+
+    @Test("Input and interface language priorities are deterministic")
+    func languagePriorities() {
+      let chinese = MultilingualQueryEngine.plan(
+        for: "广州美食", interfaceLanguage: .japanese)
+      #expect(chinese.keywords[0].language == .simplifiedChinese)
+      #expect(chinese.keywords[1].language == .japanese)
+      #expect(chinese.keywords[2].language == .english)
+      let english = MultilingualQueryEngine.plan(
+        for: "Guangzhou cuisine", interfaceLanguage: .japanese)
+      #expect(english.keywords[0].language == .english)
+      #expect(english.keywords[1].language == .japanese)
+      let japanese = MultilingualQueryEngine.plan(
+        for: "広州料理", interfaceLanguage: .english)
+      #expect(japanese.keywords[0].language == .japanese)
+      #expect(japanese.keywords[1].language == .english)
+      let russian = MultilingualQueryEngine.plan(
+        for: "кухня Гуанчжоу", interfaceLanguage: .english)
+      #expect(russian.keywords[0].language == .russian)
+      #expect(russian.keywords[1].language == .english)
+    }
+
     @Test("Taiwan food intent creates two semantic concept groups")
     func taiwanFoodIntent() {
       let intent = SearchRelevanceEngine.intent(for: "台湾美食")
@@ -225,11 +291,24 @@ import Foundation
       let intent = SearchRelevanceEngine.intent(
         for: "法国街头抗议", supportingQueries: ["French street protest"])
       #expect(intent.conceptGroups.contains { $0.id == "place.france" })
-      #expect(intent.conceptGroups.contains { $0.id == "literal.protest" })
+      #expect(intent.conceptGroups.contains { $0.id == "topic.protest" })
       let relevant = asset("Street protest in Paris, France")
       let irrelevant = asset("French cuisine in Paris")
       #expect(SearchRelevanceEngine.assess(relevant, intent: intent, mode: .balanced).eligible)
       #expect(!SearchRelevanceEngine.assess(irrelevant, intent: intent, mode: .balanced).eligible)
+    }
+
+    @Test("Unknown translation is an alias and never a new mandatory group")
+    func unknownTranslationAlias() {
+      let intent = SearchRelevanceEngine.intent(
+        for: "珐琅工艺", supportingQueries: ["enamel craft"])
+      #expect(intent.conceptGroups.count == 1)
+      #expect(intent.conceptGroups[0].id == "literal.query")
+      #expect(intent.conceptGroups[0].aliases.contains("enamel craft"))
+      #expect(
+        SearchRelevanceEngine.assess(
+          asset("Traditional enamel craft workshop"), intent: intent, mode: .balanced
+        ).eligible)
     }
 
     private func asset(
