@@ -91,7 +91,7 @@ Before publishing v0.7.3, CI must complete all of the following on a clean Windo
 - Self-contained publish, Swift runtime collection, pinned yt-dlp/FFmpeg checksum verification, and Inno Setup compilation.
 - Clean per-user installation, installed Core Host health check, native WPF startup-liveness check, and clean uninstall.
 - Real public Provider smoke tests; optional key paths run only when repository secrets are configured.
-- Real YouTube, Dailymotion, and public direct-media analysis plus a validated 10-second editing-compatible MP4 clip and source sidecars.
+- Real YouTube analysis or correct hosted-IP access-limit classification, real Dailymotion and public direct-media analysis, plus a validated 10-second editing-compatible MP4 clip and source sidecars.
 - Portable archive, installer, SHA-256 verification, runtime/license inventory, tracked-secret scan, and candidate artifact upload.
 
 No developer credential, browser cookie, token, password, private-link query value, or user path may be embedded in source, logs, feedback URLs, sidecars, or release packages.

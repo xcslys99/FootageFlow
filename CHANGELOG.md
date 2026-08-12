@@ -15,7 +15,7 @@ All notable FootageFlow changes are documented here.
 ### Improved
 
 - Openverse requests now explicitly set `mature=false`, and mature items are defensively removed if an upstream response still includes one
-- Added a real creator-workflow smoke test for public YouTube, Dailymotion, and direct-media analysis, 10-second clip extraction, editing-compatible MP4 validation, fast-start, and source sidecars on both platform pipelines
+- Added a real creator-workflow smoke test for public YouTube, Dailymotion, and direct-media analysis, 10-second clip extraction, editing-compatible MP4 validation, fast-start, and source sidecars on both platform pipelines; hosted-runner YouTube blocks must be correctly classified rather than bypassed
 - Removed stale v0.6.0 labels from the current English screenshots in both README files
 
 ### Validation

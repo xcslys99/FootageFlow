@@ -416,6 +416,11 @@ static async Task RunCreatorWorkflowSmokeAsync(
             check(!string.IsNullOrWhiteSpace(analysis.Title) && analysis.FormatCount > 0,
                 $"Windows creator smoke {name} analysis");
         }
+        catch (ExternalToolException error) when (name == "YouTube" &&
+            error.Code is "temporarilyBlocked" or "rateLimited")
+        {
+            check(true, $"Windows creator smoke YouTube {error.Code} classification");
+        }
         catch (Exception error)
         {
             check(false, $"Windows creator smoke {name} analysis ({error.GetType().Name})");
@@ -435,7 +440,8 @@ static async Task RunCreatorWorkflowSmokeAsync(
             ["linkClipStart"] = "2",
             ["linkClipEnd"] = "12",
             ["linkClipDuration"] = "10",
-            ["linkMediaDuration"] = analysis.Duration?.ToString(CultureInfo.InvariantCulture) ?? ""
+            ["linkMediaDuration"] = analysis.Duration?.ToString(CultureInfo.InvariantCulture) ?? "",
+            ["sourceName"] = analysis.SourceName
         };
         var output = await service.DownloadAsync(
             source, directory, "sintel-10-second-clip", metadata, null, CancellationToken.None);
@@ -450,7 +456,7 @@ static async Task RunCreatorWorkflowSmokeAsync(
         var asset = new MediaAsset
         {
             Id = "creator-smoke", Provider = "linkDownloader", Title = analysis.Title,
-            Creator = analysis.Creator, SourceName = analysis.SourceName, SourcePageURL = source,
+            Creator = analysis.Creator, SourcePageURL = source,
             DownloadURL = source, LicenseStatus = "UNKNOWN", MediaType = "video", Downloadable = true,
             SearchKeyword = source, FileType = "mp4", DownloadAvailability = "conditional",
             OriginalMetadata = metadata

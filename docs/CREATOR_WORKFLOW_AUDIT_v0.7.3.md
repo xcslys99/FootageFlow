@@ -32,7 +32,7 @@ The macOS packaged app uses its bundled tools to:
 5. Produce and probe an editing-compatible MP4.
 6. Verify approximately 10 seconds, H.264, yuv420p, AAC when audio exists, MP4 fast-start, `.source.txt`, and `.source.json`.
 
-The Windows CI runs the equivalent checks through `YtDlpPlatformService`, the packaged Windows tools, and the shared Core Host sidecar writer. Test media is temporary and is not committed or shipped.
+The Windows CI runs the equivalent checks through `YtDlpPlatformService`, the packaged Windows tools, and the shared Core Host sidecar writer. A GitHub-hosted IP may be temporarily blocked or rate-limited by YouTube; in that case the release gate requires the limitation to be classified correctly and still requires real Dailymotion/direct-media analysis plus the full clip/output checks. Test media is temporary and is not committed or shipped.
 
 ## Security and privacy boundaries
 
