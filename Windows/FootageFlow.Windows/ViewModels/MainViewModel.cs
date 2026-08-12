@@ -48,6 +48,8 @@ public sealed class MainViewModel : ObservableObject
     private string _ignoredClipboardValue = "";
     private bool _isUpdateChecking;
     private string _updateStatusCode = "";
+    private bool _showAllSearchLanguages;
+    private static readonly SemaphoreSlim SearchNetworkLimit = new(12, 12);
 
     public MainViewModel()
     {
@@ -58,6 +60,9 @@ public sealed class MainViewModel : ObservableObject
         ResultsView = CollectionViewSource.GetDefaultView(Results);
         ResultsView.Filter = value => value is MediaAsset asset && MatchesFilters(asset);
         ApplySort();
+        SearchKeywordsView = CollectionViewSource.GetDefaultView(SearchKeywords);
+        SearchKeywordsView.Filter = value => value is SearchKeyword keyword &&
+            (ShowAllSearchLanguages || keyword.Origin == "input" || keyword.Language == "en");
         FavoritesView = CollectionViewSource.GetDefaultView(Favorites);
         FavoritesView.Filter = value => value is SavedAssetRecord record && MatchesProject(record.ProjectID);
         HistoryView = CollectionViewSource.GetDefaultView(History);
@@ -87,12 +92,22 @@ public sealed class MainViewModel : ObservableObject
             };
         NavigateCommand = new RelayCommand(page => CurrentPage = page?.ToString() ?? "search");
         SearchCommand = new AsyncRelayCommand(_ => SearchAsync(), _ => !IsSearching);
-        AddSearchKeywordCommand = new RelayCommand(_ => SearchKeywords.Add(new SearchKeyword
-            { Id = Guid.NewGuid(), Text = "", IsEnabled = true }));
+        AddSearchKeywordCommand = new RelayCommand(_ =>
+        {
+            SearchKeywords.Add(new SearchKeyword
+            {
+                Id = Guid.NewGuid(), Text = "", IsEnabled = true,
+                Language = _settings.Current.Language, Origin = "userAdded", Priority = 99
+            });
+            SearchKeywordsView.Refresh();
+        });
         RemoveSearchKeywordCommand = new RelayCommand(value =>
         {
             if (value is SearchKeyword keyword) SearchKeywords.Remove(keyword);
+            SearchKeywordsView.Refresh();
         });
+        ToggleSearchLanguagesCommand = new RelayCommand(_ =>
+            ShowAllSearchLanguages = !ShowAllSearchLanguages);
         RegenerateKeywordsCommand = new AsyncRelayCommand(_ => RegenerateKeywordsAsync());
         LoadMoreCommand = new AsyncRelayCommand(_ => LoadMoreAsync(), _ => CanLoadMore && !IsSearching && !IsLoadingMore);
         StopSearchCommand = new RelayCommand(_ => _searchCancellation?.Cancel(), _ => IsSearching);
@@ -171,6 +186,7 @@ public sealed class MainViewModel : ObservableObject
     public ObservableCollection<MediaAsset> Results { get; } = [];
     public ICollectionView ResultsView { get; }
     public ObservableCollection<SearchKeyword> SearchKeywords { get; } = [];
+    public ICollectionView SearchKeywordsView { get; }
     public ObservableCollection<ProjectRecord> Projects { get; } = [];
     public ObservableCollection<SavedAssetRecord> Favorites { get; } = [];
     public ObservableCollection<SearchHistoryRecord> History { get; } = [];
@@ -186,6 +202,7 @@ public sealed class MainViewModel : ObservableObject
     public ICommand AddSearchKeywordCommand { get; }
     public ICommand RemoveSearchKeywordCommand { get; }
     public ICommand RegenerateKeywordsCommand { get; }
+    public ICommand ToggleSearchLanguagesCommand { get; }
     public ICommand LoadMoreCommand { get; }
     public ICommand StopSearchCommand { get; }
     public ICommand OpenSourceCommand { get; }
@@ -253,6 +270,16 @@ public sealed class MainViewModel : ObservableObject
     public bool IsLinkDownloaderPage => CurrentPage == "linkDownloader";
     public bool IsFeedbackPage => CurrentPage == "feedback";
     public string Query { get => _query; set => Set(ref _query, value); }
+    public bool ShowAllSearchLanguages
+    {
+        get => _showAllSearchLanguages;
+        set
+        {
+            if (!Set(ref _showAllSearchLanguages, value)) return;
+            SearchKeywordsView.Refresh();
+            OnPropertyChanged(nameof(SearchLanguagesToggleText));
+        }
+    }
     public string SearchStatus { get => _searchStatus; set => Set(ref _searchStatus, value); }
     public bool IsSearching
     {
@@ -392,7 +419,7 @@ public sealed class MainViewModel : ObservableObject
         get
         {
             var version = typeof(MainViewModel).Assembly.GetName().Version;
-            return version is null ? "0.7.1" : $"{version.Major}.{version.Minor}.{Math.Max(0, version.Build)}";
+            return version is null ? "0.7.2" : $"{version.Major}.{version.Minor}.{Math.Max(0, version.Build)}";
         }
     }
     public bool IsUpdateChecking
@@ -436,6 +463,8 @@ public sealed class MainViewModel : ObservableObject
     public string SmartExpansionText => T("search.smartExpansion");
     public string AddKeywordText => T("search.addKeyword");
     public string RegenerateKeywordsText => T("search.regenerateKeywords");
+    public string SearchLanguagesToggleText =>
+        T(ShowAllSearchLanguages ? "search.hideAllLanguages" : "search.showAllLanguages");
     public string TypeTitle => T("filter.type");
     public string OrientationTitle => T("filter.orientation");
     public string ResolutionTitle => T("filter.resolution");
@@ -753,13 +782,16 @@ public sealed class MainViewModel : ObservableObject
         {
             if (!string.Equals(_keywordSourceQuery, clean, StringComparison.Ordinal) || SearchKeywords.Count == 0)
                 await RegenerateKeywordsAsync(cancellationToken);
-            var effectiveQueries = SearchKeywords.Where(x => x.IsEnabled && !string.IsNullOrWhiteSpace(x.Text))
-                .Select(x => x.Text.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
-            if (effectiveQueries.Length == 0) effectiveQueries = [clean];
-            _lastSearchQueries = effectiveQueries;
-            _lastEffectiveQuery = effectiveQueries[0];
+            var effectiveKeywords = SearchKeywords.Where(x => x.IsEnabled && !string.IsNullOrWhiteSpace(x.Text))
+                .Take(14).ToArray();
+            if (effectiveKeywords.Length == 0)
+                effectiveKeywords = [new SearchKeyword
+                    { Id = Guid.NewGuid(), Text = clean, IsEnabled = true, Origin = "input",
+                      Language = _settings.Current.Language, Priority = 0 }];
+            _lastSearchQueries = effectiveKeywords.Select(x => x.Text.Trim()).ToArray();
+            _lastEffectiveQuery = _lastSearchQueries[0];
             var tasks = selected.ToDictionary(option => option.Id,
-                option => SearchProviderExpandedAsync(option, effectiveQueries, cancellationToken));
+                option => SearchProviderExpandedAsync(option, effectiveKeywords, cancellationToken));
             var pending = tasks.Values.ToList();
             var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             while (pending.Count > 0)
@@ -782,6 +814,7 @@ public sealed class MainViewModel : ObservableObject
             await _core.SendAsync(new CoreRequest
             {
                 Action = "addHistory", Query = clean, Keywords = SearchKeywords.Select(x => x.Text).ToArray(),
+                KeywordDetails = SearchKeywords.Where(x => x.IsEnabled).ToArray(),
                 ProviderIDs = selected.Select(x => x.Id).ToArray(), ProjectID = CurrentProject?.Id.ToString(),
                 ResultCount = Results.Count, Language = _settings.Current.Language
             }, cancellationToken: cancellationToken);
@@ -803,31 +836,61 @@ public sealed class MainViewModel : ObservableObject
         }, cancellationToken: cancellationToken);
         SearchKeywords.Clear();
         foreach (var keyword in keywords.Keywords ?? []) SearchKeywords.Add(keyword);
+        SearchKeywordsView.Refresh();
         _keywordSourceQuery = clean;
     }
 
     private async Task<ProviderBatch> SearchProviderExpandedAsync(
-        ProviderOption option, IReadOnlyList<string> queries, CancellationToken cancellationToken)
+        ProviderOption option, IReadOnlyList<SearchKeyword> queries, CancellationToken cancellationToken)
     {
-        var budget = option.Id switch
-        {
-            "youtube" or "dailymotion" or "vimeo" or "peertube" => 2,
-            "wikimedia" or "internetArchive" or "nasa" or "libraryOfCongress" or
-                "nationalArchives" or "europeana" => 4,
-            _ => 3
-        };
-        var selectedQueries = queries.Take(budget).ToArray();
+        var limited = option.Id is ("nationalArchives" or "europeana" or "videvo" or "videezy"
+            or "mixkit" or "coverr" or "vimeo") && string.IsNullOrWhiteSpace(ReadCredential(option.Id));
+        var selectedQueries = queries.Take(limited ? 1 : 14).ToArray();
         var assets = new List<MediaAsset>();
         ProviderBatch? primary = null;
-        foreach (var query in selectedQueries)
+        ProviderBatch? successful = null;
+        var directOrTool = option.Id is ("pexels" or "pixabay" or "youtube")
+            && string.IsNullOrWhiteSpace(ReadCredential(option.Id));
+        var perProviderLimit = directOrTool ? 1 : 2;
+        async Task<(int Index, ProviderBatch Batch)> RunQueryAsync(int index)
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            var batch = await SearchProviderAsync(option, query, cancellationToken);
-            primary ??= batch;
-            assets.AddRange(batch.Assets);
-            if (batch.State.Availability is "rateLimited" or "temporarilyBlocked") break;
+            var keyword = selectedQueries[index];
+            await SearchNetworkLimit.WaitAsync(cancellationToken);
+            try
+            {
+                var batch = await SearchProviderAsync(option, keyword.Text.Trim(), cancellationToken);
+                foreach (var asset in batch.Assets)
+                {
+                    asset.OriginalMetadata["matchedQuery"] = keyword.Text.Trim();
+                    if (!string.IsNullOrWhiteSpace(keyword.Language))
+                        asset.OriginalMetadata["matchedQueryLanguage"] = keyword.Language;
+                    if (!string.IsNullOrWhiteSpace(keyword.Origin))
+                        asset.OriginalMetadata["matchedQueryOrigin"] = keyword.Origin;
+                    asset.OriginalMetadata["matchedQueryPriority"] = (keyword.Priority ?? index).ToString();
+                }
+                return (Index: index, Batch: batch);
+            }
+            finally { SearchNetworkLimit.Release(); }
         }
-        var first = primary ?? new ProviderBatch
+        var nextIndex = 0;
+        var tasks = new List<Task<(int Index, ProviderBatch Batch)>>();
+        while (nextIndex < Math.Min(perProviderLimit, selectedQueries.Length))
+            tasks.Add(RunQueryAsync(nextIndex++));
+        var halted = false;
+        while (tasks.Count > 0)
+        {
+            var completed = await Task.WhenAny(tasks);
+            tasks.Remove(completed);
+            var result = await completed;
+            if (result.Index == 0 || primary is null) primary = result.Batch;
+            if (result.Batch.Assets.Count > 0) successful ??= result.Batch;
+            assets.AddRange(result.Batch.Assets);
+            if (result.Batch.State.Availability is "rateLimited" or "temporarilyBlocked" or
+                "authenticationRequired") halted = true;
+            if (!halted && nextIndex < selectedQueries.Length)
+                tasks.Add(RunQueryAsync(nextIndex++));
+        }
+        var first = successful ?? primary ?? new ProviderBatch
         {
             Provider = option.Id, DisplayName = option.DisplayName,
             State = new ProviderState { Availability = "unavailable" }
@@ -956,6 +1019,7 @@ public sealed class MainViewModel : ObservableObject
         {
             Action = "rankAssets", Query = query, Assets = _candidateResults.ToArray(),
             RelevanceMode = RelevanceMode, Keywords = _lastSearchQueries,
+            KeywordDetails = SearchKeywords.Where(x => x.IsEnabled).ToArray(),
             Language = _settings.Current.Language
         }, cancellationToken: cancellationToken);
         Results.Clear();
@@ -1119,6 +1183,15 @@ public sealed class MainViewModel : ObservableObject
     {
         if (history is null) return;
         Query = history.OriginalQuery;
+        SearchKeywords.Clear();
+        var restored = history.KeywordDetails ?? history.Keywords.Select(text => new SearchKeyword
+        {
+            Id = Guid.NewGuid(), Text = text, IsEnabled = true,
+            Language = _settings.Current.Language, Origin = "userAdded", Priority = 99
+        }).ToArray();
+        foreach (var keyword in restored) SearchKeywords.Add(keyword);
+        SearchKeywordsView.Refresh();
+        _keywordSourceQuery = history.OriginalQuery;
         CurrentPage = "search";
         await SearchAsync();
     }

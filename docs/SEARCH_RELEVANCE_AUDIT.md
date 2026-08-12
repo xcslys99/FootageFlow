@@ -1,4 +1,10 @@
-# Search relevance audit (v0.7.1)
+# Search relevance and multilingual retrieval audit (v0.7.2)
+
+## v0.7.2 Guangzhou root cause
+
+In v0.7.1, `广州美食` was not covered by the local place lexicon. The macOS translation path produced `Guangzhou delicacies`; `delicacies` was also missing from the food aliases. The relevance engine therefore treated the original Chinese text and translated words as unrelated literal requirements and filtered every candidate. Provider query budgets then searched only the first two to four visible phrases.
+
+v0.7.2 adds Guangzhou/Canton/Cantonese and food vocabulary across all ten UI languages. More importantly, the original text is now the only authority for mandatory concept groups. Translation and visual phrases improve retrieval but cannot add a third requirement. `广州美食` deterministically resolves to exactly `place.guangzhou` plus `topic.food`.
 
 ## Root causes
 
@@ -10,33 +16,33 @@ The live SepiaSearch response for `Taiwan cuisine` reported 546 candidates and b
 
 ## Current two-stage pipeline
 
-1. `KeywordEngine` keeps the original query and up to four bounded, visible translations or related phrases. It does not emit a standalone broad entity for compound intents such as `台湾美食`.
-2. Providers retrieve candidates independently and progressively.
-3. `SearchRelevanceEngine` derives concept groups from the original query and, when needed, the visible translated query.
+1. `MultilingualQueryEngine` creates one complete compound query in every supported interface language. Input-language and English visual expansions can add at most four more records, for a maximum of 14. It does not emit a standalone broad entity for a compound intent.
+2. All enabled languages enter the same bounded wave: 12 requests globally, two per official/public Provider, and one per direct/tool Provider. Providers still return independently and progressively.
+3. `SearchRelevanceEngine` derives mandatory concept groups only from the original query. Translations remain retrieval hints.
 4. It scores title, tags/keywords, category, description, creator/channel, bounded Provider relevance, and the matched retrieval query. The matched query alone cannot satisfy concept coverage.
 5. Precise, Balanced, or Broad mode filters the candidate pool. Balanced is the persisted default. PeerTube/SepiaSearch, Library of Congress, Internet Archive, and YouTube use a modestly stricter threshold because their search surfaces are empirically broad.
-6. De-duplicated accepted items are sorted by local score. Switching mode re-ranks the retained candidate pool without another network search.
+6. De-duplicated accepted items are sorted by local score with a small input-language, interface-language, English, other preference applied only after eligibility. Switching mode re-ranks the retained candidate pool without another network search.
 
 Field weights are ordered as follows: title; tags/keywords; category; description; creator/channel. Provider order is only a bounded secondary signal.
 
 ## Fixed evaluation
 
-The offline relevance fixture includes positive and negative examples for `台湾美食`, `hamburger`, `city night`, `Apollo 11`, `factory worker`, `俄乌战争`, `日本料理`, and `French cuisine`.
+The offline relevance fixture includes positive and negative examples for `广州美食`, `台湾美食`, `hamburger`, `city night`, `Apollo 11`, `factory worker`, `俄乌战争`, `日本料理`, and `French cuisine`. It also verifies all ten canonical Guangzhou queries, Chinese/English/Japanese/Russian priority, and legacy history decoding.
 
 The `台湾美食` fixture gives deliberately irrelevant candidates higher Provider scores. Balanced local ranking still returns 20/20 relevant Top-20 items and retains non-exact matches such as `Taipei beef noodle soup`.
 
 ## Live acceptance evidence
 
-Run:
+The v0.7.2 run is:
 
 ```bash
-FootageFlow --relevance-smoke "台湾美食"
+FootageFlow --relevance-smoke "广州美食"
 ```
 
-The final 2026-08-12 public-provider run retrieved 122 candidates from Wikimedia Commons, Internet Archive, Library of Congress, PeerTube/SepiaSearch, Openverse, and Dailymotion. Under the final review rules, the old Provider order contained only 2 relevant items in its Top 20. Balanced returned 14 items and all 14 passed the relevance review; it intentionally did not pad the page with weak matches. PeerTube/SepiaSearch retained 1 of 23 candidates, Wikimedia retained 2 of 7, and Library of Congress retained 0 of 29 broad candidates rather than displaying unrelated items.
+The final 2026-08-12 public-provider run issued the ten canonical queries plus four bounded visual expansions and retrieved 323 de-duplicated candidates from Wikimedia Commons, Internet Archive, Library of Congress, PeerTube/SepiaSearch, Openverse, and Dailymotion. Provider order contained 7 locally relevant items in its Top 20 (0.35). Balanced returned 20/20 relevant items (1.00), led by Guangzhou wedding cuisine, Cantonese dishes, morning tea, dim sum, seafood markets, and street food. One empty or broad Provider did not affect the others.
 
 The final pass also rejects concepts that occur far apart in long descriptions, topic words found only in oversized archive manifests, a conflicting location in the title, and noisy tag lists that supply a missing topic without support from the title or description. Broad mode remains available when the user explicitly wants those weaker candidates.
 
-The final installed macOS GUI run used the visible queries `台湾美食`, `Taiwanese cuisine`, `Taiwan cuisine`, `Taiwan street food`, and `Taiwan night market food`. It returned 35 real assets. The first 20 cards were reviewed after loading and all 20 covered both Taiwan and food; no journalist, military, folk-song, or politics result remained in that set.
+The final installed macOS GUI run showed `广州美食`, `Guangzhou cuisine`, `Guangzhou street food`, and `Cantonese cuisine` by default. **View all languages** exposed the other eight canonical language rows plus input-language visual expansions, all editable and individually enabled. The previous `Guangzhou delicacies`-driven zero-result behavior did not recur.
 
 This metric measures deterministic concept coverage in available Provider metadata, not a human copyright, quality, or factual endorsement.

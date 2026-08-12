@@ -78,79 +78,36 @@ enum KeywordEngine {
   }
 
   static func keywords(
-    for original: String, translated: String? = nil, smartExpansion: Bool = true
+    for original: String, translated: String? = nil, smartExpansion: Bool = true,
+    interfaceLanguage: AppLanguage = .english
   ) -> [SearchKeyword] {
-    let compact = original.cleanQuery
-    guard !compact.isEmpty else { return [] }
-    var candidates = [compact]
-    guard smartExpansion else { return candidates.map { SearchKeyword(text: $0) } }
+    MultilingualQueryEngine.plan(
+      for: original, interfaceLanguage: interfaceLanguage,
+      translatedSupplement: translated, includeVisualExpansions: smartExpansion
+    ).keywords
+  }
 
-    if let translated = translated?.cleanQuery, !translated.isEmpty {
-      candidates.append(translated)
+  static func providerKeywordPlan(
+    from keywords: [SearchKeyword], provider: ProviderID, mode: ProviderMode
+  ) -> [SearchKeyword] {
+    let enabled = keywords.filter {
+      $0.isEnabled && !$0.text.cleanQuery.isEmpty
     }
-    let matched = phraseRules.filter { rule in
-      rule.terms.contains { compact.localizedCaseInsensitiveContains($0) }
-    }
-    let years = years(in: compact)
-    let allCanonical = unique(matched.map(\.canonical))
-    let canonical = allCanonical.filter { candidate in
-      !allCanonical.contains { other in
-        other.caseInsensitiveCompare(candidate) != .orderedSame
-          && other.localizedCaseInsensitiveContains(candidate)
-      }
-    }
-    if !canonical.isEmpty {
-      candidates.append((years + canonical).joined(separator: " "))
-    }
-    for rule in matched {
-      candidates.append(contentsOf: rule.expansions)
-    }
+    guard !enabled.isEmpty else { return [] }
+    if mode == .limited { return [enabled[0]] }
 
-    if compact.localizedCaseInsensitiveContains("Argentina")
-      || compact.contains("阿根廷")
-    {
-      let year = years.first.map { " \($0)" } ?? ""
-      if compact.localizedCaseInsensitiveContains("crisis") || compact.contains("危机")
-        || compact.contains("危機") || compact.contains("挤兑") || compact.contains("擠兌")
-      {
-        candidates += ["Argentina financial crisis\(year)", "Argentina bank run\(year)"]
-      }
-    }
-
-    return unique(candidates.map(\.cleanQuery).filter { !$0.isEmpty }).prefix(5).map {
-      SearchKeyword(text: $0)
-    }
+    return enabled.prefix(14).map { $0 }
   }
 
   static func providerQueries(
     from keywords: [SearchKeyword], provider: ProviderID, mode: ProviderMode
   ) -> [String] {
-    let enabled = unique(
-      keywords.filter(\.isEnabled).map(\.text).map(\.cleanQuery).filter { !$0.isEmpty })
-    guard let first = enabled.first else { return [] }
-    let budget = queryBudget(provider: provider, mode: mode)
-    var result = Array(enabled.prefix(budget))
-
-    let archiveProviders: Set<ProviderID> = [
-      .wikimedia, .internetArchive, .nasa, .libraryOfCongress, .nationalArchives, .europeana,
-    ]
-    if archiveProviders.contains(provider), result.count < budget,
-      !first.localizedCaseInsensitiveContains("footage")
-    {
-      result.append("\(first) archive footage")
-    }
-    return Array(unique(result).prefix(budget))
+    providerKeywordPlan(from: keywords, provider: provider, mode: mode).map(\.text)
   }
 
   static func queryBudget(provider: ProviderID, mode: ProviderMode) -> Int {
     if mode == .limited { return 1 }
-    switch provider {
-    case .youtube, .dailymotion, .vimeo, .peertube: return 2
-    case .wikimedia, .internetArchive, .nasa, .libraryOfCongress, .nationalArchives, .europeana:
-      return 4
-    case .openverse: return 3
-    default: return 3
-    }
+    return 14
   }
 
   static func mergeTranslation(_ translation: String, into keywords: [SearchKeyword])
@@ -160,9 +117,14 @@ enum KeywordEngine {
     guard !translated.isEmpty else { return keywords }
     var result = keywords
     if !result.contains(where: { $0.text.caseInsensitiveCompare(translated) == .orderedSame }) {
-      result.insert(SearchKeyword(text: translated), at: min(1, result.count))
+      let fallback = result.first(where: { $0.origin == .input })?.language ?? .english
+      result.append(
+        SearchKeyword(
+          text: translated,
+          language: MultilingualQueryEngine.detectLanguage(in: translated, fallback: fallback),
+          origin: .systemTranslation, priority: 2))
     }
-    return Array(result.prefix(5))
+    return Array(result.prefix(14))
   }
 
   static func splitScript(_ script: String) -> [String] {

@@ -47,6 +47,12 @@ enum SearchRelevanceEngine {
         "taiwanesische", "taipei", "台北", "臺北", "taïwan",
       ]),
     ConceptRule(
+      id: "place.guangzhou", label: "Guangzhou",
+      aliases: [
+        "广州", "廣州", "guangzhou", "canton", "cantonese", "cantón", "cantão", "kanton",
+        "広州", "광저우", "гуанчжоу",
+      ]),
+    ConceptRule(
       id: "place.japan", label: "Japan",
       aliases: ["日本", "japan", "japanese", "tokyo", "東京", "东京", "japon", "japón", "japao", "japão"]),
     ConceptRule(
@@ -68,8 +74,10 @@ enum SearchRelevanceEngine {
         "饮食", "飲食", "食品", "food", "foods", "cuisine", "culinary", "cooking", "cook",
         "dish", "dishes", "recipe", "recipes", "restaurant", "restaurants", "street food",
         "snack", "snacks", "meal", "meals", "noodle", "noodles", "soup", "chicken", "pork",
-        "beef", "rice", "dumpling", "dumplings", "kitchen", "comida", "cocina", "culinaria",
-        "culinária", "gastronomie", "küche", "еда", "кухня", "음식", "요리",
+        "beef", "rice", "dumpling", "dumplings", "dim sum", "yum cha", "seafood", "kitchen",
+        "comida", "cocina", "culinaria",
+        "culinária", "delicacies", "gastronomy", "gastronomía", "gastronomie", "küche",
+        "粤菜", "粵菜", "早茶", "点心", "點心", "飲茶", "еда", "кухня", "음식", "요리",
       ]),
     ConceptRule(
       id: "topic.city", label: "City",
@@ -119,6 +127,12 @@ enum SearchRelevanceEngine {
         "银行挤兑", "銀行擠兌", "bank run", "bank queue", "economic crisis", "financial crisis", "经济危机",
         "經濟危機", "withdrawal queue",
       ]),
+    ConceptRule(
+      id: "topic.protest", label: "Protest",
+      aliases: [
+        "抗议", "抗議", "protest", "protests", "demonstration", "protesta", "protesto",
+        "manifestation", "protest", "протест", "抗議活動", "시위",
+      ]),
   ]
 
   private static let stopWords: Set<String> = [
@@ -141,18 +155,9 @@ enum SearchRelevanceEngine {
       return SearchIntent(originalQuery: query, conceptGroups: [])
     }
 
-    let normalizedSupporting = supportingQueries.map(normalize).filter { !$0.isEmpty }
-    let originalRuleIDs = Set(
-      rules.filter { rule in
-        rule.aliases.contains(where: { contains($0, in: normalizedQuery) })
-      }.map(\.id))
-    // Expansion phrases are retrieval hints, not additional mandatory intent. Only consult the
-    // first translated phrase when the original query cannot be mapped by the local lexicon.
-    let translatedFallback = normalizedSupporting.first(where: { !hasCJK($0) }) ?? ""
-    let semanticCorpus =
-      originalRuleIDs.isEmpty
-      ? [normalizedQuery, translatedFallback].filter { !$0.isEmpty }.joined(separator: " ")
-      : normalizedQuery
+    // Translated and expanded queries are retrieval hints only. They must never add a new
+    // mandatory concept group that was not present in the user's original text.
+    let semanticCorpus = normalizedQuery
     var groups: [SearchConceptGroup] = []
     var coveredTokens = Set<String>()
     for rule in rules where rule.aliases.contains(where: { contains($0, in: semanticCorpus) }) {
@@ -162,9 +167,20 @@ enum SearchRelevanceEngine {
       }
     }
 
-    let literalSource =
-      hasCJK(normalizedQuery)
-      ? (normalizedSupporting.first(where: { !hasCJK($0) }) ?? normalizedQuery) : normalizedQuery
+    if groups.isEmpty {
+      let supportingAliases = supportingQueries.map(normalize).filter { !$0.isEmpty }
+      return SearchIntent(
+        originalQuery: query,
+        conceptGroups: [
+          SearchConceptGroup(
+            id: "literal.query", label: query,
+            aliases: unique(
+              [normalizedQuery] + tokens(normalizedQuery) + supportingAliases
+                + supportingAliases.flatMap(tokens)))
+        ])
+    }
+
+    let literalSource = normalizedQuery
     let queryTokens = tokens(literalSource).filter {
       $0.count > 1 && !stopWords.contains($0) && !coveredTokens.contains($0)
         && !(hasCJK($0) && !groups.isEmpty)
@@ -175,13 +191,6 @@ enum SearchRelevanceEngine {
       groups.append(SearchConceptGroup(id: id, label: token, aliases: literalAliases(token)))
     }
 
-    if groups.isEmpty {
-      groups = [
-        SearchConceptGroup(
-          id: "literal.query", label: query,
-          aliases: unique([normalizedQuery] + tokens(normalizedQuery)))
-      ]
-    }
     return SearchIntent(originalQuery: query, conceptGroups: groups)
   }
 
@@ -320,18 +329,37 @@ enum SearchRelevanceEngine {
 
   static func rank(
     _ assets: [MediaAsset], query: String, mode: SearchRelevanceMode,
-    supportingQueries: [String] = []
+    supportingQueries: [String] = [], inputLanguage: AppLanguage? = nil,
+    interfaceLanguage: AppLanguage = .english
   ) -> [MediaAsset] {
     let searchIntent = intent(for: query, supportingQueries: supportingQueries)
+    let detectedInput =
+      inputLanguage
+      ?? MultilingualQueryEngine.detectLanguage(in: query, fallback: interfaceLanguage)
     return assets.compactMap { asset -> MediaAsset? in
       let assessment = assess(asset, intent: searchIntent, mode: mode)
       guard assessment.eligible else { return nil }
       var ranked = asset
+      let language = resultLanguage(
+        for: asset, fallback: detectedInput, interfaceLanguage: interfaceLanguage)
+      let languagePriority = MultilingualQueryEngine.languagePriority(
+        language, input: detectedInput, interface: interfaceLanguage)
+      let languageBonus: Double =
+        switch languagePriority {
+        case 0: 0.035
+        case 1: 0.025
+        case 2: 0.015
+        default: 0
+        }
       ranked.originalMetadata["providerRelevanceScore"] = String(asset.relevanceScore)
       ranked.originalMetadata["localRelevanceScore"] = String(assessment.score)
+      ranked.originalMetadata["resultLanguage"] = language.rawValue
+      ranked.originalMetadata["resultLanguagePriority"] = String(languagePriority)
       ranked.originalMetadata["conceptCoverage"] =
         "\(assessment.coveredGroupIDs.count)/\(assessment.totalGroupCount)"
-      ranked.relevanceScore = assessment.score
+      // Apply language only after semantic eligibility. It can break close ties but can never
+      // rescue an item that failed the user's core concept groups.
+      ranked.relevanceScore = assessment.score + languageBonus
       return ranked
     }.sorted {
       if $0.relevanceScore != $1.relevanceScore { return $0.relevanceScore > $1.relevanceScore }
@@ -340,6 +368,44 @@ enum SearchRelevanceEngine {
       if leftProvider != rightProvider { return leftProvider > rightProvider }
       return $0.stableID < $1.stableID
     }
+  }
+
+  private static func resultLanguage(
+    for asset: MediaAsset, fallback: AppLanguage, interfaceLanguage: AppLanguage
+  ) -> AppLanguage {
+    let metadataKeys = ["language", "languages", "lang", "contentLanguage"]
+    for key in metadataKeys {
+      guard
+        let raw = asset.originalMetadata.first(where: {
+          $0.key.caseInsensitiveCompare(key) == .orderedSame
+        })?.value.lowercased()
+      else { continue }
+      if let exact = AppLanguage.allCases.first(where: {
+        raw == $0.rawValue.lowercased() || raw.hasPrefix($0.rawValue.lowercased() + "-")
+      }) {
+        return exact
+      }
+      if raw.contains("chinese") || raw.contains("中文") { return .simplifiedChinese }
+      if raw.contains("english") { return .english }
+      if raw.contains("spanish") { return .spanish }
+      if raw.contains("portuguese") { return .brazilianPortuguese }
+      if raw.contains("japanese") { return .japanese }
+      if raw.contains("korean") { return .korean }
+      if raw.contains("german") { return .german }
+      if raw.contains("french") { return .french }
+      if raw.contains("russian") { return .russian }
+    }
+    let visible = [asset.title, asset.description ?? ""].joined(separator: " ")
+    let detected = MultilingualQueryEngine.detectLanguage(in: visible, fallback: fallback)
+    if detected != fallback || visible.unicodeScalars.contains(where: { $0.value > 127 }) {
+      return detected
+    }
+    if let raw = asset.originalMetadata["matchedQueryLanguage"],
+      let matched = AppLanguage(rawValue: raw)
+    {
+      return matched
+    }
+    return MultilingualQueryEngine.detectLanguage(in: visible, fallback: interfaceLanguage)
   }
 
   private static func metadataText(_ metadata: [String: String], keys: [String]) -> String {
@@ -389,6 +455,13 @@ enum SearchRelevanceEngine {
   private static func minimumConceptWindow(
     _ groups: [SearchConceptGroup], in normalizedText: String
   ) -> Int? {
+    if hasCJK(normalizedText),
+      groups.allSatisfy({ group in
+        group.aliases.contains(where: { contains($0, in: normalizedText) })
+      })
+    {
+      return 1
+    }
     let haystack = tokens(normalizedText)
     guard !haystack.isEmpty, !groups.isEmpty else { return nil }
 

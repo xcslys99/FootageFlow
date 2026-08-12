@@ -10,7 +10,7 @@
 
 [下载 macOS 或 Windows 最新正式版](https://github.com/xcslys99/FootageFlow/releases/latest) · [查看全部版本](https://github.com/xcslys99/FootageFlow/releases)
 
-FootageFlow 注重隐私，适合历史、国家、财经、人物、科普、纪录片和短视频创作。FootageFlow v0.7.1 正式支持 **macOS 15+ Apple Silicon** 和 **Windows 11 x64**。两个版本共用全部 17 个搜索 Provider、分页、统一 Metadata/Rights、智能关键词规则、本地相关性重排、创作者输出元数据、来源 Sidecar、项目持久化和版本判断核心。
+FootageFlow 注重隐私，适合历史、国家、财经、人物、科普、纪录片和短视频创作。FootageFlow v0.7.2 正式支持 **macOS 15+ Apple Silicon** 和 **Windows 11 x64**。两个版本共用全部 17 个搜索 Provider、十语复合主题检索、分页、统一 Metadata/Rights、本地相关性重排、创作者输出元数据、来源 Sidecar、项目持久化和版本判断核心。
 
 ## FootageFlow 的两种核心用法
 
@@ -39,7 +39,7 @@ FootageFlow 注重隐私，适合历史、国家、财经、人物、科普、�
 ## 创作者工作流
 
 - **只下载需要的片段：** 链接解析后输入开始/结束时间，或使用轻量范围控件；任务仍进入原有下载管理器。
-- **自动扩展搜索关键词：** 最多生成 5 条可见、可编辑的多语言查询，并限制每个 Provider 的请求预算。智能搜索扩展使用本地规则，不需要付费 AI API。
+- **用十种语言搜索复合主题：** 每次搜索都会保持完整意图，并生成英语、简体中文、繁体中文、西班牙语、巴西葡萄牙语、日语、韩语、德语、法语和俄语查询。默认显示输入语言和英语；点击“查看全部语言”可编辑全部查询。不使用付费 AI API。
 - **输出剪辑兼容文件：** 保留原格式、生成 H.264/AAC/yuv420p 且支持 fast-start 的 MP4，或提取 M4A 音频；完成前会验证兼容输出。
 - **在本机检测复制的媒体链接：** 剪贴板检测默认关闭，仅在 FootageFlow 处于活动状态时运行，不上传剪贴板内容。
 - **搜索 Openverse：** 查找开放授权的图片和音频，并保留每项实际提供的许可与署名元数据。
@@ -48,7 +48,7 @@ FootageFlow 注重隐私，适合历史、国家、财经、人物、科普、�
 ## 已实现功能
 
 - 并发搜索 17 个来源，包括 Pexels、Pixabay、Wikimedia Commons、Internet Archive、YouTube、NASA、Library of Congress、National Archives、Europeana、PeerTube/SepiaSearch、Coverr、Vimeo、Openverse 和 Dailymotion
-- 可见、可编辑、可关闭的智能搜索扩展，并对 Provider 查询数量设上限
+- 可见、可编辑、可关闭的十语复合查询；输入语言和英语还可各增加最多两条视觉扩展，总量不超过 14 条
 - 两阶段检索与本地概念相关性重排，可选择精准、均衡或宽泛模式；默认“均衡”会过滤只匹配复合主题中一个宽泛概念的结果
 - Provider 独立分页和“加载更多”；追加结果不会清空已有列表，下一页失败也不会丢失已加载素材
 - “链接下载”可一次解析一个或多个公开媒体链接，选择完整/片段与输出预设，并将任务送入原有下载管理器
@@ -85,15 +85,15 @@ FootageFlow 注重隐私，适合历史、国家、财经、人物、科普、�
 
 ## 在 macOS 安装
 
-1. 从 Releases 下载 `FootageFlow-0.7.1-macOS-arm64.dmg`。
+1. 从 Releases 下载 `FootageFlow-0.7.2-macOS-arm64.dmg`。
 2. 打开 DMG，把 FootageFlow 拖入“应用程序”。
-3. 打开 FootageFlow。v0.7.1 使用 Ad Hoc 签名，尚未公证；如果首次启动被系统拦截，请前往“系统设置 → 隐私与安全性 → 仍要打开”。
+3. 打开 FootageFlow。v0.7.2 使用 Ad Hoc 签名，尚未公证；如果首次启动被系统拦截，请前往“系统设置 → 隐私与安全性 → 仍要打开”。
 
 日常使用不需要打开终端。
 
 ## 在 Windows 安装
 
-1. 在 Windows 11 x64 电脑上下载 `FootageFlow-Setup-0.7.1-Windows-x64.exe`。
+1. 在 Windows 11 x64 电脑上下载 `FootageFlow-Setup-0.7.2-Windows-x64.exe`。
 2. 使用同时提供的 `.sha256` 文件核对安装包，然后双击安装。
 3. 完成安装向导，从“开始”菜单打开 FootageFlow。
 

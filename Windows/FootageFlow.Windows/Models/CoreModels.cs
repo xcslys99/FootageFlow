@@ -31,6 +31,7 @@ public sealed class CoreRequest
     public string? RecordID { get; init; }
     public string? LocalPath { get; init; }
     public IReadOnlyList<string>? Keywords { get; init; }
+    public IReadOnlyList<SearchKeyword>? KeywordDetails { get; init; }
     public int? ResultCount { get; init; }
     public int? SegmentIndex { get; init; }
     public string? ExternalToolOutputBase64 { get; init; }
@@ -120,6 +121,7 @@ public sealed class SearchHistoryRecord
     public Guid Id { get; init; }
     public string OriginalQuery { get; init; } = "";
     public IReadOnlyList<string> Keywords { get; init; } = [];
+    public IReadOnlyList<SearchKeyword>? KeywordDetails { get; init; }
     public IReadOnlyList<string> ProviderIDs { get; init; } = [];
     public Guid? ProjectID { get; init; }
     public DateTimeOffset SearchedAt { get; init; }
@@ -203,6 +205,9 @@ public sealed class SearchKeyword
     public Guid Id { get; set; }
     public string Text { get; set; } = "";
     public bool IsEnabled { get; set; }
+    public string? Language { get; set; }
+    public string? Origin { get; set; }
+    public int? Priority { get; set; }
 }
 
 public sealed class MediaAsset : ObservableObject

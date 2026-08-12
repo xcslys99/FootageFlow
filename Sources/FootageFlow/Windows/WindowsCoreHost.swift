@@ -27,6 +27,7 @@
     var recordID: String? = nil
     var localPath: String? = nil
     var keywords: [String]? = nil
+    var keywordDetails: [SearchKeyword]? = nil
     var resultCount: Int? = nil
     var segmentIndex: Int? = nil
     var externalToolOutputBase64: String? = nil
@@ -156,7 +157,9 @@
         return WindowsCoreResponse(
           id: request.id, success: true,
           assets: SearchRelevanceEngine.rank(
-            assets, query: query, mode: mode, supportingQueries: request.keywords ?? []))
+            assets, query: query, mode: mode, supportingQueries: request.keywords ?? [],
+            inputLanguage: request.keywordDetails?.first(where: { $0.origin == .input })?.language,
+            interfaceLanguage: request.language.flatMap(AppLanguage.init(rawValue:)) ?? .english))
       case "providerTest":
         return await providerTest(request)
       case "keywords":
@@ -164,7 +167,8 @@
         return WindowsCoreResponse(
           id: request.id, success: true,
           keywords: KeywordEngine.keywords(
-            for: query, smartExpansion: request.smartExpansion ?? true))
+            for: query, smartExpansion: request.smartExpansion ?? true,
+            interfaceLanguage: request.language.flatMap(AppLanguage.init(rawValue:)) ?? .english))
       case "splitScript":
         guard let query = nonempty(request.query) else { return missingQuery(request.id) }
         return WindowsCoreResponse(
@@ -268,7 +272,8 @@
         store.addHistory(
           SearchHistoryRecord(
             originalQuery: query, keywords: request.keywords ?? [], providers: providers,
-            projectID: uuid(request.projectID), resultCount: max(0, request.resultCount ?? 0)))
+            projectID: uuid(request.projectID), resultCount: max(0, request.resultCount ?? 0),
+            keywordDetails: request.keywordDetails))
       case "deleteHistory":
         guard let id = uuid(request.recordID) else { return invalidRecordID(request.id) }
         store.deleteHistory(id: id)

@@ -143,26 +143,26 @@ import Foundation
       #expect(json["clipDurationSeconds"] as? Double == 10)
     }
 
-    @Test("smart expansion is multilingual bounded and optional")
+    @Test("smart expansion builds the shared ten-language plan and remains bounded")
     func smartExpansion() {
       let cases = [
         ("hamburger", "cheeseburger"), ("fries", "potato fries"),
-        ("coffee shop", "barista making coffee"), ("city night", "night traffic"),
+        ("coffee shop", "barista making coffee"), ("city night", "downtown night traffic"),
         ("factory worker", "manufacturing worker"),
-        ("Apollo 11", "1969 moon landing"), ("俄乌战争", "Ukraine conflict"),
+        ("Apollo 11", "1969 moon landing"), ("俄乌战争", "Russian invasion of Ukraine"),
         ("台湾美食", "Taiwan street food"), ("台灣美食", "Taiwan street food"),
         ("台湾料理", "Taiwan cuisine"), ("comida taiwanesa", "Taiwan cuisine"),
-        ("российско-украинская война", "Ukraine conflict"),
+        ("российско-украинская война", "Russian invasion of Ukraine"),
       ]
       for (query, expected) in cases {
         let values = KeywordEngine.keywords(for: query).map(\.text)
         #expect(values.first == query)
         #expect(values.contains(expected))
-        #expect(values.count <= 5)
+        #expect(values.count >= 10)
+        #expect(values.count <= 14)
       }
       #expect(
-        KeywordEngine.keywords(for: "coffee shop", smartExpansion: false).map(\.text)
-          == ["coffee shop"])
+        KeywordEngine.keywords(for: "coffee shop", smartExpansion: false).count == 10)
       let languageCases = [
         ("城市夜景", "city night"), ("都市夜景", "city night"),
         ("夜の街", "city night"), ("도시 야경", "city night"),
@@ -185,10 +185,10 @@ import Foundation
       let values = KeywordEngine.keywords(for: "Apollo 11")
       #expect(
         KeywordEngine.providerQueries(from: values, provider: .youtube, mode: .publicAPI).count
-          == 2)
+          >= 10)
       #expect(
         KeywordEngine.providerQueries(from: values, provider: .wikimedia, mode: .publicAPI).count
-          <= 4)
+          <= 14)
       #expect(
         KeywordEngine.providerQueries(from: values, provider: .europeana, mode: .limited).count
           == 1)
@@ -205,6 +205,26 @@ import Foundation
       #expect(LinkURLParser.mediaURLs(from: "secret password text").isEmpty)
       #expect(LinkURLParser.mediaURLs(from: "http://127.0.0.1/private").isEmpty)
       #expect(LinkURLParser.mediaURLs(from: "https://example.com/file.mp4").count == 1)
+    }
+
+    @Test("legacy history and keyword JSON decode without multilingual fields")
+    func legacySearchHistory() throws {
+      let oldKeyword = Data(
+        #"{"id":"00000000-0000-0000-0000-000000000001","text":"广州美食","isEnabled":true}"#.utf8)
+      let decodedKeyword = try JSONDecoder().decode(SearchKeyword.self, from: oldKeyword)
+      #expect(decodedKeyword.language == nil)
+      #expect(decodedKeyword.origin == nil)
+
+      let record = SearchHistoryRecord(
+        originalQuery: "广州美食", keywords: ["广州美食"], providers: [.wikimedia],
+        projectID: nil, resultCount: 3)
+      let data = try JSONEncoder().encode(record)
+      var object = try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
+      object.removeValue(forKey: "keywordDetails")
+      let legacy = try JSONSerialization.data(withJSONObject: object)
+      let decoded = try JSONDecoder().decode(SearchHistoryRecord.self, from: legacy)
+      #expect(decoded.keywords == ["广州美食"])
+      #expect(decoded.keywordDetails == nil)
     }
 
     @Test("update checker compares releases, preserves notes, and trusts only official pages")

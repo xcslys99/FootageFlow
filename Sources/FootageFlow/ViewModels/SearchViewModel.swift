@@ -1,5 +1,33 @@
 import Foundation
 
+private actor SearchRequestLimiter {
+  static let shared = SearchRequestLimiter(limit: 12)
+  private let limit: Int
+  private var active = 0
+  private var waiters: [CheckedContinuation<Void, Never>] = []
+
+  init(limit: Int) { self.limit = limit }
+
+  func acquire() async {
+    if active < limit {
+      active += 1
+      return
+    }
+    await withCheckedContinuation { waiters.append($0) }
+  }
+
+  func release() {
+    if waiters.isEmpty { active = max(0, active - 1) } else { waiters.removeFirst().resume() }
+  }
+}
+
+private struct ProviderQueryOutcome: Sendable {
+  let index: Int
+  let keyword: SearchKeyword
+  let page: ProviderPage?
+  let error: Error?
+}
+
 @MainActor
 final class SearchViewModel: ObservableObject {
   @Published var query = ""
@@ -38,6 +66,8 @@ final class SearchViewModel: ObservableObject {
   private var store: DataStore?
   private var candidateAssets: [MediaAsset] = []
   private var relevanceQueries: [String] = []
+  private var searchInputLanguage: AppLanguage = .english
+  private var searchInterfaceLanguage: AppLanguage = .english
   private var pagination: [ProviderID: [ProviderQueryPageState]] = [:]
   private var loadMoreInFlight: [ProviderID: ProviderQueryPageState] = [:]
   private var searchGeneration = UUID()
@@ -85,23 +115,43 @@ final class SearchViewModel: ObservableObject {
     }
   }
 
-  func prepareKeywords(translated: String? = nil) {
-    keywords = KeywordEngine.keywords(
-      for: query, translated: translated, smartExpansion: smartExpansionEnabled)
+  @discardableResult
+  func prepareKeywords(
+    translated: String? = nil, interfaceLanguage: AppLanguage = .english
+  ) -> MultilingualQueryPlan {
+    let plan = MultilingualQueryEngine.plan(
+      for: query, interfaceLanguage: interfaceLanguage, translatedSupplement: translated,
+      includeVisualExpansions: smartExpansionEnabled)
+    keywords = plan.keywords
+    searchInputLanguage = plan.inputLanguage
+    searchInterfaceLanguage = plan.interfaceLanguage
+    return plan
   }
   func acceptTranslation(_ text: String) {
     keywords = KeywordEngine.mergeTranslation(text, into: keywords)
   }
-  func addKeyword() { keywords.append(SearchKeyword(text: "")) }
+  func restoreKeywords(_ restored: [SearchKeyword], interfaceLanguage: AppLanguage) {
+    keywords = restored
+    searchInterfaceLanguage = interfaceLanguage
+    searchInputLanguage =
+      restored.first(where: { $0.origin == .input })?.language
+      ?? MultilingualQueryEngine.detectLanguage(in: query, fallback: interfaceLanguage)
+  }
+  func addKeyword() {
+    keywords.append(
+      SearchKeyword(
+        text: "", language: searchInterfaceLanguage, origin: .userAdded, priority: 99))
+  }
   func removeKeyword(_ id: UUID) { keywords.removeAll { $0.id == id } }
 
   func search(
     forceRefresh: Bool = false, only providerID: ProviderID? = nil,
     directOverrides: Set<ProviderID> = []
   ) {
-    let active = keywords.filter {
+    let activeKeywords = keywords.filter {
       $0.isEnabled && !$0.text.trimmingCharacters(in: .whitespaces).isEmpty
-    }.map(\.text)
+    }
+    let active = activeKeywords.map(\.text)
     relevanceQueries = active
     guard !active.isEmpty else {
       prepareKeywords()
@@ -157,33 +207,36 @@ final class SearchViewModel: ObservableObject {
             var nextPages: [ProviderQueryPageState] = []
             var totalResults = 0
             do {
-              let providerKeywords = KeywordEngine.providerQueries(
-                from: active.map { SearchKeyword(text: $0) }, provider: provider.info.id,
-                mode: provider.info.mode)
-              for (queryIndex, keyword) in providerKeywords.enumerated() {
-                try Task.checkCancellation()
-                let request = SearchRequest(
-                  query: keyword, mediaType: filterSnapshot.0, orientation: filterSnapshot.1,
-                  resolution: filterSnapshot.2, duration: filterSnapshot.3,
-                  yearFrom: filterSnapshot.4, yearTo: filterSnapshot.5,
-                  downloadableOnly: filterSnapshot.6, pageSize: 16)
-                let page: ProviderPage
-                if !forceRefresh, provider.info.id != .nationalArchives,
-                  let cached = await SearchCache.shared.page(
-                    provider: provider.info.id, request: request)
-                {
-                  page = cached
-                } else {
-                  page = try await provider.searchPage(request, continuation: nil)
-                  if provider.info.id != .nationalArchives {
-                    await SearchCache.shared.store(
-                      page, provider: provider.info.id, request: request)
-                  }
+              let providerKeywords = KeywordEngine.providerKeywordPlan(
+                from: activeKeywords, provider: provider.info.id, mode: provider.info.mode)
+              let outcomes = await Self.searchQueries(
+                providerKeywords, provider: provider, forceRefresh: forceRefresh,
+                filter: filterSnapshot)
+              var firstError: Error?
+              for outcome in outcomes.sorted(by: { $0.index < $1.index }) {
+                if let error = outcome.error {
+                  firstError = firstError ?? error
+                  await AppLogger.shared.write(
+                    provider: provider.info.id, requestType: "search", error: error)
+                  continue
                 }
+                guard let page = outcome.page else { continue }
+                let request = SearchRequest(
+                  query: outcome.keyword.text, mediaType: filterSnapshot.0,
+                  orientation: filterSnapshot.1, resolution: filterSnapshot.2,
+                  duration: filterSnapshot.3, yearFrom: filterSnapshot.4,
+                  yearTo: filterSnapshot.5, downloadableOnly: filterSnapshot.6, pageSize: 16)
                 combined += page.assets.map { asset in
                   var ranked = asset
-                  ranked.relevanceScore -= Double(queryIndex) * 0.08
-                  ranked.originalMetadata["matchedQuery"] = keyword
+                  ranked.originalMetadata["matchedQuery"] = outcome.keyword.text
+                  if let language = outcome.keyword.language {
+                    ranked.originalMetadata["matchedQueryLanguage"] = language.rawValue
+                  }
+                  if let origin = outcome.keyword.origin {
+                    ranked.originalMetadata["matchedQueryOrigin"] = origin.rawValue
+                  }
+                  ranked.originalMetadata["matchedQueryPriority"] = String(
+                    outcome.keyword.priority ?? outcome.index)
                   return ranked
                 }
                 if let continuation = page.continuation {
@@ -192,6 +245,7 @@ final class SearchViewModel: ObservableObject {
                 }
                 if let total = page.totalResults { totalResults += total }
               }
+              if combined.isEmpty, let firstError { throw firstError }
               return ProviderSearchResult(
                 provider: provider.info.id, assets: combined, error: nil, state: nil,
                 mode: provider.info.mode, pagination: nextPages,
@@ -382,7 +436,8 @@ final class SearchViewModel: ObservableObject {
     }
     assets = SearchRelevanceEngine.rank(
       candidateAssets, query: relevanceQuery, mode: relevanceMode,
-      supportingQueries: relevanceQueries)
+      supportingQueries: relevanceQueries, inputLanguage: searchInputLanguage,
+      interfaceLanguage: searchInterfaceLanguage)
   }
 
   private func setInitialState(for provider: any MediaProvider) {
@@ -402,7 +457,83 @@ final class SearchViewModel: ObservableObject {
     guard let store else { return }
     let record = SearchHistoryRecord(
       originalQuery: query, keywords: active, providers: selectedProviders,
-      projectID: currentProjectID, resultCount: assets.count)
+      projectID: currentProjectID, resultCount: assets.count,
+      keywordDetails: keywords.filter(\.isEnabled))
     store.addHistory(record)
+  }
+
+  nonisolated private static func searchQueries(
+    _ keywords: [SearchKeyword], provider: any MediaProvider, forceRefresh: Bool,
+    filter: (
+      MediaType, AssetOrientation, ResolutionFilter, DurationFilter, Int?, Int?, Bool
+    )
+  ) async -> [ProviderQueryOutcome] {
+    guard !keywords.isEmpty else { return [] }
+    let concurrency = provider.info.mode == .directSearch || provider.info.mode == .ytDLP ? 1 : 2
+    return await withTaskGroup(of: ProviderQueryOutcome.self) { group in
+      var nextIndex = 0
+      func enqueue(_ index: Int) {
+        let keyword = keywords[index]
+        group.addTask {
+          if Task.isCancelled {
+            return ProviderQueryOutcome(
+              index: index, keyword: keyword, page: nil, error: ProviderError.cancelled)
+          }
+          await SearchRequestLimiter.shared.acquire()
+          if Task.isCancelled {
+            await SearchRequestLimiter.shared.release()
+            return ProviderQueryOutcome(
+              index: index, keyword: keyword, page: nil, error: ProviderError.cancelled)
+          }
+          let request = SearchRequest(
+            query: keyword.text, mediaType: filter.0, orientation: filter.1,
+            resolution: filter.2, duration: filter.3, yearFrom: filter.4,
+            yearTo: filter.5, downloadableOnly: filter.6, pageSize: 16)
+          do {
+            let page: ProviderPage
+            if !forceRefresh, provider.info.id != .nationalArchives,
+              let cached = await SearchCache.shared.page(
+                provider: provider.info.id, request: request)
+            {
+              page = cached
+            } else {
+              page = try await provider.searchPage(request, continuation: nil)
+              if provider.info.id != .nationalArchives {
+                await SearchCache.shared.store(
+                  page, provider: provider.info.id, request: request)
+              }
+            }
+            await SearchRequestLimiter.shared.release()
+            return ProviderQueryOutcome(index: index, keyword: keyword, page: page, error: nil)
+          } catch {
+            await SearchRequestLimiter.shared.release()
+            return ProviderQueryOutcome(index: index, keyword: keyword, page: nil, error: error)
+          }
+        }
+      }
+
+      while nextIndex < min(concurrency, keywords.count) {
+        enqueue(nextIndex)
+        nextIndex += 1
+      }
+      var results: [ProviderQueryOutcome] = []
+      var halted = false
+      for await outcome in group {
+        results.append(outcome)
+        if let providerError = outcome.error as? ProviderError {
+          switch providerError {
+          case .rateLimited, .temporarilyBlocked, .invalidAPIKey, .missingAPIKey:
+            halted = true
+          default:
+            break
+          }
+        }
+        if nextIndex < keywords.count, !Task.isCancelled, !halted {
+          enqueue(nextIndex)
+          nextIndex += 1
+        }
+      }
+      return results
+    }
   }
 }

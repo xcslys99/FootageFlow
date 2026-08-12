@@ -12,6 +12,7 @@ struct QuickSearchView: View {
   @State private var showHistory = false
   @State private var selection = AssetSelection()
   @State private var showAdvancedFilters = false
+  @State private var showAllSearchLanguages = false
   @State private var showNewProject = false
   @State private var newProjectName = ""
 
@@ -144,17 +145,23 @@ struct QuickSearchView: View {
           Toggle(tr("search.smartExpansion"), isOn: $viewModel.smartExpansionEnabled)
             .toggleStyle(.checkbox)
             .onChange(of: viewModel.smartExpansionEnabled) { _, _ in
-              viewModel.prepareKeywords()
+              viewModel.prepareKeywords(interfaceLanguage: localization.language)
             }
         }
         VStack(alignment: .leading, spacing: 5) {
-          ForEach($viewModel.keywords) { $keyword in
+          ForEach(visibleKeywordIndices, id: \.self) { index in
+            let keyword = $viewModel.keywords[index]
             HStack(spacing: 6) {
-              Toggle("", isOn: $keyword.isEnabled).labelsHidden()
-              TextField(tr("search.keywordPlaceholder"), text: $keyword.text).textFieldStyle(
+              Toggle("", isOn: keyword.isEnabled).labelsHidden()
+              if let language = keyword.wrappedValue.language {
+                Text(language.displayName)
+                  .font(.caption2).foregroundStyle(.secondary)
+                  .frame(width: 78, alignment: .leading)
+              }
+              TextField(tr("search.keywordPlaceholder"), text: keyword.text).textFieldStyle(
                 .roundedBorder)
               Button {
-                viewModel.removeKeyword(keyword.id)
+                viewModel.removeKeyword(keyword.wrappedValue.id)
               } label: {
                 Image(systemName: "xmark.circle.fill")
               }.buttonStyle(.plain).foregroundStyle(.secondary)
@@ -165,6 +172,16 @@ struct QuickSearchView: View {
           } label: {
             Label(tr("search.addKeyword"), systemImage: "plus")
           }.buttonStyle(.plain)
+          if viewModel.keywords.count > visibleKeywordIndices.count || showAllSearchLanguages {
+            Button {
+              withAnimation { showAllSearchLanguages.toggle() }
+            } label: {
+              Label(
+                tr(showAllSearchLanguages ? "search.hideAllLanguages" : "search.showAllLanguages"),
+                systemImage: showAllSearchLanguages ? "chevron.up" : "globe")
+            }
+            .buttonStyle(.plain)
+          }
         }
       }
       HStack {
@@ -432,7 +449,7 @@ struct QuickSearchView: View {
   }
 
   private func beginSearch() {
-    viewModel.prepareKeywords()
+    viewModel.prepareKeywords(interfaceLanguage: localization.language)
     if KeywordEngine.containsChinese(viewModel.query) {
       pendingTranslation = viewModel.query
       if translationConfiguration == nil {
@@ -449,9 +466,26 @@ struct QuickSearchView: View {
 
   private func useHistory(_ history: SearchHistoryRecord) {
     viewModel.query = history.originalQuery
-    viewModel.keywords = history.keywords.map { SearchKeyword(text: $0) }
+    let restored =
+      history.keywordDetails
+      ?? history.keywords.map {
+        SearchKeyword(
+          text: $0,
+          language: MultilingualQueryEngine.detectLanguage(
+            in: $0, fallback: localization.language),
+          origin: .userAdded, priority: 99)
+      }
+    viewModel.restoreKeywords(restored, interfaceLanguage: localization.language)
     viewModel.currentProjectID = history.projectID
     showHistory = false
     viewModel.search()
+  }
+
+  private var visibleKeywordIndices: [Int] {
+    guard !showAllSearchLanguages else { return Array(viewModel.keywords.indices) }
+    return viewModel.keywords.indices.filter { index in
+      let keyword = viewModel.keywords[index]
+      return keyword.origin == .input || keyword.language == .english
+    }
   }
 }

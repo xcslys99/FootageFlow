@@ -189,10 +189,11 @@
               <CheckBox Content="{Binding SmartExpansionText}" IsChecked="{Binding SmartExpansionEnabled}" VerticalAlignment="Center" />
               <Button Content="{Binding RegenerateKeywordsText}" Command="{Binding RegenerateKeywordsCommand}" />
               <Button Content="{Binding AddKeywordText}" Command="{Binding AddSearchKeywordCommand}" />
+              <Button Content="{Binding SearchLanguagesToggleText}" Command="{Binding ToggleSearchLanguagesCommand}" />
             </WrapPanel>
-            <ItemsControl ItemsSource="{Binding SearchKeywords}">
+            <ItemsControl ItemsSource="{Binding SearchKeywordsView}">
               <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
-              <ItemsControl.ItemTemplate><DataTemplate><Border Background="#E8F2FF" CornerRadius="10" Padding="7,4" Margin="0,5,6,0"><StackPanel Orientation="Horizontal"><CheckBox IsChecked="{Binding IsEnabled}" VerticalAlignment="Center" /><TextBox Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}" MinWidth="110" BorderThickness="0" Background="Transparent" Padding="3,0" /><Button Content="×" Command="{Binding DataContext.RemoveSearchKeywordCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" Padding="4,0" /></StackPanel></Border></DataTemplate></ItemsControl.ItemTemplate>
+              <ItemsControl.ItemTemplate><DataTemplate><Border Background="#E8F2FF" CornerRadius="10" Padding="7,4" Margin="0,5,6,0"><StackPanel Orientation="Horizontal"><CheckBox IsChecked="{Binding IsEnabled}" VerticalAlignment="Center" /><TextBlock Text="{Binding Language}" Foreground="{StaticResource SubtleTextBrush}" FontSize="10" Width="42" VerticalAlignment="Center" /><TextBox Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}" MinWidth="110" BorderThickness="0" Background="Transparent" Padding="3,0" /><Button Content="×" Command="{Binding DataContext.RemoveSearchKeywordCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" Padding="4,0" /></StackPanel></Border></DataTemplate></ItemsControl.ItemTemplate>
             </ItemsControl>
             <TextBlock Text="{Binding SearchStatus}" Margin="0,7,0,0" Foreground="{StaticResource SubtleTextBrush}" />
             <WrapPanel Margin="0,8,0,0">

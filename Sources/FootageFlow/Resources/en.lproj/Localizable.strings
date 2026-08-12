@@ -435,3 +435,5 @@
 "update.timeout" = "The update check timed out. Please try again.";
 "update.rateLimited" = "Update checks are temporarily rate limited. Please try again later.";
 "update.checkFailed" = "Unable to check for updates right now.";
+"search.showAllLanguages" = "View all languages";
+"search.hideAllLanguages" = "Show fewer languages";

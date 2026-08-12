@@ -416,3 +416,5 @@
 "update.timeout" = "Die Updatesuche hat zu lange gedauert. Bitte erneut versuchen.";
 "update.rateLimited" = "Die Updatesuche ist vorübergehend begrenzt. Bitte später erneut versuchen.";
 "update.checkFailed" = "Derzeit kann nicht nach Updates gesucht werden.";
+"search.showAllLanguages" = "Alle Sprachen anzeigen";
+"search.hideAllLanguages" = "Weniger Sprachen anzeigen";
