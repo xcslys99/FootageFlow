@@ -22,14 +22,29 @@ public partial class MainWindow : Window
         {
             if (asset is not null) new PreviewWindow(asset, _viewModel.T) { Owner = this }.Show();
         };
+        _viewModel.UpdateAvailable += ShowUpdateDialog;
         _clipboardTimer.Tick += (_, _) =>
         {
             if (!IsActive || !_viewModel.IsLinkDownloaderPage || !_viewModel.ClipboardDetectionEnabled) return;
             try { if (Clipboard.ContainsText()) _viewModel.CheckClipboardCandidate(Clipboard.GetText()); }
             catch { }
         };
-        Loaded += (_, _) => _clipboardTimer.Start();
+        Loaded += async (_, _) =>
+        {
+            _clipboardTimer.Start();
+            await _viewModel.CheckForUpdatesOnLaunchAsync();
+        };
         Closed += (_, _) => _clipboardTimer.Stop();
+    }
+
+    private void ShowUpdateDialog(AppReleaseInfo release)
+    {
+        var dialog = new UpdateWindow(release, _viewModel.CurrentVersion, _viewModel.T)
+        {
+            Owner = this
+        };
+        if (dialog.ShowDialog() == true) _viewModel.ViewUpdate(release);
+        else _viewModel.RemindLater(release);
     }
 
     private void LanguageButton_Click(object sender, RoutedEventArgs e)

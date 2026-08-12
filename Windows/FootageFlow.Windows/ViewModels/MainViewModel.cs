@@ -44,6 +44,8 @@ public sealed class MainViewModel : ObservableObject
     private string _keywordSourceQuery = "";
     private string _clipboardSuggestion = "";
     private string _ignoredClipboardValue = "";
+    private bool _isUpdateChecking;
+    private string _updateStatusCode = "";
 
     public MainViewModel()
     {
@@ -154,12 +156,14 @@ public sealed class MainViewModel : ObservableObject
             IgnoreClipboard();
         });
         OpenFeedbackCommand = new AsyncRelayCommand(value => OpenFeedbackAsync(value?.ToString()));
+        CheckForUpdatesCommand = new AsyncRelayCommand(_ => CheckForUpdatesAsync(manual: true), _ => !IsUpdateChecking);
         RefreshProviderModes();
         SearchStatus = T("search.initialStatus");
         _ = LoadDatabaseAsync();
     }
 
     public event Action<MediaAsset?>? PreviewRequested;
+    public event Action<AppReleaseInfo>? UpdateAvailable;
     public DownloadQueueService Downloads { get; }
     public ObservableCollection<ProviderOption> Providers { get; }
     public ObservableCollection<MediaAsset> Results { get; } = [];
@@ -221,6 +225,7 @@ public sealed class MainViewModel : ObservableObject
     public ICommand IgnoreClipboardCommand { get; }
     public ICommand DisableClipboardCommand { get; }
     public ICommand OpenFeedbackCommand { get; }
+    public ICommand CheckForUpdatesCommand { get; }
 
     public string CurrentPage
     {
@@ -367,6 +372,33 @@ public sealed class MainViewModel : ObservableObject
     public string DownloadRoot => _settings.Current.DownloadRoot;
     public string LanguageCode => _localization.Language;
     public string LanguageButton => $"🌐 {_localization.DisplayName}";
+    public string CurrentVersion
+    {
+        get
+        {
+            var version = typeof(MainViewModel).Assembly.GetName().Version;
+            return version is null ? "0.7.0" : $"{version.Major}.{version.Minor}.{Math.Max(0, version.Build)}";
+        }
+    }
+    public bool IsUpdateChecking
+    {
+        get => _isUpdateChecking;
+        private set
+        {
+            if (!Set(ref _isUpdateChecking, value)) return;
+            (CheckForUpdatesCommand as AsyncRelayCommand)?.RaiseCanExecuteChanged();
+        }
+    }
+    public string UpdateStatus => _updateStatusCode switch
+    {
+        "checking" => T("update.checking"),
+        "upToDate" => T("update.upToDate"),
+        "noNetwork" => T("update.noNetwork"),
+        "timeout" => T("update.timeout"),
+        "rateLimited" => T("update.rateLimited"),
+        "failed" => T("update.checkFailed"),
+        _ => ""
+    };
 
     public string T(string key) => _localization.Text(key);
     public string NavSearch => T("nav.quickSearch");
@@ -493,8 +525,74 @@ public sealed class MainViewModel : ObservableObject
     public string FeedbackStarPrompt => T("feedback.starPrompt");
     public string FeedbackStarButton => $"⭐ {T("feedback.viewGitHub")}";
     public string FeedbackPrivacy => T("feedback.privacy");
+    public string UpdateSettingsTitle => T("update.settingsTitle");
+    public string UpdateSettingsDetail => T("update.settingsDetail");
+    public string UpdateCurrentVersionLabel => T("update.currentVersion");
+    public string UpdateCheckNowText => T("update.checkNow");
 
     public void SetLanguage(string language) => _localization.SetLanguage(language);
+
+    public Task CheckForUpdatesOnLaunchAsync() => CheckForUpdatesAsync(manual: false);
+
+    public void RemindLater(AppReleaseInfo release)
+    {
+        _settings.Current.DeferredUpdateVersion = release.Version;
+        _settings.Current.DeferredUpdateUntil = DateTimeOffset.UtcNow.AddHours(24);
+        _settings.Save();
+    }
+
+    public void ViewUpdate(AppReleaseInfo release)
+    {
+        RemindLater(release);
+        ShellService.OpenUrl(release.PageURL);
+    }
+
+    private async Task CheckForUpdatesAsync(bool manual)
+    {
+        if (IsUpdateChecking) return;
+        IsUpdateChecking = true;
+        if (manual) SetUpdateStatus("checking");
+        try
+        {
+            var response = await _core.SendAsync(new CoreRequest
+            {
+                Action = "checkUpdate", Language = _settings.Current.Language,
+                DeferredUpdateVersion = _settings.Current.DeferredUpdateVersion,
+                DeferredUpdateUntil = _settings.Current.DeferredUpdateUntil,
+                ForceUpdatePrompt = manual
+            }, timeout: TimeSpan.FromSeconds(20));
+            if (!response.Success)
+            {
+                if (manual) SetUpdateStatus(response.ErrorCode switch
+                {
+                    "noNetwork" => "noNetwork", "timeout" => "timeout",
+                    "rateLimited" => "rateLimited", _ => "failed"
+                });
+                return;
+            }
+            if (response.UpdateStatus == "available" && response.Release is { } release)
+            {
+                if (manual) SetUpdateStatus("");
+                UpdateAvailable?.Invoke(release);
+            }
+            else if (manual) SetUpdateStatus("upToDate");
+        }
+        catch (CoreHostException error)
+        {
+            if (manual) SetUpdateStatus(error.Code == "timeout" ? "timeout" : "failed");
+        }
+        catch
+        {
+            if (manual) SetUpdateStatus("failed");
+        }
+        finally { IsUpdateChecking = false; }
+    }
+
+    private void SetUpdateStatus(string value)
+    {
+        _updateStatusCode = value;
+        OnPropertyChanged(nameof(UpdateStatus));
+    }
 
     public void CheckClipboardCandidate(string text)
     {

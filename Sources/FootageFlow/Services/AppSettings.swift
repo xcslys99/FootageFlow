@@ -5,6 +5,8 @@ enum AppSettings {
   static let downloadRootKey = "downloadRoot"
   static let smartExpansionKey = "smartSearchExpansionEnabled"
   static let clipboardDetectionKey = "clipboardMediaLinkDetectionEnabled"
+  static let deferredUpdateVersionKey = "deferredUpdateVersion"
+  static let deferredUpdateUntilKey = "deferredUpdateUntil"
   private static let migrationKey = "didMigrateFootageFinderSettings"
   private static let providerCatalogV3Key = "didEnableDiscoveryProvidersV3"
   private static let providerCatalogV5Key = "didEnableSearchExpansionProvidersV5"
@@ -71,5 +73,19 @@ enum AppSettings {
   static var clipboardDetectionEnabled: Bool {
     get { UserDefaults.standard.bool(forKey: clipboardDetectionKey) }
     set { UserDefaults.standard.set(newValue, forKey: clipboardDetectionKey) }
+  }
+
+  static var deferredUpdateVersion: String? {
+    UserDefaults.standard.string(forKey: deferredUpdateVersionKey)
+  }
+
+  static var deferredUpdateUntil: Date? {
+    UserDefaults.standard.object(forKey: deferredUpdateUntilKey) as? Date
+  }
+
+  static func deferUpdate(version: String, now: Date = .now) {
+    UserDefaults.standard.set(version, forKey: deferredUpdateVersionKey)
+    UserDefaults.standard.set(
+      AppUpdateReminderPolicy.deferredUntil(from: now), forKey: deferredUpdateUntilKey)
   }
 }

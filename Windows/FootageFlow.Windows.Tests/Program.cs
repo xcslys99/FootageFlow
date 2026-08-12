@@ -32,10 +32,19 @@ try
               recommendation.Contains("Europeana", StringComparison.Ordinal) &&
               recommendation.Contains("YouTube", StringComparison.Ordinal),
               $"Windows {language.Code} API recommendation localization");
+        Check(localization.Text("update.availableTitle").Contains("%@", StringComparison.Ordinal) &&
+              localization.Text("update.whatsNew") != "update.whatsNew",
+              $"Windows {language.Code} update localization");
     }
     localization.SetLanguage("ru");
+    settings.Current.DeferredUpdateVersion = "0.8.0";
+    settings.Current.DeferredUpdateUntil = DateTimeOffset.UtcNow.AddHours(24);
+    settings.Save();
     var reopened = new SettingsService(settingsFile: settingsPath);
     Check(reopened.Current.Language == "ru", "Windows language persistence");
+    Check(reopened.Current.DeferredUpdateVersion == "0.8.0" &&
+          reopened.Current.DeferredUpdateUntil is not null,
+          "Windows update reminder persistence");
     Check(!File.ReadAllText(settingsPath).Contains("local-test-value", StringComparison.Ordinal), "Settings exclude API keys");
 }
 finally
@@ -139,6 +148,15 @@ Check(roundTrip?.IsDirectlyDownloadable == true, "Direct-download availability m
 Check(roundTrip?.RightsKnown == true && roundTrip.OpenLicense, "RightsInfo JSON round trip");
 var sourceRecord = new DownloadRecord { ProviderRaw = "linkDownloader", SourceName = "YouTube" };
 Check(sourceRecord.DisplaySource == "YouTube", "Windows link download source display");
+var updateRelease = JsonSerializer.Deserialize<AppReleaseInfo>(JsonSerializer.Serialize(new AppReleaseInfo
+{
+    Version = "0.8.0", Title = "Fixture update", Notes = "Visible changes",
+    PageURL = "https://github.com/xcslys99/FootageFlow/releases/tag/v0.8.0",
+    PublishedAt = DateTimeOffset.UtcNow
+}));
+Check(updateRelease?.Version == "0.8.0" && updateRelease.Notes == "Visible changes" &&
+      updateRelease.PageURL.StartsWith("https://github.com/xcslys99/FootageFlow/releases/", StringComparison.Ordinal),
+      "Windows update release model round trip");
 var linkItem = new LinkDownloadItem("https://vimeo.com/123")
 {
     Analysis = new LinkAnalysisResult

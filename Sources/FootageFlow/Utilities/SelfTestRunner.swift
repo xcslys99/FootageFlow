@@ -275,6 +275,37 @@ enum SelfTestRunner {
     check(
       archiveDocs?.first?["identifier"] as? String == "item1", "Internet Archive fixture parse")
 
+    check(
+      SemanticAppVersion("0.7.0")! > SemanticAppVersion("0.6.0")!,
+      "Update semantic version comparison")
+    check(
+      SemanticAppVersion("1.0.0-beta.1")! < SemanticAppVersion("1.0.0")!,
+      "Update prerelease comparison")
+    let updateJSON = Data(
+      """
+      {"tag_name":"v0.8.0","name":"FootageFlow v0.8.0","body":"Added useful improvements.","html_url":"https://github.com/xcslys99/FootageFlow/releases/tag/v0.8.0","published_at":"2026-08-12T08:00:00Z","draft":false,"prerelease":false}
+      """.utf8)
+    if case .updateAvailable(let release) = try? AppUpdateService.evaluate(
+      data: updateJSON, currentVersion: "0.7.0")
+    {
+      check(release.version == "0.8.0", "Update release fixture parse")
+      check(release.notes.contains("useful improvements"), "Update release notes parse")
+    } else {
+      failed.append("Update release fixture parse")
+      failed.append("Update release notes parse")
+    }
+    let reminderNow = Date(timeIntervalSince1970: 1_700_000_000)
+    check(
+      !AppUpdateReminderPolicy.shouldPrompt(
+        releaseVersion: "0.8.0", currentVersion: "0.7.0", deferredVersion: "0.8.0",
+        deferredUntil: reminderNow.addingTimeInterval(60), now: reminderNow),
+      "Update remind-later suppression")
+    check(
+      AppUpdateReminderPolicy.shouldPrompt(
+        releaseVersion: "0.9.0", currentVersion: "0.7.0", deferredVersion: "0.8.0",
+        deferredUntil: reminderNow.addingTimeInterval(60), now: reminderNow),
+      "Newer update bypasses old deferral")
+
     print("SELF_TEST passed=\(passed) failed=\(failed.count)")
     for name in failed { print("FAIL \(name)") }
     return failed.isEmpty ? 0 : 1

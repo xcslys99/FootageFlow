@@ -14,4 +14,6 @@ public sealed class AppSettingsModel
     public bool CreatorWorkflowProvidersV6Added { get; set; }
     public bool SmartSearchExpansionEnabled { get; set; } = true;
     public bool ClipboardMediaLinkDetectionEnabled { get; set; }
+    public string? DeferredUpdateVersion { get; set; }
+    public DateTimeOffset? DeferredUpdateUntil { get; set; }
 }

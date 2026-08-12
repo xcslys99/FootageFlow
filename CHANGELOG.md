@@ -2,6 +2,27 @@
 
 All notable FootageFlow changes are documented here.
 
+## [0.7.0] - 2026-08-12
+
+### Added
+
+- Cross-platform update checks against the latest official GitHub Release at app launch
+- A native update dialog that shows the current/latest versions, publication date, and release notes before the user makes a choice
+- **View Update** to open the official release page and **Remind Later** to defer the same release for 24 hours
+- A manual **Check for Updates** action in macOS and Windows Settings
+- Localized update UI and readable network, timeout, and rate-limit states in all ten interface languages
+
+### Behavior and privacy
+
+- Updates are never forced, silently downloaded, or automatically installed
+- Startup failures remain unobtrusive; manual checks show a friendly status instead of a technical stack trace
+- Only the current app version and normal HTTPS request metadata are sent to GitHub's public Releases API; no API key, project, search, download, clipboard, or local-path data is included
+- The shared Swift core owns release parsing, semantic version comparison, official-URL validation, and reminder policy so macOS and Windows follow identical rules
+
+### Compatibility note
+
+- v0.6.0 and earlier cannot receive an in-app update notice retroactively because those binaries do not contain an update checker. One manual upgrade to v0.7.0 is required before future releases can be discovered in the app.
+
 ## [0.6.0] - 2026-08-12
 
 ### Added

@@ -3,6 +3,7 @@ import SwiftUI
 struct SettingsView: View {
   @EnvironmentObject private var localization: LocalizationManager
   @EnvironmentObject private var store: DataStore
+  @EnvironmentObject private var updates: AppUpdateController
   @State private var pexelsKey = ""
   @State private var pixabayKey = ""
   @State private var youtubeKey = ""
@@ -119,6 +120,22 @@ struct SettingsView: View {
               DesktopPlatform.shared.open(AppLogger.shared.logURL)
             }
             Text(tr("settings.logHelp")).font(.caption).foregroundStyle(.secondary)
+          }.padding(8)
+        }
+        GroupBox(tr("update.settingsTitle")) {
+          VStack(alignment: .leading, spacing: 10) {
+            LabeledContent(tr("update.currentVersion")) {
+              Text(FootageFlowVersion.current).foregroundStyle(.secondary)
+            }
+            HStack {
+              Button(tr("update.checkNow")) {
+                Task { await updates.checkManually() }
+              }
+              .disabled(updates.manualState == .checking)
+              if updates.manualState == .checking { ProgressView().controlSize(.small) }
+              Text(updateStatusText).foregroundStyle(updateStatusColor)
+            }
+            Text(tr("update.settingsDetail")).font(.caption).foregroundStyle(.secondary)
           }.padding(8)
         }
         GroupBox(tr("settings.privacy")) {
@@ -344,5 +361,25 @@ struct SettingsView: View {
     if capabilities.license.isAvailable { values.append(tr("capability.rights")) }
     if capabilities.download.isAvailable { values.append(tr("capability.download")) }
     return tr("settings.capabilities", values.joined(separator: " · "))
+  }
+
+  private var updateStatusText: String {
+    switch updates.manualState {
+    case .idle: ""
+    case .checking: tr("update.checking")
+    case .upToDate: tr("update.upToDate")
+    case .failed(.noNetwork): tr("update.noNetwork")
+    case .failed(.timedOut): tr("update.timeout")
+    case .failed(.rateLimited): tr("update.rateLimited")
+    case .failed(.serverUnavailable), .failed(.invalidResponse): tr("update.checkFailed")
+    }
+  }
+
+  private var updateStatusColor: Color {
+    switch updates.manualState {
+    case .upToDate: .green
+    case .failed: .red
+    default: .secondary
+    }
   }
 }

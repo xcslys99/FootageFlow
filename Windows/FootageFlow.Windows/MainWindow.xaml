@@ -376,6 +376,14 @@
             <TextBlock Text="This product uses the National Archives Catalog API but is not endorsed or certified by the National Archives and Records Administration." TextWrapping="Wrap" Foreground="{StaticResource SubtleTextBrush}" FontSize="11" Margin="0,0,0,10" />
             <TextBlock Text="{Binding DownloadFolderText}" FontWeight="SemiBold" FontSize="16" Margin="0,14,0,6" />
             <DockPanel><Button DockPanel.Dock="Right" Content="{Binding ChooseText}" Click="ChooseDownloadFolder_Click" /><TextBox Text="{Binding DownloadRoot, Mode=OneWay}" IsReadOnly="True" /></DockPanel>
+            <TextBlock Text="{Binding UpdateSettingsTitle}" FontWeight="SemiBold" FontSize="16" Margin="0,20,0,6" />
+            <TextBlock Text="{Binding UpdateSettingsDetail}" TextWrapping="Wrap" Foreground="{StaticResource SubtleTextBrush}" MaxWidth="850" HorizontalAlignment="Left" />
+            <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+              <TextBlock Text="{Binding UpdateCurrentVersionLabel}" FontWeight="SemiBold" VerticalAlignment="Center" />
+              <TextBlock Text="{Binding CurrentVersion}" Foreground="{StaticResource SubtleTextBrush}" VerticalAlignment="Center" Margin="6,0,12,0" />
+              <Button Content="{Binding UpdateCheckNowText}" Command="{Binding CheckForUpdatesCommand}" />
+              <TextBlock Text="{Binding UpdateStatus}" Foreground="{StaticResource SubtleTextBrush}" VerticalAlignment="Center" Margin="8,0,0,0" />
+            </StackPanel>
             <TextBlock Text="{Binding PrivacyTitle}" FontWeight="SemiBold" FontSize="16" Margin="0,20,0,6" />
             <TextBlock Text="{Binding PrivacyBody}" TextWrapping="Wrap" Foreground="{StaticResource SubtleTextBrush}" MaxWidth="850" HorizontalAlignment="Left" />
             <CheckBox Content="{Binding ClipboardSettingText}" IsChecked="{Binding ClipboardDetectionEnabled}" FontWeight="SemiBold" Margin="0,14,0,4" />

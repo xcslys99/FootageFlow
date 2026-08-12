@@ -207,6 +207,63 @@ import Foundation
       #expect(LinkURLParser.mediaURLs(from: "https://example.com/file.mp4").count == 1)
     }
 
+    @Test("update checker compares releases, preserves notes, and trusts only official pages")
+    func updateChecker() throws {
+      #expect(SemanticAppVersion("v0.7.0")! > SemanticAppVersion("0.6.0")!)
+      #expect(SemanticAppVersion("0.10.0")! > SemanticAppVersion("0.9.9")!)
+      #expect(SemanticAppVersion("1.0.0-beta.2")! < SemanticAppVersion("1.0.0")!)
+      #expect(SemanticAppVersion("1.0.0-beta.2")! < SemanticAppVersion("1.0.0-beta.10")!)
+
+      let available = try AppUpdateService.evaluate(
+        data: fixture("github-release"), currentVersion: "0.7.0")
+      guard case .updateAvailable(let release) = available else {
+        Issue.record("A newer fixture release should be offered")
+        return
+      }
+      #expect(release.version == "0.8.0")
+      #expect(release.notes.contains("Full release notes"))
+      #expect(release.pageURL.absoluteString.hasSuffix("/releases/tag/v0.8.0"))
+      #expect(release.publishedAt != nil)
+
+      let current = try AppUpdateService.evaluate(
+        data: fixture("github-release"), currentVersion: "0.8.0")
+      #expect(current == .upToDate(latestVersion: "0.8.0"))
+
+      var untrusted = try #require(
+        JSONSerialization.jsonObject(with: fixture("github-release")) as? [String: Any])
+      untrusted["html_url"] = "https://evil.example/download"
+      let untrustedData = try JSONSerialization.data(withJSONObject: untrusted)
+      let safe = try AppUpdateService.evaluate(data: untrustedData, currentVersion: "0.7.0")
+      guard case .updateAvailable(let safeRelease) = safe else {
+        Issue.record("The safe fallback should still offer the update")
+        return
+      }
+      #expect(safeRelease.pageURL == AppUpdateService.latestReleasePageURL)
+    }
+
+    @Test("update reminder defers only the same release for 24 hours")
+    func updateReminder() {
+      let now = Date(timeIntervalSince1970: 1_800_000_000)
+      let later = AppUpdateReminderPolicy.deferredUntil(from: now)
+      #expect(later.timeIntervalSince(now) == 86_400)
+      #expect(
+        !AppUpdateReminderPolicy.shouldPrompt(
+          releaseVersion: "0.8.0", currentVersion: "0.7.0", deferredVersion: "0.8.0",
+          deferredUntil: later, now: now))
+      #expect(
+        AppUpdateReminderPolicy.shouldPrompt(
+          releaseVersion: "0.8.0", currentVersion: "0.7.0", deferredVersion: "0.8.0",
+          deferredUntil: later, now: later))
+      #expect(
+        AppUpdateReminderPolicy.shouldPrompt(
+          releaseVersion: "0.9.0", currentVersion: "0.7.0", deferredVersion: "0.8.0",
+          deferredUntil: later, now: now))
+      #expect(
+        !AppUpdateReminderPolicy.shouldPrompt(
+          releaseVersion: "0.7.0", currentVersion: "0.7.0", deferredVersion: nil,
+          deferredUntil: nil, now: now))
+    }
+
     @Test("NASA manifest returns official HTTPS media without guessing rights")
     func nasaFixture() throws {
       let response = try JSONDecoder().decode(NASASearchResponse.self, from: fixture("nasa"))
@@ -366,6 +423,13 @@ import Foundation
         #expect(
           !catalog.text("clipboard.setting", language: language, arguments: []).contains(
             "Unavailable"))
+        #expect(
+          !catalog.text("update.whatsNew", language: language, arguments: []).contains(
+            "Unavailable"))
+        #expect(
+          catalog.text(
+            "update.availableTitle", language: language, arguments: ["0.8.0"]
+          ).contains("0.8.0"))
       }
     }
 
