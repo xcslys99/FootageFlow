@@ -387,6 +387,10 @@
 "feedback.privacy" = "FootageFlow 不会在这些链接中附带 API Key、本地路径、搜索历史、下载记录或项目内容。";
 "common.reset" = "重置";
 "search.smartExpansion" = "智能扩展";
+"search.relevance.mode" = "相关性模式";
+"search.relevance.precise" = "精准";
+"search.relevance.balanced" = "均衡";
+"search.relevance.broad" = "宽泛";
 "search.regenerateKeywords" = "重新生成";
 "search.expandedQueries" = "扩展搜索词";
 "link.scope.full" = "下载完整媒体";

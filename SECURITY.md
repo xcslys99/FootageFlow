@@ -4,7 +4,7 @@
 
 Security fixes are provided for the latest published FootageFlow release.
 
-FootageFlow v0.7.0 supports macOS 15+ on Apple Silicon and Windows 11 x64.
+FootageFlow v0.7.1 supports macOS 15+ on Apple Silicon and Windows 11 x64.
 
 ## Reporting a vulnerability
 
@@ -23,4 +23,4 @@ Do not include real API keys, private media, or personal file paths. Replace the
 - Update metadata is accepted only from the official GitHub Releases API, and update links are restricted to this repository's HTTPS release pages.
 - The updater is notification-only: it cannot silently download, execute, or install a release.
 
-The v0.7.0 macOS build is Ad Hoc signed and not notarized. The v0.7.0 Windows installer is not code-signed. These are distribution limitations, not claims of Apple or Microsoft verification. Release assets include SHA-256 checksums for independent verification.
+The v0.7.1 macOS build is Ad Hoc signed and not notarized. The v0.7.1 Windows installer is not code-signed. These are distribution limitations, not claims of Apple or Microsoft verification. Release assets include SHA-256 checksums for independent verification.

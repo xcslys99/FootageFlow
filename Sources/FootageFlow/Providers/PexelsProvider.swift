@@ -97,7 +97,8 @@ struct PexelsProvider: MediaProvider {
         width: best?.width ?? video.width, height: best?.height ?? video.height,
         duration: Double(video.duration), fileType: best?.fileType ?? "video/mp4",
         mediaType: .video, publishedDate: nil, downloadable: download != nil,
-        originalMetadata: ["userURL": video.user.url], searchKeyword: request.query,
+        originalMetadata: ["userURL": video.user.url, "syntheticTitle": "true"],
+        searchKeyword: request.query,
         relevanceScore: 1 - Double(index) * 0.01, thumbnailCandidates: thumbnails)
     }
     return (assets, response.nextPage != nil, response.totalResults ?? assets.count)

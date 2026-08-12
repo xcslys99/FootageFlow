@@ -4,6 +4,7 @@ enum AppSettings {
   static let enabledProvidersKey = "enabledProviders"
   static let downloadRootKey = "downloadRoot"
   static let smartExpansionKey = "smartSearchExpansionEnabled"
+  static let searchRelevanceModeKey = "searchRelevanceMode"
   static let clipboardDetectionKey = "clipboardMediaLinkDetectionEnabled"
   static let deferredUpdateVersionKey = "deferredUpdateVersion"
   static let deferredUpdateUntilKey = "deferredUpdateUntil"
@@ -68,6 +69,14 @@ enum AppSettings {
       UserDefaults.standard.object(forKey: smartExpansionKey) as? Bool ?? true
     }
     set { UserDefaults.standard.set(newValue, forKey: smartExpansionKey) }
+  }
+
+  static var searchRelevanceMode: SearchRelevanceMode {
+    get {
+      UserDefaults.standard.string(forKey: searchRelevanceModeKey)
+        .flatMap(SearchRelevanceMode.init(rawValue:)) ?? .balanced
+    }
+    set { UserDefaults.standard.set(newValue.rawValue, forKey: searchRelevanceModeKey) }
   }
 
   static var clipboardDetectionEnabled: Bool {

@@ -15,6 +15,12 @@ final class SearchViewModel: ObservableObject {
   @Published var smartExpansionEnabled = AppSettings.smartExpansionEnabled {
     didSet { AppSettings.smartExpansionEnabled = smartExpansionEnabled }
   }
+  @Published var relevanceMode = AppSettings.searchRelevanceMode {
+    didSet {
+      AppSettings.searchRelevanceMode = relevanceMode
+      rerankAssets()
+    }
+  }
   @Published var sort: SearchSort = .relevance
   @Published var selectedProviders = AppSettings.enabledProviders
   @Published var currentProjectID: UUID?
@@ -30,6 +36,8 @@ final class SearchViewModel: ObservableObject {
 
   private var task: Task<Void, Never>?
   private var store: DataStore?
+  private var candidateAssets: [MediaAsset] = []
+  private var relevanceQueries: [String] = []
   private var pagination: [ProviderID: [ProviderQueryPageState]] = [:]
   private var loadMoreInFlight: [ProviderID: ProviderQueryPageState] = [:]
   private var searchGeneration = UUID()
@@ -94,6 +102,7 @@ final class SearchViewModel: ObservableObject {
     let active = keywords.filter {
       $0.isEnabled && !$0.text.trimmingCharacters(in: .whitespaces).isEmpty
     }.map(\.text)
+    relevanceQueries = active
     guard !active.isEmpty else {
       prepareKeywords()
       if keywords.isEmpty {
@@ -116,8 +125,12 @@ final class SearchViewModel: ObservableObject {
       pagination = [:]
       loadMoreInFlight = [:]
       loadMoreFailedProviders = []
+      candidateAssets = []
+      assets = []
     } else {
       pagination[providerID!] = []
+      candidateAssets.removeAll { $0.provider == providerID }
+      rerankAssets()
     }
     status = .searchingProviders(selectedProviders.count)
     let filterSnapshot = (
@@ -137,7 +150,6 @@ final class SearchViewModel: ObservableObject {
     }
     task = Task { [weak self] in
       guard let self else { return }
-      if providerID == nil { self.assets = [] }
       await withTaskGroup(of: ProviderSearchResult.self) { group in
         for provider in providers {
           group.addTask {
@@ -317,8 +329,9 @@ final class SearchViewModel: ObservableObject {
       providerStates[batch.provider] = ProviderRuntimeState(
         availability: availability, message: nil, mode: batch.mode)
     }
-    assets += batch.assets
-    assets = SearchDeduplicator.apply(assets)
+    candidateAssets += batch.assets
+    candidateAssets = SearchDeduplicator.apply(candidateAssets)
+    rerankAssets()
     providerCounts[batch.provider] = assets.filter { $0.provider == batch.provider }.count
     status = assets.isEmpty ? .searchingOthers : .progressiveFound(assets.count)
   }
@@ -338,8 +351,9 @@ final class SearchViewModel: ObservableObject {
     providerErrors[batch.provider] = nil
     loadMoreFailedProviders.remove(batch.provider)
     pagination[batch.provider, default: []].append(contentsOf: batch.pagination)
-    assets += batch.assets
-    assets = SearchDeduplicator.apply(assets)
+    candidateAssets += batch.assets
+    candidateAssets = SearchDeduplicator.apply(candidateAssets)
+    rerankAssets()
     providerCounts[batch.provider] = assets.filter { $0.provider == batch.provider }.count
     let availability: ProviderAvailability =
       switch batch.mode {
@@ -358,6 +372,17 @@ final class SearchViewModel: ObservableObject {
     asset.relevanceScore + (asset.isDirectlyDownloadable ? 0.08 : 0)
       + (asset.height ?? 0 >= 1080 ? 0.04 : 0)
       + (asset.creator != nil ? 0.01 : 0) + (asset.licenseStatus != .unknown ? 0.03 : 0)
+  }
+
+  private func rerankAssets() {
+    let relevanceQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !relevanceQuery.isEmpty else {
+      assets = candidateAssets
+      return
+    }
+    assets = SearchRelevanceEngine.rank(
+      candidateAssets, query: relevanceQuery, mode: relevanceMode,
+      supportingQueries: relevanceQueries)
   }
 
   private func setInitialState(for provider: any MediaProvider) {

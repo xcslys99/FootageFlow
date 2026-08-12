@@ -369,6 +369,10 @@
 "feedback.privacy" = "FootageFlow никогда не добавляет к ссылкам ключи API, локальные пути, историю, загрузки или содержимое проектов.";
 "common.reset" = "Сбросить";
 "search.smartExpansion" = "Умное расширение";
+"search.relevance.mode" = "Режим релевантности";
+"search.relevance.precise" = "Точный";
+"search.relevance.balanced" = "Сбалансированный";
+"search.relevance.broad" = "Широкий";
 "search.regenerateKeywords" = "Создать заново";
 "search.expandedQueries" = "Расширенные запросы";
 "link.scope.full" = "Скачать медиа целиком";

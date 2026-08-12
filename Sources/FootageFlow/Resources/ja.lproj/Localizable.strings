@@ -369,6 +369,10 @@
 "feedback.privacy" = "API キー、ローカルパス、履歴、ダウンロード、プロジェクト内容がリンクに付加されることはありません。";
 "common.reset" = "リセット";
 "search.smartExpansion" = "スマート拡張";
+"search.relevance.mode" = "関連性モード";
+"search.relevance.precise" = "精密";
+"search.relevance.balanced" = "バランス";
+"search.relevance.broad" = "幅広い";
 "search.regenerateKeywords" = "再生成";
 "search.expandedQueries" = "拡張検索語";
 "link.scope.full" = "メディア全体をダウンロード";

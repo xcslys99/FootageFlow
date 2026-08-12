@@ -41,7 +41,7 @@ struct WikimediaProvider: MediaProvider {
       URLQueryItem(
         name: "iiextmetadatafilter",
         value:
-          "ImageDescription|ObjectName|Artist|Credit|LicenseShortName|LicenseUrl|UsageTerms|DateTimeOriginal"
+          "ImageDescription|ObjectName|Artist|Credit|LicenseShortName|LicenseUrl|UsageTerms|DateTimeOriginal|Categories"
       ),
     ]
     if let offset = continuation?.offset {
@@ -99,6 +99,7 @@ struct WikimediaProvider: MediaProvider {
         originalMetadata: [
           "credit": ProviderUtilities.cleanHTML(metadata["Credit"]?.value) ?? "",
           "uploader": image.user ?? "",
+          "categories": ProviderUtilities.cleanHTML(metadata["Categories"]?.value) ?? "",
         ], searchKeyword: request.query, relevanceScore: 1 - Double(index) * 0.01,
         thumbnailCandidates: thumbnails)
     }

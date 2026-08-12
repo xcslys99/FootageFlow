@@ -18,6 +18,8 @@
     var apiKeys: [String: String]? = nil
     var language: String? = nil
     var asset: MediaAsset? = nil
+    var assets: [MediaAsset]? = nil
+    var relevanceMode: String? = nil
     var mediaPath: String? = nil
     var projectName: String? = nil
     var projectID: String? = nil
@@ -144,6 +146,17 @@
         return await checkUpdate(request)
       case "search":
         return await search(request)
+      case "rankAssets":
+        guard let query = nonempty(request.query), let assets = request.assets else {
+          return WindowsCoreResponse(
+            id: request.id, success: false, errorCode: "invalidRequest",
+            errorMessage: "A query and candidate assets are required.")
+        }
+        let mode = SearchRelevanceMode(rawValue: request.relevanceMode ?? "") ?? .balanced
+        return WindowsCoreResponse(
+          id: request.id, success: true,
+          assets: SearchRelevanceEngine.rank(
+            assets, query: query, mode: mode, supportingQueries: request.keywords ?? []))
       case "providerTest":
         return await providerTest(request)
       case "keywords":
