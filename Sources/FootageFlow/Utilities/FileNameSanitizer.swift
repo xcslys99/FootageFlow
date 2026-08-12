@@ -18,13 +18,27 @@ enum FileNameSanitizer {
     let number = index.map { String(format: "%02d_", $0) } ?? ""
     let stem = sanitize(asset.title, maxLength: 64)
     let ext: String = {
+      if asset.originalMetadata["linkOutputPreset"] == EditingOutputPreset.audioOnly.rawValue {
+        return "m4a"
+      }
+      if asset.originalMetadata["linkOutputPreset"]
+        == EditingOutputPreset.editingCompatibleMP4.rawValue
+      {
+        return "mp4"
+      }
       let urlExt = asset.downloadURL?.pathExtension.lowercased() ?? ""
       if !urlExt.isEmpty { return urlExt }
       if asset.mediaType == .image { return "jpg" }
       return "mp4"
     }()
     let provider = sanitize(asset.sourceDisplayName, maxLength: 24)
-    return "\(number)\(stem)_\(provider)_\(sanitize(asset.id, maxLength: 24)).\(ext)"
+    let clipSuffix: String = {
+      guard let start = asset.originalMetadata["linkClipStart"].flatMap(Double.init),
+        let end = asset.originalMetadata["linkClipEnd"].flatMap(Double.init)
+      else { return "" }
+      return "_\(TimecodeParser.fileNameString(start))_to_\(TimecodeParser.fileNameString(end))"
+    }()
+    return "\(number)\(stem)\(clipSuffix)_\(provider)_\(sanitize(asset.id, maxLength: 24)).\(ext)"
   }
 
   static func uniqueURL(in directory: URL, preferredName: String) -> URL {

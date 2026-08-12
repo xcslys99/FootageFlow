@@ -17,6 +17,7 @@ struct SettingsView: View {
   @State private var downloadRoot = AppSettings.downloadRootURL
   @State private var confirmClearHistory = false
   @State private var editingKeys: Set<ProviderID> = []
+  @State private var clipboardDetection = AppSettings.clipboardDetectionEnabled
 
   var body: some View {
     ScrollView {
@@ -87,6 +88,10 @@ struct SettingsView: View {
             noKeyRow(.wikimedia, detail: tr("settings.wikimediaDetail"))
             Divider()
             noKeyRow(.internetArchive, detail: tr("settings.archiveDetail"))
+            Divider()
+            noKeyRow(.openverse, detail: tr("settings.openverseDetail"))
+            Divider()
+            noKeyRow(.dailymotion, detail: tr("settings.dailymotionDetail"))
           }.padding(6)
         }
         GroupBox(tr("settings.downloadCache")) {
@@ -117,7 +122,14 @@ struct SettingsView: View {
           }.padding(8)
         }
         GroupBox(tr("settings.privacy")) {
-          Text(tr("settings.privacyBody")).font(.callout).padding(8)
+          VStack(alignment: .leading, spacing: 10) {
+            Text(tr("settings.privacyBody")).font(.callout)
+            Toggle(tr("clipboard.setting"), isOn: $clipboardDetection)
+              .onChange(of: clipboardDetection) { _, enabled in
+                AppSettings.clipboardDetectionEnabled = enabled
+              }
+            Text(tr("clipboard.privacyDetail")).font(.caption).foregroundStyle(.secondary)
+          }.padding(8)
         }
         GroupBox(tr("settings.legal")) {
           Text(ProviderPolicy.nationalArchivesNotice)

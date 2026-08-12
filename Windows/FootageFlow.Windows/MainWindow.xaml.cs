@@ -5,12 +5,14 @@ using FootageFlow.Windows.Models;
 using FootageFlow.Windows.Services;
 using FootageFlow.Windows.ViewModels;
 using Microsoft.Win32;
+using System.Windows.Threading;
 
 namespace FootageFlow.Windows;
 
 public partial class MainWindow : Window
 {
     private readonly MainViewModel _viewModel = new();
+    private readonly DispatcherTimer _clipboardTimer = new() { Interval = TimeSpan.FromSeconds(2) };
 
     public MainWindow()
     {
@@ -20,6 +22,14 @@ public partial class MainWindow : Window
         {
             if (asset is not null) new PreviewWindow(asset, _viewModel.T) { Owner = this }.Show();
         };
+        _clipboardTimer.Tick += (_, _) =>
+        {
+            if (!IsActive || !_viewModel.IsLinkDownloaderPage || !_viewModel.ClipboardDetectionEnabled) return;
+            try { if (Clipboard.ContainsText()) _viewModel.CheckClipboardCandidate(Clipboard.GetText()); }
+            catch { }
+        };
+        Loaded += (_, _) => _clipboardTimer.Start();
+        Closed += (_, _) => _clipboardTimer.Stop();
     }
 
     private void LanguageButton_Click(object sender, RoutedEventArgs e)

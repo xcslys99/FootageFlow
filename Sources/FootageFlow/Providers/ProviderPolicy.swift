@@ -44,6 +44,7 @@ enum ProviderPolicy {
       case .mixkit: "https://mixkit.co/free-stock-video/?q=\(escaped)"
       case .coverr: "https://coverr.co/stock-video-footage?query=\(escaped)"
       case .vimeo: "https://vimeo.com/search?q=\(escaped)"
+      case .dailymotion: "https://www.dailymotion.com/search/\(escaped)/videos"
       default: nil
       }
     return URLValidator.remote(value)

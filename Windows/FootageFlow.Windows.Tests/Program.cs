@@ -13,7 +13,7 @@ void Check(bool condition, string name)
 }
 
 Check(new AppSettingsModel().Language == "en", "English is the first-launch default");
-Check(new AppSettingsModel().EnabledProviders.Count == 15, "Fifteen providers enabled by default");
+Check(new AppSettingsModel().EnabledProviders.Count == 17, "Seventeen providers enabled by default");
 Check(LocalizationService.SupportedLanguages.Count == 10, "Ten interface languages are available");
 var settingsDirectory = Path.Combine(Path.GetTempPath(), "FootageFlowSettingsTest", Guid.NewGuid().ToString("N"));
 var settingsPath = Path.Combine(settingsDirectory, "settings.json");
@@ -144,7 +144,7 @@ var linkItem = new LinkDownloadItem("https://vimeo.com/123")
     Analysis = new LinkAnalysisResult
     {
         Id = "vimeo:123", OriginalURL = "https://vimeo.com/123", SourceName = "Vimeo",
-        Title = "Fixture", ProgressiveHeights = [1080, 720], HasAudio = true,
+        Title = "Fixture", Duration = 120, ProgressiveHeights = [1080, 720], HasAudio = true,
         SubtitleLanguages = ["en"], FormatCount = 4
     }
 };
@@ -157,6 +157,43 @@ linkItem.DownloadSubtitles = true;
 linkItem.SubtitleLanguage = "en";
 Check(linkItem.DownloadIdentity == "vimeo:123:audioOnly:subs:en",
     "Windows link quality-specific download identity");
+linkItem.SelectedQuality = "p720";
+linkItem.OutputPreset = "editingCompatibleMP4";
+linkItem.SelectedScope = "clip";
+linkItem.ClipStart = "00:01:20";
+linkItem.ClipEnd = "00:01:30";
+Check(linkItem.ClipStartSeconds == 80 && linkItem.ClipEndSeconds == 90 && linkItem.ClipDuration == 10,
+    "Windows clip time validation");
+Check(linkItem.IsReady && linkItem.DownloadIdentity.Contains(":editingCompatibleMP4:clip:80-90", StringComparison.Ordinal),
+    "Windows clip identity and output preset");
+var workflowMetadata = new Dictionary<string, string>(media.OriginalMetadata)
+{
+    ["linkOutputPreset"] = "editingCompatibleMP4",
+    ["linkClipStart"] = "80",
+    ["linkClipEnd"] = "90",
+    ["linkClipDuration"] = "10"
+};
+var workflowAsset = media.CloneForWorkflow(
+    "fixture:editingCompatibleMP4:clip:80-90", workflowMetadata, "video", "mp4");
+Check(workflowAsset.StableId.EndsWith(":editingCompatibleMP4:clip:80-90", StringComparison.Ordinal) &&
+      workflowAsset.OriginalMetadata["linkOutputPreset"] == "editingCompatibleMP4",
+    "Windows workflow asset preserves an independent queue identity and metadata");
+var workflowRecord = new DownloadRecord
+{
+    OutputPresetRaw = "editingCompatibleMP4", ClipStartSeconds = 80,
+    ClipEndSeconds = 90, ClipDurationSeconds = 10
+};
+var workflowRecordRoundTrip = JsonSerializer.Deserialize<DownloadRecord>(JsonSerializer.Serialize(workflowRecord));
+Check(workflowRecordRoundTrip?.OutputPresetRaw == "editingCompatibleMP4" &&
+      workflowRecordRoundTrip.ClipStartSeconds == 80 && workflowRecordRoundTrip.ClipEndSeconds == 90 &&
+      workflowRecordRoundTrip.ClipDurationSeconds == 10,
+    "Windows download history preserves output and clip metadata");
+linkItem.ClipEnd = "00:03:00";
+Check(linkItem.ClipError == "beyondDuration" && !linkItem.IsReady,
+    "Windows clip end beyond duration");
+Check(Timecode.TryParse("80", out var rawSeconds) && rawSeconds == 80,
+    "Windows raw-second time parsing");
+Check(!Timecode.TryParse("1:60", out _), "Windows invalid time parsing");
 Check(LinkUrlSafety.TryCreate("https://www.youtube.com/watch?v=fixture", out _),
     "Windows public link validation");
 Check(!LinkUrlSafety.TryCreate("http://127.0.0.1/private", out _),
@@ -190,7 +227,7 @@ if (OperatingSystem.IsWindows())
         var core = new CoreHostClient(corePath);
         var health = await core.SendAsync(new CoreRequest { Action = "health" });
         Check(health.Success && health.Platform == "windows", "Windows core health");
-        Check(health.Providers?.Count == 15, "Windows core exposes fifteen shared providers");
+        Check(health.Providers?.Count == 17, "Windows core exposes seventeen shared providers");
         var keywords = await core.SendAsync(new CoreRequest { Action = "keywords", Query = "2001年阿根廷银行挤兑" });
         Check((keywords.Keywords?.Count ?? 0) >= 3, "Shared keyword engine");
         var attribution = await core.SendAsync(new CoreRequest { Action = "formatAttribution", Asset = media });

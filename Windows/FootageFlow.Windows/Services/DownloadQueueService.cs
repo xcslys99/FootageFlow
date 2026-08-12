@@ -28,7 +28,7 @@ public sealed class DownloadQueueService
         _ytDlp = ytDlp;
         _localization = localization;
         _http = httpClient ?? new HttpClient { Timeout = Timeout.InfiniteTimeSpan };
-        _http.DefaultRequestHeaders.UserAgent.ParseAdd("FootageFlow/0.5.0");
+        _http.DefaultRequestHeaders.UserAgent.ParseAdd("FootageFlow/0.6.0");
     }
 
     public DownloadTaskItem Enqueue(MediaAsset asset, Guid? projectId, string projectName)
@@ -253,5 +253,33 @@ public sealed class DownloadQueueService
     {
         item.State = state;
         item.Status = _localization.Text($"download.status.{state}");
+        item.WorkflowSummary = WorkflowSummary(item.Asset.OriginalMetadata);
     }
+
+    private string WorkflowSummary(IReadOnlyDictionary<string, string> metadata)
+    {
+        if (!metadata.TryGetValue("linkOutputPreset", out var preset) || string.IsNullOrWhiteSpace(preset)) return "";
+        var values = new List<string>
+        {
+            $"{_localization.Text("link.outputFormat")}: {_localization.Text($"link.output.{preset}")}"
+        };
+        if (metadata.TryGetValue("linkClipStart", out var startRaw) &&
+            metadata.TryGetValue("linkClipEnd", out var endRaw) &&
+            double.TryParse(startRaw, System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out var start) &&
+            double.TryParse(endRaw, System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out var end))
+        {
+            values.Add($"{_localization.Text("link.clip.start")}: {Timecode(start)}");
+            values.Add($"{_localization.Text("link.clip.end")}: {Timecode(end)}");
+            if (metadata.TryGetValue("linkClipDuration", out var durationRaw) &&
+                double.TryParse(durationRaw, System.Globalization.NumberStyles.Float,
+                    System.Globalization.CultureInfo.InvariantCulture, out var duration))
+                values.Add(_localization.Text("link.clip.duration", Timecode(duration)));
+        }
+        return string.Join(" · ", values);
+    }
+
+    private static string Timecode(double seconds) =>
+        TimeSpan.FromSeconds(Math.Max(0, Math.Floor(seconds))).ToString(@"hh\:mm\:ss");
 }

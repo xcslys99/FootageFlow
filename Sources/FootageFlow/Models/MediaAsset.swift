@@ -4,6 +4,7 @@ enum ProviderID: String, Codable, CaseIterable, Identifiable, Sendable {
   case pexels, pixabay, wikimedia, internetArchive, youtube
   case nasa, libraryOfCongress, nationalArchives, europeana
   case peertube, videvo, videezy, mixkit, coverr, vimeo
+  case openverse, dailymotion
   case linkDownloader
 
   var id: String { rawValue }
@@ -24,6 +25,8 @@ enum ProviderID: String, Codable, CaseIterable, Identifiable, Sendable {
     case .mixkit: "Mixkit"
     case .coverr: "Coverr"
     case .vimeo: "Vimeo"
+    case .openverse: "Openverse"
+    case .dailymotion: "Dailymotion"
     case .linkDownloader: "Link Downloader"
     }
   }
@@ -195,7 +198,10 @@ struct MediaAsset: Identifiable, Codable, Hashable, Sendable {
   /// Ordered, normalized alternatives. Optional keeps v0.1-v0.5 persisted JSON decodable.
   var thumbnailCandidates: [URL]? = nil
 
-  var stableID: String { "\(provider.rawValue):\(id)" }
+  var stableID: String {
+    let variant = originalMetadata["workflowVariantID"].map { ":\($0)" } ?? ""
+    return "\(provider.rawValue):\(id)\(variant)"
+  }
   var sourceDisplayName: String {
     originalMetadata["sourceName"]?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
       ?? provider.displayName

@@ -10,6 +10,8 @@ namespace FootageFlow.Windows.Services;
 public sealed class YtDlpPlatformService
 {
     private readonly string _executable = Path.Combine(AppContext.BaseDirectory, "Tools", "yt-dlp.exe");
+    private readonly string _ffmpeg = Path.Combine(AppContext.BaseDirectory, "Tools", "ffmpeg.exe");
+    private readonly string _ffprobe = Path.Combine(AppContext.BaseDirectory, "Tools", "ffprobe.exe");
     public bool IsAvailable => File.Exists(_executable);
 
     public async Task<byte[]> SearchAsync(string query, int limit, CancellationToken cancellationToken)
@@ -60,7 +62,7 @@ public sealed class YtDlpPlatformService
                     var video = String(format, "vcodec") is { } videoCodec && videoCodec != "none";
                     var audio = String(format, "acodec") is { } audioCodec && audioCodec != "none";
                     hasAudio |= audio;
-                    if (video && audio && Int(format, "height") is { } height) heights.Add(height);
+                    if (video && Int(format, "height") is { } height) heights.Add(height);
                 }
             var languages = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             CollectLanguages(root, "subtitles", languages);
@@ -90,7 +92,7 @@ public sealed class YtDlpPlatformService
         CancellationToken cancellationToken)
     {
         var selector = metadata?.GetValueOrDefault("linkFormatSelector") ??
-            "best[height<=720][acodec!=none][vcodec!=none]/best[height<=720]";
+            "bestvideo[height<=720]+bestaudio/best[height<=720]";
         var arguments = new List<string>
         {
             "--ignore-config", "--no-warnings", "--no-playlist", "--no-overwrites",
@@ -99,6 +101,34 @@ public sealed class YtDlpPlatformService
             "--format", selector, "--paths", directory, "--output", $"{fileStem}.%(ext)s",
             "--print", "after_move:FFFILE:%(filepath)s"
         };
+        var outputPreset = metadata?.GetValueOrDefault("linkOutputPreset") ?? "original";
+        double clipStart = 0, clipEnd = 0;
+        var hasClip = double.TryParse(metadata?.GetValueOrDefault("linkClipStart"),
+                NumberStyles.Float, CultureInfo.InvariantCulture, out clipStart) &&
+            double.TryParse(metadata?.GetValueOrDefault("linkClipEnd"),
+                NumberStyles.Float, CultureInfo.InvariantCulture, out clipEnd) && clipEnd > clipStart;
+        var needsFfmpeg = hasClip || selector.Contains('+') ||
+            outputPreset is "editingCompatibleMP4" or "audioOnly";
+        if (needsFfmpeg)
+        {
+            if (!File.Exists(_ffmpeg) || !File.Exists(_ffprobe))
+                throw new ExternalToolException("externalToolUnavailable", "Editing media support is missing. Please reinstall FootageFlow.");
+        }
+        if (File.Exists(_ffmpeg))
+        {
+            arguments.Add("--ffmpeg-location"); arguments.Add(Path.GetDirectoryName(_ffmpeg)!);
+        }
+        if (hasClip)
+        {
+            arguments.Add("--download-sections");
+            arguments.Add($"*{clipStart.ToString("0.###", CultureInfo.InvariantCulture)}-{clipEnd.ToString("0.###", CultureInfo.InvariantCulture)}");
+            arguments.Add("--force-keyframes-at-cuts");
+        }
+        if (outputPreset == "audioOnly")
+        {
+            arguments.Add("--extract-audio"); arguments.Add("--audio-format"); arguments.Add("m4a");
+            arguments.Add("--audio-quality"); arguments.Add("0");
+        }
         if (metadata?.GetValueOrDefault("linkDownloadSubtitles") == "true")
         {
             arguments.Add("--write-subs");
@@ -123,7 +153,87 @@ public sealed class YtDlpPlatformService
         var candidate = Path.GetFullPath(path);
         if (!candidate.StartsWith(root, StringComparison.OrdinalIgnoreCase))
             throw new ExternalToolException("invalidResponse", "The download path was rejected for safety.");
+        if (outputPreset == "editingCompatibleMP4")
+        {
+            var duration = hasClip ? clipEnd - clipStart :
+                double.TryParse(metadata?.GetValueOrDefault("linkMediaDuration"), NumberStyles.Float,
+                    CultureInfo.InvariantCulture, out var parsedDuration) ? parsedDuration : 0;
+            return await TranscodeEditingCompatibleAsync(
+                candidate, directory, fileStem, duration, progress, cancellationToken);
+        }
         return candidate;
+    }
+
+    private async Task<string> TranscodeEditingCompatibleAsync(
+        string input, string directory, string fileStem, double duration,
+        IProgress<YtDlpProgress>? progress, CancellationToken cancellationToken)
+    {
+        var temporary = Path.Combine(directory, $".{fileStem}.{Guid.NewGuid():N}.footageflow.mp4");
+        try
+        {
+            var canStreamCopy = await IsEditingCompatibleSourceAsync(input, cancellationToken);
+            var arguments = new List<string>
+            {
+                "-hide_banner", "-nostdin", "-y", "-i", input, "-map", "0:v:0", "-map", "0:a:0?"
+            };
+            if (canStreamCopy) arguments.AddRange(["-c", "copy"]);
+            else arguments.AddRange([
+                "-c:v", "libx264", "-preset", "medium", "-crf", "20", "-pix_fmt", "yuv420p",
+                "-c:a", "aac", "-b:a", "192k"
+            ]);
+            arguments.AddRange([
+                "-movflags", "+faststart", "-progress", "pipe:1", "-nostats", temporary
+            ]);
+            var result = await RunToolStreamingAsync(_ffmpeg,
+                arguments, TimeSpan.FromHours(1), cancellationToken, line =>
+                {
+                    if (duration <= 0 || !line.StartsWith("out_time_ms=", StringComparison.Ordinal) ||
+                        !double.TryParse(line[12..], NumberStyles.Float, CultureInfo.InvariantCulture,
+                            out var microseconds)) return;
+                    progress?.Report(new YtDlpProgress(Math.Min(99, 75 + microseconds / 1_000_000 / duration * 25), 0));
+                });
+            if (result.ExitCode != 0 || !File.Exists(temporary))
+                throw new ExternalToolException("conversionFailed", "The editing-compatible MP4 could not be created.");
+            var probe = await RunToolAsync(_ffprobe,
+                ["-v", "error", "-show_entries", "stream=codec_type,codec_name,pix_fmt", "-of", "json", temporary],
+                TimeSpan.FromMinutes(1), cancellationToken);
+            using var document = JsonDocument.Parse(probe.Output);
+            var streams = document.RootElement.GetProperty("streams").EnumerateArray().ToArray();
+            if (probe.ExitCode != 0 || !streams.Any(stream => String(stream, "codec_type") == "video" &&
+                    String(stream, "codec_name") == "h264" && String(stream, "pix_fmt") == "yuv420p") ||
+                streams.Any(stream => String(stream, "codec_type") == "audio" && String(stream, "codec_name") != "aac"))
+                throw new ExternalToolException("conversionFailed", "The converted MP4 did not pass compatibility validation.");
+            var output = Path.Combine(directory, fileStem + ".mp4");
+            if (File.Exists(output) && !Path.GetFullPath(input).Equals(Path.GetFullPath(output), StringComparison.OrdinalIgnoreCase))
+                throw new ExternalToolException("duplicate", "A file with this name already exists.");
+            if (Path.GetFullPath(input).Equals(Path.GetFullPath(output), StringComparison.OrdinalIgnoreCase)) File.Delete(input);
+            else if (File.Exists(input)) File.Delete(input);
+            File.Move(temporary, output);
+            progress?.Report(new YtDlpProgress(100, 0));
+            return output;
+        }
+        finally { try { if (File.Exists(temporary)) File.Delete(temporary); } catch { } }
+    }
+
+    private async Task<bool> IsEditingCompatibleSourceAsync(
+        string input, CancellationToken cancellationToken)
+    {
+        if (!Path.GetExtension(input).Equals(".mp4", StringComparison.OrdinalIgnoreCase)) return false;
+        try
+        {
+            var probe = await RunToolAsync(_ffprobe,
+                ["-v", "error", "-show_entries", "stream=codec_type,codec_name,pix_fmt", "-of", "json", input],
+                TimeSpan.FromMinutes(1), cancellationToken);
+            if (probe.ExitCode != 0) return false;
+            using var document = JsonDocument.Parse(probe.Output);
+            var streams = document.RootElement.GetProperty("streams").EnumerateArray().ToArray();
+            return streams.Any(stream => String(stream, "codec_type") == "video" &&
+                    String(stream, "codec_name") == "h264" && String(stream, "pix_fmt") == "yuv420p") &&
+                !streams.Any(stream => String(stream, "codec_type") == "audio" &&
+                    String(stream, "codec_name") != "aac");
+        }
+        catch (OperationCanceledException) { throw; }
+        catch { return false; }
     }
 
     private async Task<ToolResult> RunStreamingAsync(
@@ -179,6 +289,49 @@ public sealed class YtDlpPlatformService
             throw new ExternalToolException("timeout", "YouTube took too long to respond. Please try again later.");
         }
         return new ToolResult(process.ExitCode, await outputTask, await errorTask);
+    }
+
+    private static async Task<ToolResult> RunToolAsync(
+        string executable, IReadOnlyList<string> arguments, TimeSpan timeout,
+        CancellationToken cancellationToken)
+    {
+        using var process = CreateToolProcess(executable, arguments);
+        if (!process.Start()) throw new ExternalToolException("externalToolUnavailable", "Media support could not be started.");
+        var outputTask = process.StandardOutput.ReadToEndAsync(cancellationToken);
+        var errorTask = process.StandardError.ReadToEndAsync(cancellationToken);
+        using var timeoutSource = new CancellationTokenSource(timeout);
+        using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutSource.Token);
+        try { await process.WaitForExitAsync(linked.Token); }
+        catch (OperationCanceledException) { TryKill(process); throw; }
+        return new ToolResult(process.ExitCode, await outputTask, await errorTask);
+    }
+
+    private static async Task<ToolResult> RunToolStreamingAsync(
+        string executable, IReadOnlyList<string> arguments, TimeSpan timeout,
+        CancellationToken cancellationToken, Action<string> onLine)
+    {
+        using var process = CreateToolProcess(executable, arguments);
+        var output = new StringBuilder();
+        process.OutputDataReceived += (_, args) => { if (args.Data is not null) { output.AppendLine(args.Data); onLine(args.Data); } };
+        if (!process.Start()) throw new ExternalToolException("externalToolUnavailable", "Media support could not be started.");
+        process.BeginOutputReadLine();
+        var errorTask = process.StandardError.ReadToEndAsync(cancellationToken);
+        using var timeoutSource = new CancellationTokenSource(timeout);
+        using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutSource.Token);
+        try { await process.WaitForExitAsync(linked.Token); process.WaitForExit(); }
+        catch (OperationCanceledException) { TryKill(process); throw; }
+        return new ToolResult(process.ExitCode, output.ToString(), await errorTask);
+    }
+
+    private static Process CreateToolProcess(string executable, IReadOnlyList<string> arguments)
+    {
+        var process = new Process { StartInfo = new ProcessStartInfo
+        {
+            FileName = executable, UseShellExecute = false, CreateNoWindow = true,
+            RedirectStandardOutput = true, RedirectStandardError = true, WorkingDirectory = AppPaths.DataRoot
+        }};
+        foreach (var argument in arguments) process.StartInfo.ArgumentList.Add(argument);
+        return process;
     }
 
     private Process CreateProcess(IReadOnlyList<string> arguments)
@@ -238,6 +391,7 @@ public sealed class YtDlpPlatformService
         if (value.Contains("youtube")) return "YouTube";
         if (value.Contains("twitter") || value.Contains("x.com")) return "X / Twitter";
         if (value.Contains("vimeo")) return "Vimeo";
+        if (value.Contains("dailymotion")) return "Dailymotion";
         return string.IsNullOrWhiteSpace(extractor) ? host : extractor;
     }
 

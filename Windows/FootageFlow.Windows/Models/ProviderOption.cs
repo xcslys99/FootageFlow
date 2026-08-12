@@ -15,5 +15,5 @@ public sealed class ProviderOption(string id, string displayName, bool enabled) 
     public string Mode { get => _mode; set => Set(ref _mode, value); }
     public string Capabilities { get => _capabilities; set => Set(ref _capabilities, value); }
     public bool SupportsApiKey => Id is "pexels" or "pixabay" or "youtube" or "nationalArchives" or "europeana" or "coverr" or "vimeo";
-    public bool CanOpenOfficialSearch => Id is "nasa" or "libraryOfCongress" or "nationalArchives" or "europeana" or "peertube" or "videvo" or "videezy" or "mixkit" or "coverr" or "vimeo";
+    public bool CanOpenOfficialSearch => Id is "nasa" or "libraryOfCongress" or "nationalArchives" or "europeana" or "peertube" or "videvo" or "videezy" or "mixkit" or "coverr" or "vimeo" or "dailymotion";
 }

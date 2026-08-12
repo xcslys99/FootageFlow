@@ -29,6 +29,7 @@
     var segmentIndex: Int? = nil
     var externalToolOutputBase64: String? = nil
     var feedbackDestination: FeedbackDestination? = nil
+    var smartExpansion: Bool? = nil
   }
 
   private struct WindowsCoreResponse: Encodable {
@@ -139,7 +140,9 @@
       case "keywords":
         guard let query = nonempty(request.query) else { return missingQuery(request.id) }
         return WindowsCoreResponse(
-          id: request.id, success: true, keywords: KeywordEngine.keywords(for: query))
+          id: request.id, success: true,
+          keywords: KeywordEngine.keywords(
+            for: query, smartExpansion: request.smartExpansion ?? true))
       case "splitScript":
         guard let query = nonempty(request.query) else { return missingQuery(request.id) }
         return WindowsCoreResponse(

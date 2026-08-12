@@ -5,6 +5,8 @@ private struct Sidecar: Codable {
   let licenseName, licenseURL, licenseStatus, searchKeyword, downloadDate, projectName,
     segment: String
   let rightsSource: String
+  let outputPreset: String?
+  let clipStartSeconds, clipEndSeconds, clipDurationSeconds: Double?
 }
 
 enum SourceSidecar {
@@ -27,7 +29,11 @@ enum SourceSidecar {
       downloadDate: formatter.string(from: .now),
       projectName: projectName ?? tr("common.uncategorized"),
       segment: segmentIndex.map(String.init) ?? tr("common.notSpecified"),
-      rightsSource: rights.source ?? asset.sourceDisplayName)
+      rightsSource: rights.source ?? asset.sourceDisplayName,
+      outputPreset: asset.originalMetadata["linkOutputPreset"],
+      clipStartSeconds: asset.originalMetadata["linkClipStart"].flatMap(Double.init),
+      clipEndSeconds: asset.originalMetadata["linkClipEnd"].flatMap(Double.init),
+      clipDurationSeconds: asset.originalMetadata["linkClipDuration"].flatMap(Double.init))
     let base = mediaURL.deletingPathExtension()
     let jsonURL = base.appendingPathExtension("source.json")
     let textURL = base.appendingPathExtension("source.txt")
@@ -35,7 +41,7 @@ enum SourceSidecar {
     encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
     encoder.dateEncodingStrategy = .iso8601
     try encoder.encode(sidecar).write(to: jsonURL, options: .atomic)
-    let text = """
+    var text = """
       \(tr("sidecar.title")): \(sidecar.title)
       \(tr("sidecar.assetID")): \(sidecar.assetID)
       \(tr("sidecar.provider")): \(sidecar.provider)
@@ -51,6 +57,19 @@ enum SourceSidecar {
       \(tr("sidecar.projectName")): \(sidecar.projectName)
       \(tr("sidecar.segment")): \(sidecar.segment)
       """
+    if let rawPreset = sidecar.outputPreset,
+      let preset = EditingOutputPreset(rawValue: rawPreset)
+    {
+      text += "\n\(tr("link.outputFormat")): \(preset.label)"
+    }
+    if let start = sidecar.clipStartSeconds, let end = sidecar.clipEndSeconds {
+      text += "\n\(tr("link.clip.start")): \(TimecodeParser.string(start))"
+      text += "\n\(tr("link.clip.end")): \(TimecodeParser.string(end))"
+      if let duration = sidecar.clipDurationSeconds {
+        text += "\n\(tr("link.clip.duration", TimecodeParser.string(duration)))"
+      }
+    }
+    text += "\n"
     try Data(text.utf8).write(to: textURL, options: .atomic)
   }
 

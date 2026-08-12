@@ -8,9 +8,31 @@ struct LinkDownloaderItem: Identifiable {
   var quality: LinkDownloadQuality = .best
   var downloadSubtitles = false
   var subtitleLanguage = ""
+  var scope: LinkDownloadScope = .full
+  var outputPreset: EditingOutputPreset = .original
+  var clipStart = "00:00:00"
+  var clipEnd = ""
   var errorKey: String?
 
   var isReady: Bool { analysis != nil && errorKey == nil }
+  var clipRange: ClipTimeRange? {
+    guard scope == .clip, let analysis else { return nil }
+    return try? ClipTimeRange.parse(
+      start: clipStart, end: clipEnd, mediaDuration: analysis.duration)
+  }
+  var clipValidationKey: String? {
+    guard scope == .clip, let analysis else { return nil }
+    do {
+      _ = try ClipTimeRange.parse(
+        start: clipStart, end: clipEnd, mediaDuration: analysis.duration)
+      return nil
+    } catch let error as ClipRangeError {
+      return error.localizationKey
+    } catch {
+      return "link.clip.invalidRange"
+    }
+  }
+  var isDownloadReady: Bool { isReady && (scope == .full || clipRange != nil) }
 }
 
 @MainActor
@@ -20,14 +42,50 @@ final class LinkDownloaderViewModel: ObservableObject {
   @Published var isAnalyzing = false
   @Published var downloadRoot = AppSettings.downloadRootURL
   @Published var statusKey = "link.initialStatus"
+  @Published var clipboardDetectionEnabled = AppSettings.clipboardDetectionEnabled {
+    didSet { AppSettings.clipboardDetectionEnabled = clipboardDetectionEnabled }
+  }
+  @Published private(set) var detectedClipboardURLs: [URL] = []
 
   private var analysisTask: Task<Void, Never>?
   private let service: YTDLPService
+  private var ignoredClipboardValue: String?
 
   init(service: YTDLPService = YTDLPService()) { self.service = service }
 
   var detectedCount: Int { LinkURLParser.urls(from: input).count }
-  var canDownloadSelected: Bool { items.contains { $0.isSelected && $0.isReady } }
+  var canDownloadSelected: Bool { items.contains { $0.isSelected && $0.isDownloadReady } }
+  var hasClipboardSuggestion: Bool { !detectedClipboardURLs.isEmpty }
+
+  func checkClipboard() {
+    guard clipboardDetectionEnabled, DesktopPlatform.shared.isApplicationActive,
+      let text = DesktopPlatform.shared.clipboardText(), text != ignoredClipboardValue
+    else { return }
+    let urls = LinkURLParser.mediaURLs(from: text)
+    guard !urls.isEmpty else { return }
+    let current = Set(LinkURLParser.urls(from: input).map(\.absoluteString))
+    let newValues = urls.filter { !current.contains($0.absoluteString) }
+    guard !newValues.isEmpty else { return }
+    detectedClipboardURLs = newValues
+  }
+
+  func analyzeClipboardSuggestion() {
+    guard !detectedClipboardURLs.isEmpty else { return }
+    input = detectedClipboardURLs.map(\.absoluteString).joined(separator: "\n")
+    ignoredClipboardValue = DesktopPlatform.shared.clipboardText()
+    detectedClipboardURLs = []
+    analyzeAll()
+  }
+
+  func ignoreClipboardSuggestion() {
+    ignoredClipboardValue = DesktopPlatform.shared.clipboardText()
+    detectedClipboardURLs = []
+  }
+
+  func disableClipboardDetection() {
+    clipboardDetectionEnabled = false
+    ignoreClipboardSuggestion()
+  }
 
   func paste() {
     guard
@@ -85,6 +143,7 @@ final class LinkDownloaderViewModel: ObservableObject {
               self.items[index].analysis = analysis
               self.items[index].quality = analysis.availableQualities.first ?? .best
               self.items[index].subtitleLanguage = analysis.subtitleLanguages.first ?? ""
+              self.items[index].clipEnd = analysis.duration.map(TimecodeParser.string) ?? ""
             case .failure(let error):
               self.items[index].errorKey = Self.errorKey(error)
               await AppLogger.shared.write(
@@ -101,11 +160,12 @@ final class LinkDownloaderViewModel: ObservableObject {
   }
 
   func downloadSelected(downloads: DownloadManager) {
-    for item in items where item.isSelected && item.isReady {
+    for item in items where item.isSelected && item.isDownloadReady {
       guard let analysis = item.analysis else { continue }
       let asset = analysis.mediaAsset(
         quality: item.quality, downloadSubtitles: item.downloadSubtitles,
-        subtitleLanguage: item.subtitleLanguage.nilIfEmpty)
+        subtitleLanguage: item.subtitleLanguage.nilIfEmpty, outputPreset: item.outputPreset,
+        clipRange: item.scope == .clip ? item.clipRange : nil)
       downloads.start(
         asset: asset, projectID: nil, projectName: tr("common.uncategorized"),
         destinationRoot: downloadRoot)

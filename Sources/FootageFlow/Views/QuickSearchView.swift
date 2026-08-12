@@ -139,7 +139,14 @@ struct QuickSearchView: View {
       .help(tr("settings.manageSources"))
 
       HStack(alignment: .top) {
-        Text(tr("search.currentKeywords")).foregroundStyle(.secondary).padding(.top, 4)
+        VStack(alignment: .leading, spacing: 5) {
+          Text(tr("search.currentKeywords")).foregroundStyle(.secondary).padding(.top, 4)
+          Toggle(tr("search.smartExpansion"), isOn: $viewModel.smartExpansionEnabled)
+            .toggleStyle(.checkbox)
+            .onChange(of: viewModel.smartExpansionEnabled) { _, _ in
+              viewModel.prepareKeywords()
+            }
+        }
         VStack(alignment: .leading, spacing: 5) {
           ForEach($viewModel.keywords) { $keyword in
             HStack(spacing: 6) {

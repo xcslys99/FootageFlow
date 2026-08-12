@@ -1,6 +1,19 @@
 // swift-tools-version: 6.0
 import PackageDescription
 
+#if os(macOS)
+  let commandLineToolsTestLibraries =
+    "/Library/Developer/CommandLineTools/Library/Developer/usr/lib"
+  let localTestingLinkerSettings: [LinkerSetting] = [
+    .unsafeFlags([
+      "-L", commandLineToolsTestLibraries,
+      "-Xlinker", "-rpath", "-Xlinker", commandLineToolsTestLibraries,
+    ])
+  ]
+#else
+  let localTestingLinkerSettings: [LinkerSetting] = []
+#endif
+
 #if os(Windows)
   let platformExcludedSources = [
     "App",
@@ -25,6 +38,11 @@ let package = Package(
   products: [
     .executable(name: "FootageFlow", targets: ["FootageFlow"])
   ],
+  dependencies: [
+    // Pin the official runtime to the compiler version so tests also execute
+    // on machines that have Command Line Tools without a full Xcode install.
+    .package(url: "https://github.com/swiftlang/swift-testing.git", exact: "6.3.2")
+  ],
   targets: [
     .executableTarget(
       name: "FootageFlow",
@@ -33,9 +51,13 @@ let package = Package(
     ),
     .testTarget(
       name: "FootageFlowTests",
-      dependencies: ["FootageFlow"],
+      dependencies: [
+        "FootageFlow",
+        .product(name: "Testing", package: "swift-testing"),
+      ],
       path: "Tests/FootageFlowTests",
-      resources: [.process("Fixtures")]
+      resources: [.process("Fixtures")],
+      linkerSettings: localTestingLinkerSettings
     ),
   ],
   swiftLanguageModes: [.v5]

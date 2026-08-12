@@ -33,6 +33,7 @@ public sealed class CoreRequest
     public int? SegmentIndex { get; init; }
     public string? ExternalToolOutputBase64 { get; init; }
     public string? FeedbackDestination { get; init; }
+    public bool? SmartExpansion { get; init; }
 }
 
 public sealed class CoreResponse
@@ -122,7 +123,12 @@ public sealed class DownloadRecord
     public string SourcePageURL { get; init; } = "";
     public Guid? ProjectID { get; init; }
     public DateTimeOffset DownloadedAt { get; init; }
+    public string? OutputPresetRaw { get; init; }
+    public double? ClipStartSeconds { get; init; }
+    public double? ClipEndSeconds { get; init; }
+    public double? ClipDurationSeconds { get; init; }
     public string DisplaySource => string.IsNullOrWhiteSpace(SourceName) ? ProviderRaw : SourceName;
+    [JsonIgnore] public string WorkflowSummary { get; set; } = "";
 }
 
 public sealed class ProviderDescriptor
@@ -178,9 +184,9 @@ public sealed class ProviderState
 
 public sealed class SearchKeyword
 {
-    public Guid Id { get; init; }
-    public string Text { get; init; } = "";
-    public bool IsEnabled { get; init; }
+    public Guid Id { get; set; }
+    public string Text { get; set; } = "";
+    public bool IsEnabled { get; set; }
 }
 
 public sealed class MediaAsset : ObservableObject
@@ -240,10 +246,27 @@ public sealed class MediaAsset : ObservableObject
     [JsonIgnore] public double SortDuration => Duration ?? -1;
     [JsonIgnore] public bool IsDirectlyDownloadable => DownloadAvailability == "direct" ||
         (DownloadAvailability is null && Downloadable && !string.IsNullOrWhiteSpace(DownloadURL));
+    [JsonIgnore] public bool SupportsEditingOutput => Downloadable && DownloadStrategy == "ytDLP";
     [JsonIgnore] public bool RightsKnown => RightsInfo?.Known ?? LicenseStatus != "UNKNOWN";
     [JsonIgnore] public bool OpenLicense => RightsInfo?.OpenLicense ??
         LicenseStatus is "SAFE" or "ATTRIBUTION_REQUIRED" or "PUBLIC_DOMAIN";
     [JsonIgnore] public bool PublicDomain => RightsInfo?.PublicDomain ?? LicenseStatus == "PUBLIC_DOMAIN";
+
+    public MediaAsset CloneForWorkflow(
+        string workflowId, Dictionary<string, string> metadata, string mediaType, string? fileType) =>
+        new()
+        {
+            Id = workflowId, Provider = Provider, Title = Title, Description = Description,
+            ThumbnailURL = ThumbnailURL, ThumbnailCandidates = ThumbnailCandidates,
+            PreviewURL = PreviewURL, DownloadURL = DownloadURL, SourcePageURL = SourcePageURL,
+            Creator = Creator, License = License, LicenseURL = LicenseURL,
+            LicenseStatus = LicenseStatus, Width = Width, Height = Height, Duration = Duration,
+            FileType = fileType, MediaType = mediaType, PublishedDate = PublishedDate,
+            Downloadable = Downloadable, OriginalMetadata = metadata,
+            SearchKeyword = SearchKeyword, RelevanceScore = RelevanceScore,
+            DownloadStrategy = DownloadStrategy, RightsInfo = RightsInfo,
+            DownloadAvailability = DownloadAvailability
+        };
 }
 
 public sealed class RightsInfo

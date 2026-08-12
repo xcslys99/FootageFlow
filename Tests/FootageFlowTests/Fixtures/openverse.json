@@ -1,0 +1,23 @@
+{
+  "result_count": 1,
+  "page_count": 2,
+  "results": [{
+    "id": "openverse-fixture",
+    "title": "Coffee beans",
+    "creator": "Fixture Creator",
+    "license": "by-sa",
+    "license_version": "4.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+    "thumbnail": "https://api.openverse.org/v1/images/openverse-fixture/thumb/",
+    "url": "https://images.example.org/coffee.jpg",
+    "foreign_landing_url": "https://example.org/coffee",
+    "filetype": "jpg",
+    "provider": "wikimedia",
+    "source": "wikimedia",
+    "attribution": "Coffee beans by Fixture Creator, CC BY-SA 4.0",
+    "width": 2400,
+    "height": 1600,
+    "duration": 9000,
+    "tags": [{"name": "coffee"}]
+  }]
+}

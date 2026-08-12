@@ -7,8 +7,11 @@ public sealed class AppSettingsModel
     public HashSet<string> EnabledProviders { get; set; } =
         ["pexels", "pixabay", "wikimedia", "internetArchive", "youtube", "nasa",
          "libraryOfCongress", "nationalArchives", "europeana", "peertube", "videvo",
-         "videezy", "mixkit", "coverr", "vimeo"];
+         "videezy", "mixkit", "coverr", "vimeo", "openverse", "dailymotion"];
     public bool ContinuedWithoutApiKey { get; set; }
     public bool DiscoveryProvidersV3Added { get; set; }
     public bool SearchExpansionProvidersV5Added { get; set; }
+    public bool CreatorWorkflowProvidersV6Added { get; set; }
+    public bool SmartSearchExpansionEnabled { get; set; } = true;
+    public bool ClipboardMediaLinkDetectionEnabled { get; set; }
 }

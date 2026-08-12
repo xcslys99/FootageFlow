@@ -3,13 +3,19 @@ import Foundation
 struct YTDLPService: Sendable {
   let runner: any ExternalToolRunning
   let executableURL: URL?
+  let ffmpegURL: URL?
+  let ffprobeURL: URL?
 
   init(
     runner: any ExternalToolRunning = ProcessExternalToolRunner(),
-    executableURL: URL? = YTDLPBinaryLocator.executableURL
+    executableURL: URL? = YTDLPBinaryLocator.executableURL,
+    ffmpegURL: URL? = FFmpegToolLocator.ffmpegURL,
+    ffprobeURL: URL? = FFmpegToolLocator.ffprobeURL
   ) {
     self.runner = runner
     self.executableURL = executableURL
+    self.ffmpegURL = ffmpegURL
+    self.ffprobeURL = ffprobeURL
   }
 
   var isAvailable: Bool {
@@ -68,6 +74,9 @@ struct YTDLPService: Sendable {
     progress: (@Sendable (YTDLPDownloadUpdate) -> Void)? = nil
   ) async throws -> URL {
     guard let executableURL, isAvailable else { throw ProviderError.externalToolUnavailable }
+    if options.requiresFFmpeg && (ffmpegURL == nil || ffprobeURL == nil) {
+      throw ProviderError.externalToolUnavailable
+    }
     var arguments =
       safeArguments + [
         "--no-playlist", "--no-overwrites", "--socket-timeout", "15", "--retries", "1",
@@ -76,6 +85,15 @@ struct YTDLPService: Sendable {
         options.formatSelector, "--paths", directory.path, "--output", "\(fileStem).%(ext)s",
         "--print", "after_move:FFFILE:%(filepath)s",
       ]
+    if let ffmpegURL {
+      arguments += ["--ffmpeg-location", ffmpegURL.deletingLastPathComponent().path]
+    }
+    if let clipRange = options.clipRange {
+      arguments += ["--download-sections", clipRange.sectionArgument, "--force-keyframes-at-cuts"]
+    }
+    if options.outputPreset == .audioOnly {
+      arguments += ["--extract-audio", "--audio-format", "m4a", "--audio-quality", "0"]
+    }
     if options.downloadSubtitles {
       arguments.append("--write-subs")
       if let languages = options.subtitleLanguages?.nilIfEmpty {
@@ -88,7 +106,10 @@ struct YTDLPService: Sendable {
       arguments: arguments, timeout: 60 * 60,
       onOutputLine: { line in
         guard let update = Self.progressUpdate(from: line) else { return }
-        progress?(update)
+        let scale = options.outputPreset == .editingCompatibleMP4 ? 0.75 : 1
+        progress?(
+          YTDLPDownloadUpdate(
+            fraction: update.fraction * scale, bytesPerSecond: update.bytesPerSecond))
       })
     guard result.exitCode == 0 else { throw Self.mapFailure(result.errorText) }
     let lines = result.outputText.split(whereSeparator: \.isNewline).map(String.init)
@@ -103,7 +124,102 @@ struct YTDLPService: Sendable {
     guard DownloadPathSafety.isContained(fileURL, in: directory),
       FileManager.default.fileExists(atPath: fileURL.path)
     else { throw ProviderError.invalidResponse }
+    if options.outputPreset == .editingCompatibleMP4 {
+      do {
+        return try await transcodeEditingCompatible(
+          input: fileURL, directory: directory, fileStem: fileStem,
+          duration: options.clipRange?.duration ?? options.mediaDuration, progress: progress)
+      } catch {
+        try? FileManager.default.removeItem(at: fileURL)
+        throw error
+      }
+    }
     return fileURL
+  }
+
+  private func transcodeEditingCompatible(
+    input: URL, directory: URL, fileStem: String, duration: Double?,
+    progress: (@Sendable (YTDLPDownloadUpdate) -> Void)?
+  ) async throws -> URL {
+    guard let ffmpegURL, let ffprobeURL else { throw ProviderError.externalToolUnavailable }
+    let canStreamCopy = await isEditingCompatibleSource(input, ffprobeURL: ffprobeURL)
+    let temporary = directory.appendingPathComponent(
+      ".\(fileStem).\(UUID().uuidString).footageflow.mp4")
+    defer { try? FileManager.default.removeItem(at: temporary) }
+    var arguments = ["-hide_banner", "-nostdin", "-y", "-i", input.path]
+    arguments += ["-map", "0:v:0", "-map", "0:a:0?"]
+    if canStreamCopy {
+      arguments += ["-c", "copy"]
+    } else {
+      arguments += [
+        "-c:v", "libx264", "-preset", "medium", "-crf", "20", "-pix_fmt", "yuv420p",
+        "-c:a", "aac", "-b:a", "192k",
+      ]
+    }
+    arguments += [
+      "-movflags", "+faststart", "-progress", "pipe:1", "-nostats", temporary.path,
+    ]
+    let result = try await runner.run(
+      executable: ffmpegURL, arguments: arguments, timeout: 60 * 60,
+      onOutputLine: { line in
+        guard let duration, duration > 0,
+          let seconds = Self.ffmpegProgressSeconds(from: line)
+        else { return }
+        progress?(
+          YTDLPDownloadUpdate(
+            fraction: min(0.75 + seconds / duration * 0.25, 0.99), bytesPerSecond: 0))
+      })
+    guard result.exitCode == 0, FileManager.default.fileExists(atPath: temporary.path) else {
+      throw ProviderError.message(tr("link.outputConversionFailed"))
+    }
+    try await verifyEditingCompatible(temporary, ffprobeURL: ffprobeURL)
+    let final = directory.appendingPathComponent("\(fileStem).mp4")
+    if final.standardizedFileURL == input.standardizedFileURL {
+      try FileManager.default.removeItem(at: input)
+    } else if FileManager.default.fileExists(atPath: final.path) {
+      throw ProviderError.message(tr("download.duplicate"))
+    }
+    try FileManager.default.moveItem(at: temporary, to: final)
+    if input.standardizedFileURL != final.standardizedFileURL {
+      try? FileManager.default.removeItem(at: input)
+    }
+    progress?(YTDLPDownloadUpdate(fraction: 1, bytesPerSecond: 0))
+    return final
+  }
+
+  private func isEditingCompatibleSource(_ url: URL, ffprobeURL: URL) async -> Bool {
+    guard url.pathExtension.lowercased() == "mp4" else { return false }
+    let result = try? await runner.run(
+      executable: ffprobeURL,
+      arguments: [
+        "-v", "error", "-show_entries", "stream=codec_type,codec_name,pix_fmt", "-of", "json",
+        url.path,
+      ], timeout: 60)
+    guard let result, result.exitCode == 0,
+      let value = try? JSONDecoder().decode(FFprobeResponse.self, from: result.standardOutput)
+    else { return false }
+    return value.streams.contains(where: {
+      $0.codecType == "video" && $0.codecName == "h264" && $0.pixelFormat == "yuv420p"
+    })
+      && !value.streams.contains(where: {
+        $0.codecType == "audio" && $0.codecName != "aac"
+      })
+  }
+
+  private func verifyEditingCompatible(_ url: URL, ffprobeURL: URL) async throws {
+    let result = try await runner.run(
+      executable: ffprobeURL,
+      arguments: [
+        "-v", "error", "-show_entries", "stream=codec_type,codec_name,pix_fmt", "-of", "json",
+        url.path,
+      ], timeout: 60)
+    guard result.exitCode == 0,
+      let value = try? JSONDecoder().decode(FFprobeResponse.self, from: result.standardOutput),
+      value.streams.contains(where: {
+        $0.codecType == "video" && $0.codecName == "h264" && $0.pixelFormat == "yuv420p"
+      }),
+      !value.streams.contains(where: { $0.codecType == "audio" && $0.codecName != "aac" })
+    else { throw ProviderError.message(tr("link.outputConversionFailed")) }
   }
 
   static func mapFailure(_ rawMessage: String) -> ProviderError {
@@ -148,6 +264,13 @@ struct YTDLPService: Sendable {
     return YTDLPDownloadUpdate(fraction: min(max(percent / 100, 0), 1), bytesPerSecond: speed)
   }
 
+  static func ffmpegProgressSeconds(from line: String) -> Double? {
+    guard line.hasPrefix("out_time_ms="), let microseconds = Double(line.dropFirst(12)) else {
+      return nil
+    }
+    return microseconds / 1_000_000
+  }
+
   static func linkAnalysis(_ value: YTDLPAnalysisResponse, fallbackURL: URL) throws
     -> LinkMediaAnalysis
   {
@@ -187,7 +310,22 @@ struct YTDLPService: Sendable {
       return "X / Twitter"
     }
     if value.contains("vimeo") { return "Vimeo" }
+    if value.contains("dailymotion") { return "Dailymotion" }
     return extractor?.nilIfEmpty ?? host?.nilIfEmpty ?? tr("common.unknown")
+  }
+}
+
+private struct FFprobeResponse: Decodable {
+  let streams: [FFprobeStream]
+}
+
+private struct FFprobeStream: Decodable {
+  let codecType, codecName, pixelFormat: String?
+
+  enum CodingKeys: String, CodingKey {
+    case codecType = "codec_type"
+    case codecName = "codec_name"
+    case pixelFormat = "pix_fmt"
   }
 }
 
@@ -279,6 +417,40 @@ enum YTDLPBinaryLocator {
     }
     #if os(macOS)
       for path in ["/opt/homebrew/bin/yt-dlp", "/usr/local/bin/yt-dlp", "/usr/bin/yt-dlp"]
+      where fileManager.isExecutableFile(atPath: path) {
+        return URL(fileURLWithPath: path)
+      }
+    #endif
+    return nil
+  }
+
+  private static func isExecutable(_ url: URL, fileManager: FileManager) -> Bool {
+    #if os(Windows)
+      fileManager.fileExists(atPath: url.path)
+    #else
+      fileManager.isExecutableFile(atPath: url.path)
+    #endif
+  }
+}
+
+enum FFmpegToolLocator {
+  static var ffmpegURL: URL? { executable(named: "ffmpeg") }
+  static var ffprobeURL: URL? { executable(named: "ffprobe") }
+
+  private static func executable(named name: String) -> URL? {
+    let fileManager = FileManager.default
+    #if os(Windows)
+      let fileName = "\(name).exe"
+    #else
+      let fileName = name
+    #endif
+    if let bundled = Bundle.main.resourceURL?.appendingPathComponent("Tools/\(fileName)"),
+      isExecutable(bundled, fileManager: fileManager)
+    {
+      return bundled
+    }
+    #if os(macOS)
+      for path in ["/opt/homebrew/bin/\(name)", "/usr/local/bin/\(name)", "/usr/bin/\(name)"]
       where fileManager.isExecutableFile(atPath: path) {
         return URL(fileURLWithPath: path)
       }

@@ -12,6 +12,9 @@ final class SearchViewModel: ObservableObject {
   @Published var yearFrom: Int?
   @Published var yearTo: Int?
   @Published var downloadableOnly = false
+  @Published var smartExpansionEnabled = AppSettings.smartExpansionEnabled {
+    didSet { AppSettings.smartExpansionEnabled = smartExpansionEnabled }
+  }
   @Published var sort: SearchSort = .relevance
   @Published var selectedProviders = AppSettings.enabledProviders
   @Published var currentProjectID: UUID?
@@ -75,7 +78,8 @@ final class SearchViewModel: ObservableObject {
   }
 
   func prepareKeywords(translated: String? = nil) {
-    keywords = KeywordEngine.keywords(for: query, translated: translated)
+    keywords = KeywordEngine.keywords(
+      for: query, translated: translated, smartExpansion: smartExpansionEnabled)
   }
   func acceptTranslation(_ text: String) {
     keywords = KeywordEngine.mergeTranslation(text, into: keywords)
@@ -141,11 +145,10 @@ final class SearchViewModel: ObservableObject {
             var nextPages: [ProviderQueryPageState] = []
             var totalResults = 0
             do {
-              let providerKeywords =
-                provider.info.mode == .limited
-                ? Array(active.prefix(1))
-                : (provider.info.id == .youtube ? Array(active.prefix(2)) : active)
-              for keyword in providerKeywords {
+              let providerKeywords = KeywordEngine.providerQueries(
+                from: active.map { SearchKeyword(text: $0) }, provider: provider.info.id,
+                mode: provider.info.mode)
+              for (queryIndex, keyword) in providerKeywords.enumerated() {
                 try Task.checkCancellation()
                 let request = SearchRequest(
                   query: keyword, mediaType: filterSnapshot.0, orientation: filterSnapshot.1,
@@ -165,7 +168,12 @@ final class SearchViewModel: ObservableObject {
                       page, provider: provider.info.id, request: request)
                   }
                 }
-                combined += page.assets
+                combined += page.assets.map { asset in
+                  var ranked = asset
+                  ranked.relevanceScore -= Double(queryIndex) * 0.08
+                  ranked.originalMetadata["matchedQuery"] = keyword
+                  return ranked
+                }
                 if let continuation = page.continuation {
                   nextPages.append(
                     ProviderQueryPageState(request: request, continuation: continuation))

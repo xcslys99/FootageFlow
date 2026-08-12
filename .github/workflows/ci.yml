@@ -14,7 +14,7 @@ env:
 jobs:
   test-and-build:
     runs-on: macos-15
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - name: Check out source
         uses: actions/checkout@v4
@@ -40,6 +40,11 @@ jobs:
           scripts/binary_privacy_scan.sh
           codesign --verify --deep --strict dist/FootageFlow.app
           dist/FootageFlow.app/Contents/MacOS/FootageFlow --self-test
+          test -x dist/FootageFlow.app/Contents/Resources/Tools/ffmpeg
+          test -x dist/FootageFlow.app/Contents/Resources/Tools/ffprobe
+          test -f dist/FootageFlow.app/Contents/Resources/Licenses/ffmpeg/LICENSE_FFMPEG.txt
+          test -f dist/FootageFlow.app/Contents/Resources/Licenses/ffmpeg/LICENSE_X264.txt
+          dist/FootageFlow.app/Contents/Resources/Tools/ffmpeg -version 2>&1 | head -n 4 | grep -q -- --enable-securetransport
 
   windows-core:
     # Swift 6.3 currently requires the Visual Studio 2022 C++ environment.
@@ -102,7 +107,7 @@ jobs:
 
       - name: Build self-contained Windows package
         shell: pwsh
-        run: scripts/windows/build-package.ps1 -Version "0.5.0"
+        run: scripts/windows/build-package.ps1 -Version "0.6.0"
 
       - name: Verify packaged runtimes
         shell: pwsh
@@ -112,6 +117,9 @@ jobs:
             "FootageFlow.exe",
             "Core\FootageFlowCore.exe",
             "Tools\yt-dlp.exe",
+            "Tools\ffmpeg.exe",
+            "Tools\ffprobe.exe",
+            "Licenses\ffmpeg\LICENSE.txt",
             "Resources\en.lproj\Localizable.strings",
             "Resources\zh-Hans.lproj\Localizable.strings",
             "Resources\zh-Hant.lproj\Localizable.strings",
@@ -152,16 +160,16 @@ jobs:
           $compiler = (& scripts/windows/install-inno.ps1 | Select-Object -Last 1)
           $stage = (Resolve-Path ".build\windows-stage").Path
           $output = (Resolve-Path "dist\windows").Path
-          & $compiler "/DAppVersion=0.5.0" "/DSourceDirectory=$stage" "/DOutputDirectory=$output" "Windows\Installer\FootageFlow.iss"
+          & $compiler "/DAppVersion=0.6.0" "/DSourceDirectory=$stage" "/DOutputDirectory=$output" "Windows\Installer\FootageFlow.iss"
           if ($LASTEXITCODE -ne 0) { throw "The Windows installer could not be compiled." }
-          $installer = Join-Path $output "FootageFlow-Setup-0.5.0-Windows-x64.exe"
+          $installer = Join-Path $output "FootageFlow-Setup-0.6.0-Windows-x64.exe"
           if (-not (Test-Path $installer -PathType Leaf)) { throw "The Windows installer is missing." }
           $signature = Get-AuthenticodeSignature $installer
           Write-Host "Installer signature status: $($signature.Status) (unsigned development build expected)"
           (Get-FileHash $installer -Algorithm SHA256).Hash.ToLowerInvariant() + "  " + (Split-Path $installer -Leaf) |
             Set-Content ($installer + ".sha256") -Encoding ascii -NoNewline
           $checksumFiles = @(
-            Join-Path $output "FootageFlow-0.5.0-Windows-x64-portable.zip.sha256"
+            Join-Path $output "FootageFlow-0.6.0-Windows-x64-portable.zip.sha256"
             $installer + ".sha256"
           )
           foreach ($checksumFile in $checksumFiles) {
@@ -180,7 +188,7 @@ jobs:
       - name: Clean install, launch, and uninstall test
         shell: pwsh
         run: |
-          $installer = (Resolve-Path "dist\windows\FootageFlow-Setup-0.5.0-Windows-x64.exe").Path
+          $installer = (Resolve-Path "dist\windows\FootageFlow-Setup-0.6.0-Windows-x64.exe").Path
           $installRoot = Join-Path $env:RUNNER_TEMP "FootageFlow-Clean-Install"
           if (Test-Path $installRoot) { Remove-Item $installRoot -Recurse -Force }
           $install = Start-Process $installer -ArgumentList @(
@@ -213,7 +221,7 @@ jobs:
       - name: Upload Windows candidate artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: FootageFlow-0.5.0-Windows-x64
+          name: FootageFlow-0.6.0-Windows-x64
           path: dist/windows/*
           if-no-files-found: error
           retention-days: 14

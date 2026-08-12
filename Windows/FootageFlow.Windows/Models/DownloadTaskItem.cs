@@ -11,6 +11,7 @@ public sealed class DownloadTaskItem(MediaAsset asset, Guid? projectId, string p
     private string? _localPath;
     private string? _errorMessage;
     private string? _errorCode;
+    private string _workflowSummary = "";
 
     public Guid Id { get; } = Guid.NewGuid();
     public MediaAsset Asset { get; } = asset;
@@ -41,6 +42,7 @@ public sealed class DownloadTaskItem(MediaAsset asset, Guid? projectId, string p
     }
     public string? ErrorMessage { get => _errorMessage; set => Set(ref _errorMessage, value); }
     public string? ErrorCode { get => _errorCode; set => Set(ref _errorCode, value); }
+    public string WorkflowSummary { get => _workflowSummary; set => Set(ref _workflowSummary, value); }
     public bool CanCancel => State is "waiting" or "downloading";
     public bool CanRetry => State is "failed" or "cancelled";
     public bool CanOpen => State == "completed" && !string.IsNullOrWhiteSpace(LocalPath);
