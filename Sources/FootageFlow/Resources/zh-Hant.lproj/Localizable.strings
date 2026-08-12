@@ -149,7 +149,7 @@
 "error.externalToolUnavailable" = "本地盡力下載工具當前不可用。";
 "error.videoUnavailable" = "該影片當前不可用。";
 "error.regionalRestriction" = "該影片在當前地區不可用。";
-"error.ytDLPFailed" = "YouTube 未能提供可下載的公開媒體流。請稍後重試或開啟來源頁面。";
+"error.ytDLPFailed" = "該媒體來源未能提供可下載的公開媒體流。請稍後重試或開啟來源頁面。";
 "error.unsupported" = "當前來源不支援這項操作。";
 "error.cancelled" = "操作已取消。";
 "error.timeout" = "網路請求超時，請重試。";

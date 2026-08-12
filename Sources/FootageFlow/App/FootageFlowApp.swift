@@ -17,6 +17,20 @@ struct FootageFlowApp: App {
       Task.detached { Darwin.exit(await LiveSmokeRunner.run()) }
       dispatchMain()
     }
+    if let index = CommandLine.arguments.firstIndex(of: "--creator-workflow-smoke") {
+      let path =
+        CommandLine.arguments.indices.contains(index + 1)
+        ? CommandLine.arguments[index + 1]
+        : FileManager.default.temporaryDirectory.appendingPathComponent(
+          "FootageFlowCreatorWorkflowSmoke", isDirectory: true
+        ).path
+      Task.detached {
+        Darwin.exit(
+          await CreatorWorkflowSmokeRunner.run(
+            directory: URL(fileURLWithPath: path, isDirectory: true)))
+      }
+      dispatchMain()
+    }
     if CommandLine.arguments.contains("--update-smoke") {
       Task.detached { Darwin.exit(await UpdateSmokeRunner.run()) }
       dispatchMain()

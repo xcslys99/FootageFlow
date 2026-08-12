@@ -49,7 +49,7 @@ final class LinkDownloaderViewModel: ObservableObject {
 
   private var analysisTask: Task<Void, Never>?
   private let service: YTDLPService
-  private var ignoredClipboardValue: String?
+  private var clipboardSession = ClipboardSuggestionSession()
 
   init(service: YTDLPService = YTDLPService()) { self.service = service }
 
@@ -59,12 +59,10 @@ final class LinkDownloaderViewModel: ObservableObject {
 
   func checkClipboard() {
     guard clipboardDetectionEnabled, DesktopPlatform.shared.isApplicationActive,
-      let text = DesktopPlatform.shared.clipboardText(), text != ignoredClipboardValue
+      let text = DesktopPlatform.shared.clipboardText()
     else { return }
-    let urls = LinkURLParser.mediaURLs(from: text)
-    guard !urls.isEmpty else { return }
-    let current = Set(LinkURLParser.urls(from: input).map(\.absoluteString))
-    let newValues = urls.filter { !current.contains($0.absoluteString) }
+    let newValues = clipboardSession.freshMediaURLs(
+      from: text, existingURLs: LinkURLParser.urls(from: input))
     guard !newValues.isEmpty else { return }
     detectedClipboardURLs = newValues
   }
@@ -72,13 +70,11 @@ final class LinkDownloaderViewModel: ObservableObject {
   func analyzeClipboardSuggestion() {
     guard !detectedClipboardURLs.isEmpty else { return }
     input = detectedClipboardURLs.map(\.absoluteString).joined(separator: "\n")
-    ignoredClipboardValue = DesktopPlatform.shared.clipboardText()
     detectedClipboardURLs = []
     analyzeAll()
   }
 
   func ignoreClipboardSuggestion() {
-    ignoredClipboardValue = DesktopPlatform.shared.clipboardText()
     detectedClipboardURLs = []
   }
 

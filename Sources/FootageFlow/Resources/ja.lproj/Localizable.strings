@@ -141,7 +141,7 @@
 "error.externalToolUnavailable" = "ローカルのベストエフォート型ダウンローダーは使用できません。";
 "error.videoUnavailable" = "このビデオは利用できません。";
 "error.regionalRestriction" = "このビデオはお住まいの地域ではご利用いただけません。";
-"error.ytDLPFailed" = "YouTube はダウンロード可能なパブリック ストリームを提供できませんでした。後でもう一度試すか、ソース ページを開いてください。";
+"error.ytDLPFailed" = "メディア配信元からダウンロード可能な公開ストリームを取得できませんでした。後でもう一度試すか、配信元ページを開いてください。";
 "error.unsupported" = "このソースはそのアクションをサポートしていません。";
 "error.cancelled" = "操作はキャンセルされました。";
 "error.timeout" = "ネットワーク要求がタイムアウトしました。もう一度試してください。";

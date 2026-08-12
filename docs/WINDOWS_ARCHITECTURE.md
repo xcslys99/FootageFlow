@@ -1,6 +1,6 @@
 # Windows architecture audit
 
-Status: Windows 11 x64 is supported from FootageFlow v0.2.0. The v0.7.2 candidate keeps the same shared-core boundary and adds one shared ten-language compound-query engine to both desktop interfaces. Windows-native installation and runtime checks are performed on a clean Windows GitHub Actions runner before release.
+Status: Windows 11 x64 is supported from FootageFlow v0.2.0. The v0.7.3 candidate keeps the same shared-core boundary and adds creator-workflow regression checks without duplicating Provider or download logic. Windows-native installation and runtime checks are performed on a clean Windows GitHub Actions runner before release.
 
 ## Current shared code
 
@@ -79,17 +79,19 @@ The Windows scheduler enforces the same 12-request global limit, two requests pe
 - v0.7.0 adds cross-platform update notifications, visible official release notes, View Update, Remind Later, and a manual Settings check without automatic installation.
 - v0.7.1 adds Precise, Balanced, and Broad modes backed by the same Swift `SearchRelevanceEngine` used on macOS. The Windows client retains high-recall candidates and sends them to the Core Host for filtering and ranking; no relevance rules are duplicated in C#.
 - v0.7.2 adds shared ten-language compound search, structured query metadata, and language-aware ranking without duplicating the lexicon in C#.
+- v0.7.3 hardens session-only clipboard suggestions, direct-media format fallback, Openverse filtering, link error classification, and real creator-workflow validation.
 - Windows 10 x64 is not declared supported because it has not completed the same validation.
 
-## v0.7.2 release validation gate
+## v0.7.3 release validation gate
 
-Before publishing v0.7.2, CI must complete all of the following on a clean Windows runner:
+Before publishing v0.7.3, CI must complete all of the following on a clean Windows runner:
 
 - Shared Swift Release build, Core Host health check, and cross-platform tests.
 - Native WPF Release build and Windows platform acceptance checks.
 - Self-contained publish, Swift runtime collection, pinned yt-dlp/FFmpeg checksum verification, and Inno Setup compilation.
 - Clean per-user installation, installed Core Host health check, native WPF startup-liveness check, and clean uninstall.
 - Real public Provider smoke tests; optional key paths run only when repository secrets are configured.
+- Real YouTube analysis or correct hosted-IP access-limit classification, real Dailymotion and public direct-media analysis, plus a validated 10-second editing-compatible MP4 clip and source sidecars.
 - Portable archive, installer, SHA-256 verification, runtime/license inventory, tracked-secret scan, and candidate artifact upload.
 
 No developer credential, browser cookie, token, password, private-link query value, or user path may be embedded in source, logs, feedback URLs, sidecars, or release packages.

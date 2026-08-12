@@ -2,6 +2,28 @@
 
 All notable FootageFlow changes are documented here.
 
+## [0.7.3] - 2026-08-12
+
+### Fixed
+
+- Clipboard media-link suggestions now remember every normalized URL already offered during the current app session, so ignored links do not reappear after another clipboard value; raw clipboard text is never persisted
+- Added the same bounded clipboard check cooldown to macOS and Windows without enabling clipboard detection by default
+- Editing-compatible downloads now retain a final `best` fallback for direct media whose extractor does not report resolution or codec metadata
+- Vimeo OAuth 401 and equivalent logged-in-client failures are now shown as an access/login requirement instead of a generic download error
+- Generic yt-dlp failures no longer incorrectly name YouTube when another media source failed
+
+### Improved
+
+- Openverse requests now explicitly set `mature=false`, and mature items are defensively removed if an upstream response still includes one
+- Added a real creator-workflow smoke test for public YouTube, Dailymotion, and direct-media analysis, 10-second clip extraction, editing-compatible MP4 validation, fast-start, and source sidecars on both platform pipelines; hosted-runner YouTube blocks must be correctly classified rather than bypassed
+- Removed stale v0.6.0 labels from the current English screenshots in both README files
+
+### Validation
+
+- 44 offline Swift unit and fixture tests pass
+- The macOS creator-workflow smoke passed 12/12 checks using bundled yt-dlp and FFmpeg: YouTube, Dailymotion, and public direct media analyzed; the resulting clip measured 10 seconds and passed MP4, H.264, yuv420p, AAC, fast-start, and sidecar checks
+- Windows CI is the release gate for WPF build, shared Swift core tests, the same real creator-workflow smoke, package assembly, installer, clean install, startup, and uninstall
+
 ## [0.7.2] - 2026-08-12
 
 ### Fixed

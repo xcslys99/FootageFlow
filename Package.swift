@@ -22,6 +22,7 @@ import PackageDescription
     "Services/PreviewWindowManager.swift",
     "Services/SearchCache.swift",
     "Utilities/AcceptanceRunner.swift",
+    "Utilities/CreatorWorkflowSmokeRunner.swift",
     "Utilities/LiveSmokeRunner.swift",
     "Utilities/SelfTestRunner.swift",
     "ViewModels",

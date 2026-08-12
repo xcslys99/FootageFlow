@@ -52,6 +52,16 @@ import Foundation
       #expect(audio.duration == 9)
     }
 
+    @Test("Openverse rejects mature items defensively")
+    func openverseMatureFilter() throws {
+      let data = Data(
+        #"{"result_count":1,"page_count":1,"results":[{"id":"mature","title":"Filtered","foreign_landing_url":"https://example.com/item","url":"https://example.com/item.jpg","mature":true}]}"#
+          .utf8)
+      let response = try JSONDecoder().decode(OpenverseSearchResponse.self, from: data)
+      let item = try #require(response.results.first)
+      #expect(OpenverseProvider.asset(item, type: .image, query: "fixture", index: 0) == nil)
+    }
+
     @Test("Dailymotion is discovery-only and preserves public metadata")
     func dailymotionFixture() throws {
       let response = try JSONDecoder().decode(
@@ -107,6 +117,7 @@ import Foundation
       #expect(editingOptions.effectiveFormatSelector.contains("vcodec^=avc1"))
       #expect(editingOptions.effectiveFormatSelector.contains("bestaudio[ext=m4a]"))
       #expect(editingOptions.effectiveFormatSelector.contains("height<=720"))
+      #expect(editingOptions.effectiveFormatSelector.hasSuffix("/best"))
       let audioOptions = YTDLPDownloadOptions(
         formatSelector: LinkDownloadQuality.audioOnly.formatSelector,
         downloadSubtitles: false, subtitleLanguages: nil,
@@ -205,6 +216,29 @@ import Foundation
       #expect(LinkURLParser.mediaURLs(from: "secret password text").isEmpty)
       #expect(LinkURLParser.mediaURLs(from: "http://127.0.0.1/private").isEmpty)
       #expect(LinkURLParser.mediaURLs(from: "https://example.com/file.mp4").count == 1)
+      var session = ClipboardSuggestionSession(cooldown: 0)
+      let first = session.freshMediaURLs(
+        from: "https://youtu.be/example", existingURLs: [], now: Date(timeIntervalSince1970: 1))
+      #expect(first.count == 1)
+      _ = session.freshMediaURLs(
+        from: "https://vimeo.com/123", existingURLs: [], now: Date(timeIntervalSince1970: 2))
+      #expect(
+        session.freshMediaURLs(
+          from: "https://youtu.be/example", existingURLs: [], now: Date(timeIntervalSince1970: 3)
+        ).isEmpty)
+      var cooldown = ClipboardSuggestionSession(cooldown: 1)
+      #expect(
+        cooldown.freshMediaURLs(
+          from: "https://youtu.be/one", existingURLs: [], now: Date(timeIntervalSince1970: 10)
+        ).count == 1)
+      #expect(
+        cooldown.freshMediaURLs(
+          from: "https://youtu.be/two", existingURLs: [], now: Date(timeIntervalSince1970: 10.5)
+        ).isEmpty)
+      #expect(
+        cooldown.freshMediaURLs(
+          from: "https://youtu.be/two", existingURLs: [], now: Date(timeIntervalSince1970: 12)
+        ).count == 1)
     }
 
     @Test("legacy history and keyword JSON decode without multilingual fields")

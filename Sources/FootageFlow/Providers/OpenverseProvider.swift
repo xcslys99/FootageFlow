@@ -42,6 +42,7 @@ struct OpenverseProvider: MediaProvider {
               URLQueryItem(name: "q", value: request.query),
               URLQueryItem(name: "page_size", value: String(pageSize)),
               URLQueryItem(name: "page", value: String(page)),
+              URLQueryItem(name: "mature", value: "false"),
             ])
           let value = try await HTTPClient.shared.decode(
             OpenverseSearchResponse.self, request: URLRequest(url: url), maxRetries: 1)
@@ -70,6 +71,7 @@ struct OpenverseProvider: MediaProvider {
   static func asset(
     _ item: OpenverseResult, type: MediaType, query: String, index: Int
   ) -> MediaAsset? {
+    guard item.mature != true else { return nil }
     guard let source = ProviderUtilities.safeURL(item.foreignLandingURL) else { return nil }
     let download = ProviderUtilities.safeURL(item.url)
     let licenseURL = ProviderUtilities.safeURL(item.licenseURL)
@@ -167,11 +169,12 @@ struct OpenverseResult: Decodable {
   let thumbnail, url, foreignLandingURL, filetype, provider, source, attribution: String?
   let width, height: Int?
   let duration: Double?
+  let mature: Bool?
   let tags: [OpenverseTag]?
 
   enum CodingKeys: String, CodingKey {
     case id, title, creator, license, thumbnail, url, width, height, duration, filetype, provider,
-      source, attribution, tags
+      source, attribution, mature, tags
     case licenseVersion = "license_version"
     case licenseURL = "license_url"
     case foreignLandingURL = "foreign_landing_url"

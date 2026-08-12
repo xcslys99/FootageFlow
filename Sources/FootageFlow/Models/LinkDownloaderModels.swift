@@ -268,7 +268,7 @@ struct YTDLPDownloadOptions: Sendable, Equatable {
       height = ""
     }
     return
-      "bestvideo[vcodec^=avc1]\(height)+bestaudio[ext=m4a]/best[ext=mp4][vcodec^=avc1]\(height)/\(formatSelector)"
+      "bestvideo[vcodec^=avc1]\(height)+bestaudio[ext=m4a]/best[ext=mp4][vcodec^=avc1]\(height)/\(formatSelector)/best"
   }
 }
 
@@ -320,6 +320,31 @@ enum LinkURLParser {
       let host = url.host?.lowercased() ?? ""
       return recognizedHosts.contains { host == $0 || host.hasSuffix(".\($0)") }
         || mediaExtensions.contains(url.pathExtension.lowercased())
+    }
+  }
+}
+
+/// Keeps clipboard suggestions quiet for the lifetime of the current Link Downloader session.
+/// Only normalized, public media URLs are retained; raw clipboard text is never stored.
+struct ClipboardSuggestionSession: Sendable {
+  private(set) var seenURLs = Set<String>()
+  private var lastCheckAt: Date?
+  let cooldown: TimeInterval
+
+  init(cooldown: TimeInterval = 0.75) {
+    self.cooldown = max(0, cooldown)
+  }
+
+  mutating func freshMediaURLs(
+    from text: String, existingURLs: [URL], now: Date = Date()
+  ) -> [URL] {
+    if let lastCheckAt, now.timeIntervalSince(lastCheckAt) < cooldown { return [] }
+    lastCheckAt = now
+    let existing = Set(existingURLs.map(\.absoluteString))
+    return LinkURLParser.mediaURLs(from: text).filter { url in
+      let value = url.absoluteString
+      guard !existing.contains(value), seenURLs.insert(value).inserted else { return false }
+      return true
     }
   }
 }

@@ -241,6 +241,12 @@ struct YTDLPService: Sendable {
     {
       return .regionalRestriction
     }
+    if (message.contains("oauth")
+      && (message.contains("401") || message.contains("unauthorized")))
+      || message.contains("web client only works when logged-in")
+    {
+      return .temporarilyBlocked(.vimeo)
+    }
     if message.contains("sign in") || message.contains("login") || message.contains("private video")
       || message.contains("members-only") || message.contains("age-restricted")
     {

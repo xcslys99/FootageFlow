@@ -1,4 +1,6 @@
 using System.Text.Json;
+using System.Text;
+using System.Globalization;
 using System.Net;
 using System.Net.Http;
 using FootageFlow.Windows.Models;
@@ -221,6 +223,24 @@ Check(!LinkUrlSafety.TryCreate("https://example.com/watch?access_token=secret", 
     "Windows sensitive query rejection");
 Check(!LinkUrlSafety.TryCreate("https://user:password@example.com/watch", out _),
     "Windows embedded credential rejection");
+var clipboardSession = new ClipboardSuggestionSession(TimeSpan.Zero);
+Check(clipboardSession.FreshCandidates(["https://youtu.be/example"], []).Count == 1,
+    "Windows clipboard first suggestion");
+_ = clipboardSession.FreshCandidates(["https://vimeo.com/123"], []);
+Check(clipboardSession.FreshCandidates(["https://youtu.be/example"], []).Count == 0,
+    "Windows clipboard suggestion is not repeated in one session");
+var clipboardCooldown = new ClipboardSuggestionSession(TimeSpan.FromSeconds(1));
+var clipboardTime = DateTimeOffset.FromUnixTimeSeconds(10);
+Check(clipboardCooldown.FreshCandidates(["https://youtu.be/one"], [], clipboardTime).Count == 1 &&
+      clipboardCooldown.FreshCandidates(["https://youtu.be/two"], [], clipboardTime.AddMilliseconds(500)).Count == 0 &&
+      clipboardCooldown.FreshCandidates(["https://youtu.be/two"], [], clipboardTime.AddSeconds(2)).Count == 1,
+    "Windows clipboard suggestion cooldown");
+Check(YtDlpPlatformService.ClassifyFailureCode(
+        "Failed to fetch macos OAuth token: HTTP Error 401: Unauthorized") == "temporarilyBlocked",
+    "Windows Vimeo OAuth 401 classification");
+Check(YtDlpPlatformService.EditingCompatibleSelector(
+        "bestvideo[height<=720]+bestaudio/best[height<=720]").EndsWith("/best", StringComparison.Ordinal),
+    "Windows direct-media fallback for editing-compatible output");
 if (roundTrip is not null)
 {
     roundTrip.IsSelected = true;
@@ -361,11 +381,143 @@ if (OperatingSystem.IsWindows())
             if (Directory.Exists(downloadRoot)) Directory.Delete(downloadRoot, true);
         }
     }
+
+    if (args.Contains("--creator-workflow-smoke", StringComparer.OrdinalIgnoreCase))
+    {
+        var toolRoot = Environment.GetEnvironmentVariable("FOOTAGEFLOW_CREATOR_SMOKE_TOOLS");
+        var creatorCorePath = Environment.GetEnvironmentVariable("FOOTAGEFLOW_CORE_PATH");
+        if (string.IsNullOrWhiteSpace(toolRoot) || string.IsNullOrWhiteSpace(creatorCorePath))
+            failures.Add("Windows creator workflow smoke paths");
+        else
+            await RunCreatorWorkflowSmokeAsync(toolRoot, creatorCorePath, Check);
+    }
 }
 
 Console.WriteLine($"WINDOWS_SELF_TEST passed={passed} failed={failures.Count}");
 foreach (var failure in failures) Console.WriteLine("FAIL " + failure);
 return failures.Count == 0 ? 0 : 1;
+
+static async Task RunCreatorWorkflowSmokeAsync(
+    string toolRoot, string corePath, Action<bool, string> check)
+{
+    var service = new YtDlpPlatformService(toolRoot);
+    check(service.IsAvailable, "Windows creator smoke bundled yt-dlp");
+    var sources = new[]
+    {
+        ("YouTube", "https://www.youtube.com/watch?v=jNQXAC9IVRw"),
+        ("Dailymotion", "https://www.dailymotion.com/video/x7rvjrf"),
+        ("public media", "https://media.w3.org/2010/05/sintel/trailer.mp4")
+    };
+    foreach (var (name, url) in sources)
+    {
+        try
+        {
+            var analysis = await service.AnalyzeAsync(url, CancellationToken.None);
+            check(!string.IsNullOrWhiteSpace(analysis.Title) && analysis.FormatCount > 0,
+                $"Windows creator smoke {name} analysis");
+        }
+        catch (ExternalToolException error) when (name == "YouTube" &&
+            error.Code is "temporarilyBlocked" or "rateLimited")
+        {
+            check(true, $"Windows creator smoke YouTube {error.Code} classification");
+        }
+        catch (Exception error)
+        {
+            check(false, $"Windows creator smoke {name} analysis ({error.GetType().Name})");
+        }
+    }
+
+    var directory = Path.Combine(Path.GetTempPath(), "FootageFlowCreatorSmoke", Guid.NewGuid().ToString("N"));
+    Directory.CreateDirectory(directory);
+    try
+    {
+        var source = sources[2].Item2;
+        var analysis = await service.AnalyzeAsync(source, CancellationToken.None);
+        var metadata = new Dictionary<string, string>
+        {
+            ["linkFormatSelector"] = "bestvideo[height<=720]+bestaudio/best[height<=720]",
+            ["linkOutputPreset"] = "editingCompatibleMP4",
+            ["linkClipStart"] = "2",
+            ["linkClipEnd"] = "12",
+            ["linkClipDuration"] = "10",
+            ["linkMediaDuration"] = analysis.Duration?.ToString(CultureInfo.InvariantCulture) ?? "",
+            ["sourceName"] = analysis.SourceName
+        };
+        var output = await service.DownloadAsync(
+            source, directory, "sintel-10-second-clip", metadata, null, CancellationToken.None);
+        var probe = await ProbeMediaAsync(Path.Combine(toolRoot, "ffprobe.exe"), output);
+        check(Path.GetExtension(output).Equals(".mp4", StringComparison.OrdinalIgnoreCase),
+            "Windows creator smoke editing MP4 extension");
+        check(Math.Abs(probe.Duration - 10) <= 0.25, "Windows creator smoke ten-second duration");
+        check(probe.HasH264Yuv420p, "Windows creator smoke H.264 yuv420p video");
+        check(probe.HasCompatibleAudio, "Windows creator smoke AAC audio when present");
+        check(HasFastStart(output), "Windows creator smoke MP4 fast-start atom order");
+
+        var asset = new MediaAsset
+        {
+            Id = "creator-smoke", Provider = "linkDownloader", Title = analysis.Title,
+            Creator = analysis.Creator, SourcePageURL = source,
+            DownloadURL = source, LicenseStatus = "UNKNOWN", MediaType = "video", Downloadable = true,
+            SearchKeyword = source, FileType = "mp4", DownloadAvailability = "conditional",
+            OriginalMetadata = metadata
+        };
+        var core = new CoreHostClient(corePath);
+        var sidecar = await core.SendAsync(new CoreRequest
+        {
+            Action = "writeSidecar", Asset = asset, MediaPath = output,
+            ProjectName = "Creator Workflow Smoke", SegmentIndex = 1
+        });
+        check(sidecar.Success && File.Exists(Path.ChangeExtension(output, ".source.txt")) &&
+              File.Exists(Path.ChangeExtension(output, ".source.json")),
+            "Windows creator smoke source sidecars");
+    }
+    finally
+    {
+        if (Directory.Exists(directory)) Directory.Delete(directory, true);
+    }
+}
+
+static async Task<(double Duration, bool HasH264Yuv420p, bool HasCompatibleAudio)> ProbeMediaAsync(
+    string ffprobe, string mediaPath)
+{
+    using var process = new System.Diagnostics.Process
+    {
+        StartInfo = new System.Diagnostics.ProcessStartInfo
+        {
+            FileName = ffprobe, UseShellExecute = false, CreateNoWindow = true,
+            RedirectStandardOutput = true, RedirectStandardError = true
+        }
+    };
+    foreach (var argument in new[] { "-v", "error", "-show_entries",
+        "format=duration:stream=codec_type,codec_name,pix_fmt", "-of", "json", mediaPath })
+        process.StartInfo.ArgumentList.Add(argument);
+    process.Start();
+    var output = await process.StandardOutput.ReadToEndAsync();
+    await process.WaitForExitAsync();
+    if (process.ExitCode != 0) throw new InvalidOperationException("ffprobe failed");
+    using var document = JsonDocument.Parse(output);
+    var duration = double.Parse(
+        document.RootElement.GetProperty("format").GetProperty("duration").GetString()!,
+        CultureInfo.InvariantCulture);
+    var streams = document.RootElement.GetProperty("streams").EnumerateArray().ToArray();
+    var video = streams.Any(value => value.GetProperty("codec_type").GetString() == "video" &&
+        value.GetProperty("codec_name").GetString() == "h264" &&
+        value.GetProperty("pix_fmt").GetString() == "yuv420p");
+    var audio = !streams.Any(value => value.GetProperty("codec_type").GetString() == "audio" &&
+        value.GetProperty("codec_name").GetString() != "aac");
+    return (duration, video, audio);
+}
+
+static bool HasFastStart(string mediaPath)
+{
+    using var stream = File.OpenRead(mediaPath);
+    var bytes = new byte[Math.Min(4 * 1024 * 1024, (int)stream.Length)];
+    _ = stream.Read(bytes);
+    var text = Encoding.Latin1.GetString(bytes);
+    var moov = text.IndexOf("moov", StringComparison.Ordinal);
+    var mdat = text.IndexOf("mdat", StringComparison.Ordinal);
+    return moov >= 0 && mdat >= 0 && moov < mdat;
+}
 
 static HttpResponseMessage Response(
     HttpStatusCode status, byte[]? data = null, string? contentType = null, string? location = null)
