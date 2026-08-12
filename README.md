@@ -69,11 +69,17 @@ YouTube search can use the official Data API when configured. FootageFlow also i
 
 These screenshots are from FootageFlow on macOS. The Windows edition follows the same product structure with platform-native controls.
 
-![FootageFlow v0.6.0 Smart Search Expansion and real provider results](docs/images/main-search.png)
+![FootageFlow v0.6.0 Smart Search Expansion with editable local queries](docs/images/smart-search-expansion.png)
 
-![FootageFlow v0.6.0 Link Downloader with clip and output controls](docs/images/link-downloader.png)
+![FootageFlow v0.6.0 Link Downloader with a validated clip range and editing-compatible output](docs/images/link-clip-output.png)
 
-![FootageFlow v0.6.0 provider, clipboard, and ten-language settings](docs/images/provider-settings.png)
+![FootageFlow v0.6.0 Openverse results with real loaded thumbnails](docs/images/openverse-results.png)
+
+![FootageFlow v0.6.0 Dailymotion discovery results](docs/images/dailymotion-results.png)
+
+![FootageFlow v0.6.0 optional local-only clipboard detection setting](docs/images/clipboard-settings.png)
+
+![FootageFlow provider modes and ten interface languages](docs/images/provider-settings.png)
 
 ## Install on macOS
 

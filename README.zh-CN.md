@@ -69,11 +69,17 @@ FootageFlow 注重隐私，适合历史、国家、财经、人物、科普、�
 
 以下截图来自 macOS 版 FootageFlow。Windows 版采用相同产品结构，并使用符合 Windows 习惯的原生控件。
 
-![FootageFlow v0.6.0 智能搜索扩展与真实 Provider 结果](docs/images/main-search.png)
+![FootageFlow v0.6.0 智能搜索扩展与可编辑本地关键词](docs/images/smart-search-expansion.png)
 
-![FootageFlow v0.6.0 带片段和输出控制的链接下载器](docs/images/link-downloader.png)
+![FootageFlow v0.6.0 链接下载的有效片段范围与剪辑兼容输出](docs/images/link-clip-output.png)
 
-![FootageFlow v0.6.0 Provider、剪贴板与 10 种语言设置](docs/images/provider-settings.png)
+![FootageFlow v0.6.0 Openverse 真实搜索结果与已加载缩略图](docs/images/openverse-results.png)
+
+![FootageFlow v0.6.0 Dailymotion 发现结果](docs/images/dailymotion-results.png)
+
+![FootageFlow v0.6.0 可选且仅限本机的剪贴板检测设置](docs/images/clipboard-settings.png)
+
+![FootageFlow Provider 模式与十种界面语言](docs/images/provider-settings.png)
 
 ## 在 macOS 安装
 

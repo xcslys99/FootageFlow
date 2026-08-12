@@ -2,7 +2,7 @@
 
 All notable FootageFlow changes are documented here.
 
-## [Unreleased]
+## [0.6.0] - 2026-08-12
 
 ### Added
 
