@@ -10,8 +10,10 @@ public partial class UpdateWindow : Window
     {
         InitializeComponent();
         Title = text("update.settingsTitle");
-        HeadingText.Text = Format(text("update.availableTitle"), release.Version);
-        VersionText.Text = Format(text("update.versionComparison"), currentVersion, release.Version);
+        HeadingText.Text = text("update.availableTitle");
+        VersionText.Text = string.Join(Environment.NewLine,
+            Format(text("update.currentVersionValue"), currentVersion),
+            Format(text("update.latestVersionValue"), release.Version));
         PublishedText.Text = release.PublishedAt is { } published
             ? Format(text("update.published"), published.ToLocalTime().ToString("D", CultureInfo.CurrentCulture)) : "";
         ReleaseTitleText.Text = release.Title;
@@ -19,7 +21,7 @@ public partial class UpdateWindow : Window
         NotesText.Text = string.IsNullOrWhiteSpace(release.Notes)
             ? text("update.notesUnavailable") : release.Notes;
         SafetyText.Text = text("update.noAutomaticInstall");
-        LaterButton.Content = text("update.remindLater");
+        LaterButton.Content = text("update.notNow");
         ViewButton.Content = text("update.viewUpdate");
     }
 

@@ -44,7 +44,7 @@ public partial class MainWindow : Window
             Owner = this
         };
         if (dialog.ShowDialog() == true) _viewModel.ViewUpdate(release);
-        else _viewModel.RemindLater(release);
+        else _viewModel.NotNow();
     }
 
     private void LanguageButton_Click(object sender, RoutedEventArgs e)

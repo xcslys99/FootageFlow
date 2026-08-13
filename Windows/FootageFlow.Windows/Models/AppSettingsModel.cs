@@ -15,6 +15,4 @@ public sealed class AppSettingsModel
     public bool SmartSearchExpansionEnabled { get; set; } = true;
     public string SearchRelevanceMode { get; set; } = "balanced";
     public bool ClipboardMediaLinkDetectionEnabled { get; set; }
-    public string? DeferredUpdateVersion { get; set; }
-    public DateTimeOffset? DeferredUpdateUntil { get; set; }
 }

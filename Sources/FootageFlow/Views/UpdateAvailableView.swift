@@ -2,7 +2,7 @@ import SwiftUI
 
 struct UpdateAvailableView: View {
   let release: AppRelease
-  let remindLater: () -> Void
+  let notNow: () -> Void
   let viewUpdate: () -> Void
 
   var body: some View {
@@ -12,8 +12,10 @@ struct UpdateAvailableView: View {
           .font(.system(size: 42))
           .foregroundStyle(.tint)
         VStack(alignment: .leading, spacing: 5) {
-          Text(tr("update.availableTitle", release.version)).font(.title.bold())
-          Text(tr("update.versionComparison", FootageFlowVersion.current, release.version))
+          Text(tr("update.availableTitle")).font(.title.bold())
+          Text(tr("update.currentVersionValue", FootageFlowVersion.current))
+            .foregroundStyle(.secondary)
+          Text(tr("update.latestVersionValue", release.version))
             .foregroundStyle(.secondary)
           if let publishedAt = release.publishedAt {
             Text(tr("update.published", publishedAt.formatted(date: .long, time: .omitted)))
@@ -35,7 +37,7 @@ struct UpdateAvailableView: View {
         .font(.caption).foregroundStyle(.secondary)
       HStack {
         Spacer()
-        Button(tr("update.remindLater"), action: remindLater)
+        Button(tr("update.notNow"), action: notNow)
         Button(tr("update.viewUpdate"), action: viewUpdate).buttonStyle(.borderedProminent)
       }
     }

@@ -11,7 +11,7 @@
 - Apple Translation where available, with a rule-based fallback
 - Checksum-pinned yt-dlp plus redistributable GPL FFmpeg/FFprobe tooling are bundled for best-effort media analysis, clip extraction, merging, audio extraction, and editing-compatible output
 
-FootageFlow v0.7.3 targets Apple Silicon macOS 15+ and Windows 11 x64. SwiftUI, AppKit, AVKit, Apple Translation, and Security.framework remain macOS-only. The Windows WPF layer calls a local Swift Core Host over JSON stdin/stdout so all 17 search providers, ten-language query planning, pagination continuations, normalized models, rights rules, local relevance ranking, clip/output metadata, attribution, sidecars, update-version logic, and the Codable project database remain single-source Swift implementations. Credentials never appear in command-line arguments.
+FootageFlow v0.7.4 targets Apple Silicon macOS 15+ and Windows 11 x64. SwiftUI, AppKit, AVKit, Apple Translation, and Security.framework remain macOS-only. The Windows WPF layer calls a local Swift Core Host over JSON stdin/stdout so all 17 search providers, ten-language query planning, pagination continuations, normalized models, rights rules, local relevance ranking, clip/output metadata, attribution, sidecars, update-version logic, and the Codable project database remain single-source Swift implementations. Credentials never appear in command-line arguments.
 
 ## Multilingual search
 
@@ -92,9 +92,9 @@ Clipboard link detection is platform-specific only at the pasteboard boundary. T
 
 ## Update checking
 
-`AppUpdateService` is a platform-neutral actor that reads only the latest non-draft, non-prerelease item from GitHub's public Releases API. It validates semantic versions, caps release-note length, accepts only this repository's HTTPS release links, and maps offline, timeout, rate-limit, server, and response failures into stable error codes. `AppUpdateReminderPolicy` owns the shared 24-hour same-release deferral rule. A newly published higher version bypasses an older release's deferral.
+`AppUpdateService` is a platform-neutral actor that reads only the latest non-draft, non-prerelease item from GitHub's public Releases API. It validates semantic versions, converts bounded Markdown Release Notes into inert plain text, accepts only this repository's HTTPS release links, and maps offline, timeout, rate-limit, server, and response failures into stable error codes. There is no persisted skip or reminder cooldown. Not Now is held only in the current platform session.
 
-macOS uses `AppUpdateController` and a SwiftUI sheet; Windows sends `checkUpdate` to the same Swift Core Host and presents the result in a WPF dialog. Both shells check once at startup, keep startup failures unobtrusive, offer a manual Settings action, and only open the official release page after **View Update**. Neither shell contains an installer or automatic-download path.
+macOS uses `AppUpdateController` and a SwiftUI sheet; Windows sends `checkUpdate` to the same Swift Core Host and presents the result in a WPF dialog. Both shells check asynchronously once per launch after the main window loads, show at most one automatic dialog per session, keep startup failures unobtrusive, offer a manual Settings action, and only open the official release page after **View Update**. A complete restart creates a fresh session and therefore reminds an outdated installation again. Neither shell contains an installer or automatic-download path.
 
 ## Rights, filtering, and batch behavior
 
@@ -124,7 +124,7 @@ Downloads are restricted to the configured root for app-initiated deletion. A su
 
 ## Localization
 
-English is the fixed first-launch default. `en.lproj` is the fallback for missing translations. v0.7.3 ships `en`, `zh-Hans`, `zh-Hant`, `es`, `pt-BR`, `ja`, `ko`, `de`, `fr`, and `ru`. SwiftPM may normalize language-directory casing in the built resource bundle, so locale lookup also checks normalized identifiers.
+English is the fixed first-launch default. `en.lproj` is the fallback for missing translations. v0.7.4 ships `en`, `zh-Hans`, `zh-Hant`, `es`, `pt-BR`, `ja`, `ko`, `de`, `fr`, and `ru`. SwiftPM may normalize language-directory casing in the built resource bundle, so locale lookup also checks normalized identifiers.
 
 Run `scripts/check_localizations.sh` after changing UI copy. `localization.fallbackProbe` intentionally exists only in English to exercise fallback behavior.
 
@@ -150,7 +150,7 @@ The package uses the official `swift-testing` dependency so the full platform-ne
 
 ## Packaging
 
-`scripts/build_app.sh` builds a Release executable; bundles checksum-pinned yt-dlp; builds static GPL FFmpeg 8.0.3 with pinned x264, Apple SecureTransport, and no `nonfree` component; copies all applicable license texts; creates the `.app`; and performs Ad Hoc signing. The FFmpeg configuration uses a neutral build prefix and the packaging scan rejects private developer paths. `scripts/binary_privacy_scan.sh` scans the app executable and bundled tools for credential-like strings. `scripts/build_dmg.sh` creates the drag-to-Applications DMG and SHA-256 checksum. No Developer ID certificate or notarization is claimed for v0.7.3.
+`scripts/build_app.sh` builds a Release executable; bundles checksum-pinned yt-dlp; builds static GPL FFmpeg 8.0.3 with pinned x264, Apple SecureTransport, and no `nonfree` component; copies all applicable license texts; creates the `.app`; and performs Ad Hoc signing. The FFmpeg configuration uses a neutral build prefix and the packaging scan rejects private developer paths. `scripts/binary_privacy_scan.sh` scans the app executable and bundled tools for credential-like strings. `scripts/build_dmg.sh` creates the drag-to-Applications DMG and SHA-256 checksum. No Developer ID certificate or notarization is claimed for v0.7.4.
 
 ## Windows architecture
 

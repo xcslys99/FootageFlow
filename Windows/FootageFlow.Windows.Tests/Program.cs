@@ -35,25 +35,43 @@ try
               recommendation.Contains("Europeana", StringComparison.Ordinal) &&
               recommendation.Contains("YouTube", StringComparison.Ordinal),
               $"Windows {language.Code} API recommendation localization");
-        Check(localization.Text("update.availableTitle").Contains("%@", StringComparison.Ordinal) &&
-              localization.Text("update.whatsNew") != "update.whatsNew",
+        Check(localization.Text("update.availableTitle") != "update.availableTitle" &&
+              localization.Text("update.currentVersionValue").Contains("%@", StringComparison.Ordinal) &&
+              localization.Text("update.latestVersionValue").Contains("%@", StringComparison.Ordinal) &&
+              localization.Text("update.whatsNew") != "update.whatsNew" &&
+              localization.Text("update.notNow") != "update.notNow",
               $"Windows {language.Code} update localization");
     }
     localization.SetLanguage("ru");
-    settings.Current.DeferredUpdateVersion = "0.8.0";
-    settings.Current.DeferredUpdateUntil = DateTimeOffset.UtcNow.AddHours(24);
     settings.Save();
+    File.WriteAllText(settingsPath, File.ReadAllText(settingsPath).Replace(
+        "\"language\": \"ru\"", "\"language\": \"ru\",\n  \"deferredUpdateVersion\": \"0.8.0\",\n  \"deferredUpdateUntil\": \"2030-01-01T00:00:00Z\""));
     var reopened = new SettingsService(settingsFile: settingsPath);
     Check(reopened.Current.Language == "ru", "Windows language persistence");
-    Check(reopened.Current.DeferredUpdateVersion == "0.8.0" &&
-          reopened.Current.DeferredUpdateUntil is not null,
-          "Windows update reminder persistence");
+    var migratedSettings = File.ReadAllText(settingsPath);
+    Check(!migratedSettings.Contains("deferredUpdate", StringComparison.OrdinalIgnoreCase),
+          "Windows removes legacy update reminder persistence");
     Check(!File.ReadAllText(settingsPath).Contains("local-test-value", StringComparison.Ordinal), "Settings exclude API keys");
 }
 finally
 {
     if (Directory.Exists(settingsDirectory)) Directory.Delete(settingsDirectory, true);
 }
+var updateSession = new UpdateCheckSession();
+Check(updateSession.TryBeginLaunchCheck(), "Windows starts one launch update check");
+Check(!updateSession.TryBeginLaunchCheck(), "Windows deduplicates launch update checks");
+Check(updateSession.ShouldPresent(manual: false), "Windows shows one automatic update dialog");
+Check(!updateSession.ShouldPresent(manual: false), "Windows suppresses repeat dialog in the same session");
+Check(updateSession.ShouldPresent(manual: true), "Windows manual check can show the update dialog");
+var restartedUpdateSession = new UpdateCheckSession();
+Check(restartedUpdateSession.TryBeginLaunchCheck() && restartedUpdateSession.ShouldPresent(manual: false),
+      "Windows restart shows an available update again");
+Check(UpdateReleaseUrlValidator.IsTrusted(
+          "https://github.com/xcslys99/FootageFlow/releases/tag/v0.7.4"),
+      "Windows trusts the official update release URL");
+Check(!UpdateReleaseUrlValidator.IsTrusted(
+          "https://github.com.evil.example/xcslys99/FootageFlow/releases/tag/v0.7.4"),
+      "Windows rejects untrusted update release URLs");
 Check(WindowsPathSafety.SanitizeName("CON") == "_CON", "Windows reserved filename");
 Check(!WindowsPathSafety.SanitizeName("bank:run?.mp4").Contains(':'), "Windows invalid filename characters");
 Check(WindowsPathSafety.SanitizeName(new string('a', 200)).Length == 80, "Windows filename length");

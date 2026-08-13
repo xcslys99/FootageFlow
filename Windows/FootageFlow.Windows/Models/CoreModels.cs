@@ -37,9 +37,6 @@ public sealed class CoreRequest
     public string? ExternalToolOutputBase64 { get; init; }
     public string? FeedbackDestination { get; init; }
     public bool? SmartExpansion { get; init; }
-    public string? DeferredUpdateVersion { get; init; }
-    public DateTimeOffset? DeferredUpdateUntil { get; init; }
-    public bool? ForceUpdatePrompt { get; init; }
 }
 
 public sealed class CoreResponse

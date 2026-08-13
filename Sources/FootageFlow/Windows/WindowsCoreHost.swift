@@ -33,9 +33,6 @@
     var externalToolOutputBase64: String? = nil
     var feedbackDestination: FeedbackDestination? = nil
     var smartExpansion: Bool? = nil
-    var deferredUpdateVersion: String? = nil
-    var deferredUpdateUntil: Date? = nil
-    var forceUpdatePrompt: Bool? = nil
   }
 
   private struct WindowsCoreResponse: Encodable {
@@ -212,17 +209,8 @@
         case .upToDate:
           return WindowsCoreResponse(id: request.id, success: true, updateStatus: "upToDate")
         case .updateAvailable(let release):
-          let shouldPrompt =
-            request.forceUpdatePrompt == true
-            || AppUpdateReminderPolicy.shouldPrompt(
-              releaseVersion: release.version,
-              currentVersion: FootageFlowVersion.current,
-              deferredVersion: request.deferredUpdateVersion,
-              deferredUntil: request.deferredUpdateUntil)
           return WindowsCoreResponse(
-            id: request.id, success: true,
-            updateStatus: shouldPrompt ? "available" : "deferred",
-            release: shouldPrompt ? release : nil)
+            id: request.id, success: true, updateStatus: "available", release: release)
         }
       } catch let error as AppUpdateCheckError {
         return WindowsCoreResponse(
