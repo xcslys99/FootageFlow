@@ -10,7 +10,9 @@ A free and open-source desktop app for macOS and Windows that helps video creato
 
 [Download for macOS or Windows — Latest Release](https://github.com/xcslys99/FootageFlow/releases/latest) · [All Releases](https://github.com/xcslys99/FootageFlow/releases)
 
-FootageFlow is privacy-friendly and built for documentary, history, country profile, finance, science, and social-video research. FootageFlow v0.7.3 supports **macOS 15+ on Apple Silicon** and **Windows 11 x64**. Both editions share all 17 search providers, ten-language compound search, pagination, normalized metadata and rights, local relevance ranking, creator output metadata, source sidecars, project persistence, and update-version logic.
+FootageFlow is privacy-friendly and built for documentary, history, country profile, finance, science, and social-video research. FootageFlow v0.7.4 supports **macOS 15+ on Apple Silicon** and **Windows 11 x64**. Both editions share all 17 search providers, ten-language compound search, pagination, normalized metadata and rights, local relevance ranking, creator output metadata, source sidecars, project persistence, and update-version logic.
+
+> **Using v0.6.0 or earlier?** Those builds cannot detect new releases. Install the latest version manually once from [GitHub Releases](https://github.com/xcslys99/FootageFlow/releases/latest); v0.7.0 and later can then notify you about future stable releases.
 
 ## Two ways to use FootageFlow
 
@@ -62,7 +64,7 @@ Availability depends on the source, individual media, permissions, regional rest
 - A visible **Feedback & Community** page integrates GitHub Issues and Discussions for bug reports, ideas, and Q&A, with links to the repository and Releases
 - Optional API keys stored only in macOS Keychain or Windows Credential Manager
 - Optional, foreground-only clipboard link detection; disabled by default and entirely local
-- Cross-platform update notifications show the official release notes at launch and offer **View Update** or **Remind Later**; FootageFlow never installs an update automatically
+- Cross-platform update notifications show the official release notes on every outdated app launch and offer **View Update** or **Not Now**; FootageFlow never installs an update automatically
 - No analytics, advertising, tracking, cloud account, paid LLM, OpenAI API, or Codex dependency
 
 YouTube search can use the official Data API when configured. FootageFlow also includes a local, best-effort yt-dlp path for public search and downloads. Downloads may fail because of rate limits, regional restrictions, login requirements, rights restrictions, or platform changes. FootageFlow does not import browser cookies, bypass DRM, or promise that every video is downloadable.
@@ -85,15 +87,15 @@ These screenshots are from FootageFlow on macOS. The Windows edition follows the
 
 ## Install on macOS
 
-1. Download `FootageFlow-0.7.3-macOS-arm64.dmg` from Releases.
+1. Download `FootageFlow-0.7.4-macOS-arm64.dmg` from Releases.
 2. Open the DMG and drag FootageFlow to Applications.
-3. Open FootageFlow. The v0.7.3 build is Ad Hoc signed, not notarized; if macOS blocks the first launch, use **System Settings → Privacy & Security → Open Anyway**.
+3. Open FootageFlow. The v0.7.4 build is Ad Hoc signed, not notarized; if macOS blocks the first launch, use **System Settings → Privacy & Security → Open Anyway**.
 
 No terminal command is required for normal use.
 
 ## Install on Windows
 
-1. On a Windows 11 x64 PC, download `FootageFlow-Setup-0.7.3-Windows-x64.exe` from Releases.
+1. On a Windows 11 x64 PC, download `FootageFlow-Setup-0.7.4-Windows-x64.exe` from Releases.
 2. Verify it against the attached `.sha256` file, then double-click the installer.
 3. Complete the setup wizard and open FootageFlow from the Start menu.
 
@@ -112,9 +114,9 @@ Default downloads are stored under `~/Movies/FootageFlow/<Project>/` on macOS an
 
 ## Software updates
 
-Starting with v0.7.0, FootageFlow checks the repository's latest official GitHub Release once when the app starts. If a newer version exists, the app shows the version, publication date, and release notes so you can choose **View Update** or **Remind Later**. View Update opens the official GitHub Release page; the app never downloads or installs an update silently. Remind Later defers that same release for 24 hours, while a newer release can still be shown immediately. You can also run a manual check under **Settings → Software Updates**.
+Starting with v0.7.0, FootageFlow can check this repository's latest stable GitHub Release after the main window loads. From v0.7.4 onward, an outdated online installation checks on every launch and shows the current version, latest version, publication date, and the real Release Notes. **View Update** opens only the official GitHub Release page. **Not Now** closes the dialog for the current app session only; if the app is still outdated, it checks and reminds again after the next complete restart. Startup network failures stay silent, and a manual check remains available under **Settings → Software Updates**. FootageFlow never downloads, installs, or forces an update.
 
-Versions up to and including v0.6.0 did not contain an update checker and therefore cannot receive this prompt retroactively. Those users must install v0.7.0 manually once; later releases can then be discovered in the app.
+Versions up to and including v0.6.0 did not contain an update checker and therefore cannot receive this prompt retroactively. Those users must install the latest release manually once; later releases can then be discovered in the app.
 
 ## Supported sources and provider modes
 

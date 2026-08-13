@@ -62,8 +62,12 @@ public sealed class SettingsService
         try
         {
             if (string.IsNullOrWhiteSpace(_settingsFile) || !File.Exists(_settingsFile)) return;
-            Current = JsonSerializer.Deserialize<AppSettingsModel>(
-                File.ReadAllText(_settingsFile), JsonOptions) ?? new AppSettingsModel();
+            var json = File.ReadAllText(_settingsFile);
+            var hadObsoleteUpdateDeferral =
+                json.Contains("deferredUpdateVersion", StringComparison.OrdinalIgnoreCase) ||
+                json.Contains("deferredUpdateUntil", StringComparison.OrdinalIgnoreCase);
+            Current = JsonSerializer.Deserialize<AppSettingsModel>(json, JsonOptions) ?? new AppSettingsModel();
+            if (hadObsoleteUpdateDeferral) Save();
         }
         catch
         {

@@ -294,17 +294,13 @@ enum SelfTestRunner {
       failed.append("Update release fixture parse")
       failed.append("Update release notes parse")
     }
-    let reminderNow = Date(timeIntervalSince1970: 1_700_000_000)
     check(
-      !AppUpdateReminderPolicy.shouldPrompt(
-        releaseVersion: "0.8.0", currentVersion: "0.7.0", deferredVersion: "0.8.0",
-        deferredUntil: reminderNow.addingTimeInterval(60), now: reminderNow),
-      "Update remind-later suppression")
+      SemanticAppVersion("0.10.0")! > SemanticAppVersion("0.9.9")!,
+      "Semantic update comparison")
     check(
-      AppUpdateReminderPolicy.shouldPrompt(
-        releaseVersion: "0.9.0", currentVersion: "0.7.0", deferredVersion: "0.8.0",
-        deferredUntil: reminderNow.addingTimeInterval(60), now: reminderNow),
-      "Newer update bypasses old deferral")
+      ReleaseNotesFormatter.plainText("## Fixed\n- **Safer** updates\n<script>x</script>")
+        .contains("• Safer updates"),
+      "Safe update release notes")
 
     print("SELF_TEST passed=\(passed) failed=\(failed.count)")
     for name in failed { print("FAIL \(name)") }

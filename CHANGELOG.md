@@ -2,6 +2,28 @@
 
 All notable FootageFlow changes are documented here.
 
+## [0.7.4] - 2026-08-13
+
+### Improved
+
+- FootageFlow now checks for a newer stable GitHub Release asynchronously on every app launch when online
+- Outdated installations show the current version, latest version, publication date, and the real Release Notes in a bounded scrollable dialog
+- **Not Now** dismisses the automatic reminder only for the current session; a complete restart checks and reminds again if the installed version is still outdated
+- Release Notes are converted from bounded Markdown to safe plain text shared by the macOS and Windows interfaces
+- Startup network, timeout, rate-limit, and invalid-response failures remain silent; manual checks still show a friendly status
+- README and the v0.5.0/v0.6.0 Release pages now direct legacy installations to upgrade manually once
+
+### Security and privacy
+
+- Update links are restricted to this repository's HTTPS Release path
+- Update checks send only the installed FootageFlow version and standard GitHub API request headers
+- FootageFlow never downloads, installs, or forces an update
+
+### Validation
+
+- Added semantic-version, stable-release, safe Release Notes, session dismissal/restart, silent startup failure, legacy-settings migration, and trusted-URL tests
+- macOS and Windows release gates cover shared Core tests, native UI builds, packaging, clean install, startup, and uninstall
+
 ## [0.7.3] - 2026-08-12
 
 ### Fixed

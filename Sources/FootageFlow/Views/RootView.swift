@@ -76,7 +76,7 @@ struct RootView: View {
     .task { await updates.checkAtLaunch() }
     .sheet(item: $updates.availableRelease) { release in
       UpdateAvailableView(
-        release: release, remindLater: updates.remindLater, viewUpdate: updates.viewUpdate)
+        release: release, notNow: updates.notNow, viewUpdate: updates.viewUpdate)
     }
   }
 }

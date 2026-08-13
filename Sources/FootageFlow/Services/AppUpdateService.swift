@@ -88,25 +88,43 @@ struct SemanticAppVersion: Comparable, Equatable, Sendable {
   }
 }
 
-enum AppUpdateReminderPolicy {
-  static let reminderDelay: TimeInterval = 24 * 60 * 60
+enum ReleaseNotesFormatter {
+  static func plainText(_ markdown: String?, limit: Int = 20_000) -> String {
+    guard let markdown else { return "" }
+    let normalized = markdown.replacingOccurrences(of: "\r\n", with: "\n")
+      .replacingOccurrences(of: "\r", with: "\n")
+    var output: [String] = []
+    var previousWasBlank = false
 
-  static func shouldPrompt(
-    releaseVersion: String,
-    currentVersion: String,
-    deferredVersion: String?,
-    deferredUntil: Date?,
-    now: Date = .now
-  ) -> Bool {
-    guard let release = SemanticAppVersion(releaseVersion),
-      let current = SemanticAppVersion(currentVersion), current < release
-    else { return false }
-    guard deferredVersion == releaseVersion, let deferredUntil else { return true }
-    return now >= deferredUntil
-  }
+    for rawLine in normalized.split(separator: "\n", omittingEmptySubsequences: false) {
+      var line = String(rawLine).trimmingCharacters(in: .whitespaces)
+      if line.hasPrefix("```") { continue }
+      while line.hasPrefix("#") { line.removeFirst() }
+      line = line.trimmingCharacters(in: .whitespaces)
+      if line == "---" || line == "***" || line == "___" { line = "" }
+      if line.hasPrefix("- ") || line.hasPrefix("* ") || line.hasPrefix("+ ") {
+        line = "• " + line.dropFirst(2)
+      }
+      line = line.replacingOccurrences(
+        of: #"!?\[([^\]]+)\]\([^\)]*\)"#, with: "$1", options: .regularExpression)
+      for marker in ["**", "__", "`"] {
+        line = line.replacingOccurrences(of: marker, with: "")
+      }
+      // Both platform shells render this output as inert plain text. Escaping angle brackets
+      // also keeps embedded HTML or scripts inert if a future text control supports markup.
+      line = line.replacingOccurrences(of: "<", with: "&lt;")
+        .replacingOccurrences(of: ">", with: "&gt;")
 
-  static func deferredUntil(from date: Date = .now) -> Date {
-    date.addingTimeInterval(reminderDelay)
+      let isBlank = line.isEmpty
+      if isBlank && previousWasBlank { continue }
+      output.append(line)
+      previousWasBlank = isBlank
+    }
+
+    return String(
+      output.joined(separator: "\n")
+        .trimmingCharacters(in: .whitespacesAndNewlines)
+        .prefix(limit))
   }
 }
 
@@ -192,7 +210,7 @@ actor AppUpdateService {
       AppRelease(
         version: version,
         title: cleaned(payload.name, limit: 240) ?? "FootageFlow v\(version)",
-        notes: cleaned(payload.body, limit: 20_000) ?? "",
+        notes: ReleaseNotesFormatter.plainText(payload.body),
         pageURL: trustedReleaseURL(payload.htmlURL),
         publishedAt: parseDate(payload.publishedAt)))
   }
@@ -211,10 +229,14 @@ actor AppUpdateService {
     return String(clean.prefix(limit))
   }
 
+  static func isTrustedReleaseURL(_ url: URL) -> Bool {
+    url.scheme?.lowercased() == "https" && url.host?.lowercased() == "github.com"
+      && url.user == nil && url.password == nil && url.port == nil
+      && url.path.hasPrefix("/xcslys99/FootageFlow/releases/")
+  }
+
   private static func trustedReleaseURL(_ value: String?) -> URL {
-    guard let value, let url = URL(string: value), url.scheme == "https",
-      url.host?.lowercased() == "github.com",
-      url.path.hasPrefix("/xcslys99/FootageFlow/releases/")
+    guard let value, let url = URL(string: value), isTrustedReleaseURL(url)
     else { return latestReleasePageURL }
     return url
   }
@@ -249,6 +271,8 @@ private struct GitHubReleasePayload: Decodable {
 
   @MainActor
   final class AppUpdateController: ObservableObject {
+    typealias CheckAction = @Sendable () async throws -> AppUpdateCheckOutcome
+
     enum ManualState: Equatable {
       case idle
       case checking
@@ -258,7 +282,15 @@ private struct GitHubReleasePayload: Decodable {
 
     @Published var availableRelease: AppRelease?
     @Published private(set) var manualState: ManualState = .idle
+    private let checkAction: CheckAction
     private var checkedAtLaunch = false
+    private var presentedAutomaticUpdate = false
+
+    init(
+      checkAction: @escaping CheckAction = { try await AppUpdateService.shared.check() }
+    ) {
+      self.checkAction = checkAction
+    }
 
     func checkAtLaunch() async {
       guard !checkedAtLaunch else { return }
@@ -270,15 +302,12 @@ private struct GitHubReleasePayload: Decodable {
       await performCheck(manual: true)
     }
 
-    func remindLater() {
-      guard let release = availableRelease else { return }
-      AppSettings.deferUpdate(version: release.version)
-      availableRelease = nil
-    }
+    func notNow() { availableRelease = nil }
 
     func viewUpdate() {
-      guard let release = availableRelease else { return }
-      AppSettings.deferUpdate(version: release.version)
+      guard let release = availableRelease,
+        AppUpdateService.isTrustedReleaseURL(release.pageURL)
+      else { return }
       availableRelease = nil
       DesktopPlatform.shared.open(release.pageURL)
     }
@@ -286,17 +315,12 @@ private struct GitHubReleasePayload: Decodable {
     private func performCheck(manual: Bool) async {
       if manual { manualState = .checking }
       do {
-        switch try await AppUpdateService.shared.check() {
+        switch try await checkAction() {
         case .upToDate:
           if manual { manualState = .upToDate }
         case .updateAvailable(let release):
-          if manual
-            || AppUpdateReminderPolicy.shouldPrompt(
-              releaseVersion: release.version,
-              currentVersion: FootageFlowVersion.current,
-              deferredVersion: AppSettings.deferredUpdateVersion,
-              deferredUntil: AppSettings.deferredUpdateUntil)
-          {
+          if manual || !presentedAutomaticUpdate {
+            if !manual { presentedAutomaticUpdate = true }
             availableRelease = release
           }
           if manual { manualState = .idle }

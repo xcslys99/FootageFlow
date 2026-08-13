@@ -1,10 +1,10 @@
 # Windows architecture audit
 
-Status: Windows 11 x64 is supported from FootageFlow v0.2.0. The v0.7.3 candidate keeps the same shared-core boundary and adds creator-workflow regression checks without duplicating Provider or download logic. Windows-native installation and runtime checks are performed on a clean Windows GitHub Actions runner before release.
+Status: Windows 11 x64 is supported from FootageFlow v0.2.0. The v0.7.4 candidate keeps the same shared-core boundary and changes update reminder lifetime without duplicating release parsing, version comparison, Provider, or download logic. Windows-native installation and runtime checks are performed on a clean Windows GitHub Actions runner before release.
 
 ## Current shared code
 
-All 17 search Provider implementations, API/direct-mode selection, pagination continuations, `HTTPClient`, normalized `MediaAsset`, rights mapping, Provider capabilities and errors, smart keyword rules, clip/output models, clipboard URL parsing, update release parsing/version/reminder policy, deduplication, filters, filename suggestions, feedback URLs, source-sidecar generation, path roots, log redaction, and Codable persistence are platform-neutral Swift. macOS and Windows therefore use one business implementation for the existing providers plus Openverse and Dailymotion.
+All 17 search Provider implementations, API/direct-mode selection, pagination continuations, `HTTPClient`, normalized `MediaAsset`, rights mapping, Provider capabilities and errors, smart keyword rules, clip/output models, clipboard URL parsing, update release parsing/version comparison/Release Notes sanitizing, deduplication, filters, filename suggestions, feedback URLs, source-sidecar generation, path roots, log redaction, and Codable persistence are platform-neutral Swift. macOS and Windows therefore use one business implementation for the existing providers plus Openverse and Dailymotion.
 
 `PersistentStore` owns project, segment, favorite, history, and download-record behavior. The macOS `DataStore` is a small Combine presentation facade over this shared repository. Windows calls the same repository through the local Core Host.
 
@@ -44,7 +44,7 @@ Pexels and Pixabay still use best-effort direct search without a key and only th
 
 Link Downloader uses the existing Windows `DownloadQueueService`, cancellation tokens, progress, retry, project folder, source sidecars, and download history. Full/clip scope and output presets create normal queue assets rather than a second queue. Only yt-dlp/FFmpeg process control and WPF presentation are Windows-specific; media metadata and file-source records use the same shared models.
 
-The Windows WPF shell sends `checkUpdate` to the same Core Host. The Swift core calls GitHub's latest official Release API, validates the version and repository URL, and applies the shared reminder policy. WPF only renders the release notes and user choices. It does not download or install application packages.
+The Windows WPF shell sends `checkUpdate` to the same Core Host. The Swift core calls GitHub's latest stable Release API, validates the semantic version and repository URL, and converts Release Notes to inert plain text. WPF holds only two non-persistent session flags so it checks once and presents at most one automatic dialog per launch. It does not download or install application packages.
 
 ## Windows-only responsibilities
 
@@ -80,11 +80,12 @@ The Windows scheduler enforces the same 12-request global limit, two requests pe
 - v0.7.1 adds Precise, Balanced, and Broad modes backed by the same Swift `SearchRelevanceEngine` used on macOS. The Windows client retains high-recall candidates and sends them to the Core Host for filtering and ranking; no relevance rules are duplicated in C#.
 - v0.7.2 adds shared ten-language compound search, structured query metadata, and language-aware ranking without duplicating the lexicon in C#.
 - v0.7.3 hardens session-only clipboard suggestions, direct-media format fallback, Openverse filtering, link error classification, and real creator-workflow validation.
+- v0.7.4 removes the persisted 24-hour update deferral. Not Now is session-only, so an outdated online installation checks and reminds again after a complete restart without forcing an update.
 - Windows 10 x64 is not declared supported because it has not completed the same validation.
 
-## v0.7.3 release validation gate
+## v0.7.4 release validation gate
 
-Before publishing v0.7.3, CI must complete all of the following on a clean Windows runner:
+Before publishing v0.7.4, CI must complete all of the following on a clean Windows runner:
 
 - Shared Swift Release build, Core Host health check, and cross-platform tests.
 - Native WPF Release build and Windows platform acceptance checks.

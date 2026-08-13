@@ -48,6 +48,7 @@ public sealed class MainViewModel : ObservableObject
     private readonly ClipboardSuggestionSession _clipboardSession = new();
     private bool _isUpdateChecking;
     private string _updateStatusCode = "";
+    private readonly UpdateCheckSession _updateSession = new();
     private bool _showAllSearchLanguages;
     private static readonly SemaphoreSlim SearchNetworkLimit = new(12, 12);
 
@@ -419,7 +420,7 @@ public sealed class MainViewModel : ObservableObject
         get
         {
             var version = typeof(MainViewModel).Assembly.GetName().Version;
-            return version is null ? "0.7.3" : $"{version.Major}.{version.Minor}.{Math.Max(0, version.Build)}";
+            return version is null ? "0.7.4" : $"{version.Major}.{version.Minor}.{Math.Max(0, version.Build)}";
         }
     }
     public bool IsUpdateChecking
@@ -580,19 +581,14 @@ public sealed class MainViewModel : ObservableObject
 
     public void SetLanguage(string language) => _localization.SetLanguage(language);
 
-    public Task CheckForUpdatesOnLaunchAsync() => CheckForUpdatesAsync(manual: false);
+    public Task CheckForUpdatesOnLaunchAsync() =>
+        _updateSession.TryBeginLaunchCheck() ? CheckForUpdatesAsync(manual: false) : Task.CompletedTask;
 
-    public void RemindLater(AppReleaseInfo release)
-    {
-        _settings.Current.DeferredUpdateVersion = release.Version;
-        _settings.Current.DeferredUpdateUntil = DateTimeOffset.UtcNow.AddHours(24);
-        _settings.Save();
-    }
+    public void NotNow() { }
 
     public void ViewUpdate(AppReleaseInfo release)
     {
-        RemindLater(release);
-        ShellService.OpenUrl(release.PageURL);
+        if (UpdateReleaseUrlValidator.IsTrusted(release.PageURL)) ShellService.OpenUrl(release.PageURL);
     }
 
     private async Task CheckForUpdatesAsync(bool manual)
@@ -604,10 +600,7 @@ public sealed class MainViewModel : ObservableObject
         {
             var response = await _core.SendAsync(new CoreRequest
             {
-                Action = "checkUpdate", Language = _settings.Current.Language,
-                DeferredUpdateVersion = _settings.Current.DeferredUpdateVersion,
-                DeferredUpdateUntil = _settings.Current.DeferredUpdateUntil,
-                ForceUpdatePrompt = manual
+                Action = "checkUpdate", Language = _settings.Current.Language
             }, timeout: TimeSpan.FromSeconds(20));
             if (!response.Success)
             {
@@ -621,7 +614,7 @@ public sealed class MainViewModel : ObservableObject
             if (response.UpdateStatus == "available" && response.Release is { } release)
             {
                 if (manual) SetUpdateStatus("");
-                UpdateAvailable?.Invoke(release);
+                if (_updateSession.ShouldPresent(manual)) UpdateAvailable?.Invoke(release);
             }
             else if (manual) SetUpdateStatus("upToDate");
         }

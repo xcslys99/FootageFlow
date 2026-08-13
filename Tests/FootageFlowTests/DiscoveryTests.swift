@@ -265,6 +265,7 @@ import Foundation
     func updateChecker() throws {
       #expect(SemanticAppVersion("v0.7.0")! > SemanticAppVersion("0.6.0")!)
       #expect(SemanticAppVersion("0.10.0")! > SemanticAppVersion("0.9.9")!)
+      #expect(SemanticAppVersion("1.0.0")! > SemanticAppVersion("0.7.3")!)
       #expect(SemanticAppVersion("1.0.0-beta.2")! < SemanticAppVersion("1.0.0")!)
       #expect(SemanticAppVersion("1.0.0-beta.2")! < SemanticAppVersion("1.0.0-beta.10")!)
 
@@ -282,6 +283,9 @@ import Foundation
       let current = try AppUpdateService.evaluate(
         data: fixture("github-release"), currentVersion: "0.8.0")
       #expect(current == .upToDate(latestVersion: "0.8.0"))
+      let newerInstalled = try AppUpdateService.evaluate(
+        data: fixture("github-release"), currentVersion: "1.0.0")
+      #expect(newerInstalled == .upToDate(latestVersion: "0.8.0"))
 
       var untrusted = try #require(
         JSONSerialization.jsonObject(with: fixture("github-release")) as? [String: Any])
@@ -293,29 +297,81 @@ import Foundation
         return
       }
       #expect(safeRelease.pageURL == AppUpdateService.latestReleasePageURL)
+      #expect(AppUpdateService.isTrustedReleaseURL(safeRelease.pageURL))
+      #expect(
+        !AppUpdateService.isTrustedReleaseURL(
+          URL(string: "https://github.com.evil.example/xcslys99/FootageFlow/releases/tag/v1")!))
     }
 
-    @Test("update reminder defers only the same release for 24 hours")
-    func updateReminder() {
-      let now = Date(timeIntervalSince1970: 1_800_000_000)
-      let later = AppUpdateReminderPolicy.deferredUntil(from: now)
-      #expect(later.timeIntervalSince(now) == 86_400)
-      #expect(
-        !AppUpdateReminderPolicy.shouldPrompt(
-          releaseVersion: "0.8.0", currentVersion: "0.7.0", deferredVersion: "0.8.0",
-          deferredUntil: later, now: now))
-      #expect(
-        AppUpdateReminderPolicy.shouldPrompt(
-          releaseVersion: "0.8.0", currentVersion: "0.7.0", deferredVersion: "0.8.0",
-          deferredUntil: later, now: later))
-      #expect(
-        AppUpdateReminderPolicy.shouldPrompt(
-          releaseVersion: "0.9.0", currentVersion: "0.7.0", deferredVersion: "0.8.0",
-          deferredUntil: later, now: now))
-      #expect(
-        !AppUpdateReminderPolicy.shouldPrompt(
-          releaseVersion: "0.7.0", currentVersion: "0.7.0", deferredVersion: nil,
-          deferredUntil: nil, now: now))
+    @Test("release notes render safe readable plain text")
+    func releaseNotesPlainText() throws {
+      let markdown = """
+        ## Added
+
+        - **Improved** search
+        - 中文更新
+        [Official page](https://example.com)
+        <script>alert('unsafe')</script>
+        """
+      let notes = ReleaseNotesFormatter.plainText(markdown)
+      #expect(notes.contains("Added"))
+      #expect(notes.contains("• Improved search"))
+      #expect(notes.contains("中文更新"))
+      #expect(notes.contains("Official page"))
+      #expect(!notes.contains("https://example.com"))
+      #expect(!notes.contains("<script>"))
+      #expect(notes.contains("&lt;script&gt;"))
+      #expect(ReleaseNotesFormatter.plainText(nil).isEmpty)
+      let longNotes = ReleaseNotesFormatter.plainText(String(repeating: "长", count: 25_000))
+      #expect(longNotes.count == 20_000)
+    }
+
+    #if os(macOS)
+      @MainActor
+      @Test("Not Now is session-only and startup failures stay silent")
+      func updateSessionBehavior() async {
+        let release = AppRelease(
+          version: "1.0.0", title: "FootageFlow v1.0.0", notes: "• Fixed",
+          pageURL: URL(string: "https://github.com/xcslys99/FootageFlow/releases/tag/v1.0.0")!,
+          publishedAt: nil)
+        let controller = AppUpdateController(checkAction: { .updateAvailable(release) })
+        await controller.checkAtLaunch()
+        #expect(controller.availableRelease == release)
+        controller.notNow()
+        #expect(controller.availableRelease == nil)
+        await controller.checkAtLaunch()
+        #expect(controller.availableRelease == nil)
+        await controller.checkManually()
+        #expect(controller.availableRelease == release)
+
+        let restarted = AppUpdateController(checkAction: { .updateAvailable(release) })
+        await restarted.checkAtLaunch()
+        #expect(restarted.availableRelease == release)
+
+        for error in [
+          AppUpdateCheckError.noNetwork, .timedOut, .rateLimited, .invalidResponse,
+        ] {
+          let failing = AppUpdateController(checkAction: { throw error })
+          await failing.checkAtLaunch()
+          #expect(failing.availableRelease == nil)
+          #expect(failing.manualState == .idle)
+          await failing.checkManually()
+          #expect(failing.manualState == .failed(error))
+        }
+      }
+    #endif
+
+    @Test("draft and prerelease payloads are not offered")
+    func stableUpdatesOnly() throws {
+      for field in ["draft", "prerelease"] {
+        var object = try #require(
+          JSONSerialization.jsonObject(with: fixture("github-release")) as? [String: Any])
+        object[field] = true
+        let data = try JSONSerialization.data(withJSONObject: object)
+        #expect(throws: AppUpdateCheckError.invalidResponse) {
+          try AppUpdateService.evaluate(data: data, currentVersion: "0.7.3")
+        }
+      }
     }
 
     @Test("NASA manifest returns official HTTPS media without guessing rights")
@@ -480,9 +536,13 @@ import Foundation
         #expect(
           !catalog.text("update.whatsNew", language: language, arguments: []).contains(
             "Unavailable"))
+        let availableTitle = catalog.text(
+          "update.availableTitle", language: language, arguments: [])
+        #expect(availableTitle != "update.availableTitle")
+        #expect(catalog.text("update.notNow", language: language, arguments: []) != "update.notNow")
         #expect(
           catalog.text(
-            "update.availableTitle", language: language, arguments: ["0.8.0"]
+            "update.latestVersionValue", language: language, arguments: ["0.8.0"]
           ).contains("0.8.0"))
       }
     }

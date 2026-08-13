@@ -6,14 +6,17 @@ enum AppSettings {
   static let smartExpansionKey = "smartSearchExpansionEnabled"
   static let searchRelevanceModeKey = "searchRelevanceMode"
   static let clipboardDetectionKey = "clipboardMediaLinkDetectionEnabled"
-  static let deferredUpdateVersionKey = "deferredUpdateVersion"
-  static let deferredUpdateUntilKey = "deferredUpdateUntil"
+  private static let obsoleteDeferredUpdateVersionKey = "deferredUpdateVersion"
+  private static let obsoleteDeferredUpdateUntilKey = "deferredUpdateUntil"
   private static let migrationKey = "didMigrateFootageFinderSettings"
   private static let providerCatalogV3Key = "didEnableDiscoveryProvidersV3"
   private static let providerCatalogV5Key = "didEnableSearchExpansionProvidersV5"
   private static let providerCatalogV6Key = "didEnableCreatorWorkflowProvidersV6"
 
   static func migrateLegacySettingsIfNeeded() {
+    // v0.7.4 makes Not Now session-only. Remove any 24-hour deferral left by v0.7.0–v0.7.3.
+    UserDefaults.standard.removeObject(forKey: obsoleteDeferredUpdateVersionKey)
+    UserDefaults.standard.removeObject(forKey: obsoleteDeferredUpdateUntilKey)
     guard !UserDefaults.standard.bool(forKey: migrationKey) else { return }
     if let legacy = UserDefaults(suiteName: "com.footagefinder.macos") {
       for key in [enabledProvidersKey, downloadRootKey, "didFinishWelcome"]
@@ -84,17 +87,4 @@ enum AppSettings {
     set { UserDefaults.standard.set(newValue, forKey: clipboardDetectionKey) }
   }
 
-  static var deferredUpdateVersion: String? {
-    UserDefaults.standard.string(forKey: deferredUpdateVersionKey)
-  }
-
-  static var deferredUpdateUntil: Date? {
-    UserDefaults.standard.object(forKey: deferredUpdateUntilKey) as? Date
-  }
-
-  static func deferUpdate(version: String, now: Date = .now) {
-    UserDefaults.standard.set(version, forKey: deferredUpdateVersionKey)
-    UserDefaults.standard.set(
-      AppUpdateReminderPolicy.deferredUntil(from: now), forKey: deferredUpdateUntilKey)
-  }
 }
