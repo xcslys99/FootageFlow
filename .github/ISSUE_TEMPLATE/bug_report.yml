@@ -10,7 +10,7 @@ body:
     id: version
     attributes:
       label: FootageFlow version
-      placeholder: 0.1.0
+      placeholder: 0.x.x
     validations:
       required: true
   - type: dropdown
@@ -55,6 +55,8 @@ body:
         - Mixkit
         - Coverr
         - Vimeo
+        - Openverse
+        - Dailymotion
         - Link Downloader
   - type: textarea
     id: steps

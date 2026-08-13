@@ -6,11 +6,14 @@
 
 一款面向视频创作者的免费开源桌面工具，支持 macOS 和 Windows。你既可以一次搜索多个素材来源，也可以粘贴支持的公开媒体链接，尝试解析和下载媒体。
 
-**macOS Apple Silicon** · **Windows 11 x64** · **免费** · **开源（MIT）**
+[![最新正式版](https://img.shields.io/github/v/release/xcslys99/FootageFlow?display_name=tag&sort=semver)](https://github.com/xcslys99/FootageFlow/releases/latest)
+[![CI](https://github.com/xcslys99/FootageFlow/actions/workflows/ci.yml/badge.svg)](https://github.com/xcslys99/FootageFlow/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![平台：macOS + Windows](https://img.shields.io/badge/platforms-macOS%20%2B%20Windows-555.svg)](#安装)
+
+**macOS 15+ Apple Silicon** · **Windows 11 x64** · **免费** · **开源**
 
 [下载 macOS 或 Windows 最新正式版](https://github.com/xcslys99/FootageFlow/releases/latest) · [查看全部版本](https://github.com/xcslys99/FootageFlow/releases)
-
-FootageFlow 注重隐私，适合历史、国家、财经、人物、科普、纪录片和短视频创作。FootageFlow v0.7.4 正式支持 **macOS 15+ Apple Silicon** 和 **Windows 11 x64**。两个版本共用全部 17 个搜索 Provider、十语复合主题检索、分页、统一 Metadata/Rights、本地相关性重排、创作者输出元数据、来源 Sidecar、项目持久化和版本判断核心。
 
 > **仍在使用 v0.6.0 或更早版本？** 这些旧版无法检测新版本。请先从 [GitHub Releases](https://github.com/xcslys99/FootageFlow/releases/latest) 手动安装一次最新版；从 v0.7.0 开始，后续稳定版本就可以在应用内提醒。
 
@@ -22,52 +25,34 @@ FootageFlow 注重隐私，适合历史、国家、财经、人物、科普、�
 
 - 多 Provider 并发搜索、分页与“加载更多”
 - 高级筛选，包括“仅显示可直接下载”
-- 多选并通过现有下载管理器进行批量下载
+- 多选并通过原有下载管理器进行批量下载
 - 项目、收藏、搜索历史和下载历史
 - 保存 Provider 实际提供的来源、Rights、License 和署名信息
 
 ### 2. 链接下载
 
-已经有媒体链接？把一个或多个支持的公开媒体链接粘贴进 FootageFlow，软件会尝试解析并下载可用媒体。
+粘贴一个或多个支持的公开媒体 URL，让 FootageFlow 尝试解析并下载可用媒体。
 
-- 读取来源 Metadata 和实际可用格式
-- 可下载完整媒体或经过校验的开始/结束时间片段
-- 来源提供时可选择清晰度、仅音频、字幕、原始输出和剪辑兼容 MP4
-- 支持 YouTube、X/Twitter、Vimeo，以及当前内置 yt-dlp 支持的其他公开网站
-- 所有任务进入同一个下载管理器，继续支持进度、取消、重试、历史记录和来源 Sidecar
+- 读取来源实际报告的 Metadata、格式和字幕
+- 可下载完整媒体或经过校验的开始/结束片段
+- 来源支持时可选择原始输出、仅音频或剪辑兼容 MP4
+- 可尝试 YouTube、X/Twitter、Vimeo、Dailymotion 及内置 yt-dlp 支持的其他公开网站
+- 所有任务进入同一个下载管理器，支持进度、取消、重试、历史记录和来源 Sidecar
 
-可用性取决于来源网站、具体媒体、访问权限、地区限制、登录要求以及平台变化。FootageFlow 是尽力提供的链接下载器，不承诺 100% 下载成功。
+可用性取决于来源网站、具体媒体、访问权限、地区限制、登录要求以及平台变化。FootageFlow 是尽力提供的链接下载器，不承诺 100% 成功。详见 [链接下载说明](docs/LINK_DOWNLOADER.md)（详细技术文档目前以英文维护）。
 
 ## 创作者工作流
 
-- **只下载需要的片段：** 链接解析后输入开始/结束时间，或使用轻量范围控件；任务仍进入原有下载管理器。
-- **用十种语言搜索复合主题：** 每次搜索都会保持完整意图，并生成英语、简体中文、繁体中文、西班牙语、巴西葡萄牙语、日语、韩语、德语、法语和俄语查询。默认显示输入语言和英语；点击“查看全部语言”可编辑全部查询。不使用付费 AI API。
-- **输出剪辑兼容文件：** 保留原格式、生成 H.264/AAC/yuv420p 且支持 fast-start 的 MP4，或提取 M4A 音频；完成前会验证兼容输出。
-- **在本机检测复制的媒体链接：** 剪贴板检测默认关闭，仅在 FootageFlow 处于活动状态时运行，不上传剪贴板内容。
-- **搜索 Openverse：** 查找开放授权的图片和音频，并保留每项实际提供的许可与署名元数据。
-- **发现 Dailymotion 视频：** 搜索公开元数据并打开原始页面；Dailymotion 主要作为发现来源。
+FootageFlow 面向纪录片、历史、国家、财经、人物、科普和短视频素材研究。一个典型项目可以在同一个应用中完成：
 
-## 已实现功能
+1. 使用当前界面语言输入一个复合主题。
+2. 查看并编辑可见搜索词；FootageFlow 会用十种语言保留完整主题，并只加入少量视觉扩展。
+3. 使用相关性模式、来源、类型、年份、时长、分辨率、Rights 或直接下载筛选缩小范围。
+4. 预览合适素材、复制来源信息、收藏或加入项目。
+5. 把可下载素材批量加入共用队列；对仅发现结果打开原始来源页。
+6. 把自动生成的来源 Sidecar 与项目一起保留，并在发布前核对当前授权。
 
-- 并发搜索 17 个来源，包括 Pexels、Pixabay、Wikimedia Commons、Internet Archive、YouTube、NASA、Library of Congress、National Archives、Europeana、PeerTube/SepiaSearch、Coverr、Vimeo、Openverse 和 Dailymotion
-- 可见、可编辑、可关闭的十语复合查询；输入语言和英语还可各增加最多两条视觉扩展，总量不超过 14 条
-- 两阶段检索与本地概念相关性重排，可选择精准、均衡或宽泛模式；默认“均衡”会过滤只匹配复合主题中一个宽泛概念的结果
-- Provider 独立分页和“加载更多”；追加结果不会清空已有列表，下一页失败也不会丢失已加载素材
-- “链接下载”可一次解析一个或多个公开媒体链接，选择完整/片段与输出预设，并将任务送入原有下载管理器
-- 按来源、素材类型、年份、时长、分辨率、Rights 和直接下载能力进行高级筛选
-- 多选、选择当前可见结果、批量进入原有三并发下载队列、加入项目、重试失败任务、复制来源信息
-- 每项均可复制来源或复制署名信息，内容只使用 Provider 实际提供的元数据
-- 视频/图片预览、收藏、项目库、文稿拆分、搜索历史和下载历史
-- 每个成功下载文件自动生成同名 `.source.txt` 和 `.source.json`
-- 支持 English、简体中文、繁體中文、西班牙语、巴西葡萄牙语、日语、韩语、德语、法语和俄语；首次启动仍默认 English
-- 搜索栏下方明确提示 National Archives、Europeana 和 YouTube 配置官方免费 API 后效果更好，并可直接进入素材来源设置
-- 明显的“反馈与社区”页面集成 GitHub Issues 和 Discussions，可报告问题、提出建议、提问并查看仓库与正式版本
-- 可选 API Key 只保存在 macOS Keychain 或 Windows Credential Manager
-- 可选的前台剪贴板媒体链接检测；默认关闭且完全在本机进行
-- 跨平台更新提示会在每次启动旧版本时显示官方版本说明，并提供“查看更新”与“暂不更新”；FootageFlow 绝不会自动安装更新
-- 不含分析、广告、跟踪、云端账号、付费大模型，也不依赖 OpenAI API、Codex 或终端脚本
-
-配置 Key 后，YouTube 搜索可使用官方 Data API。FootageFlow 也内置本地 yt-dlp，用于尽力搜索和下载公开内容。由于平台限流、地区限制、登录要求、版权限制或接口变化，部分视频可能无法下载。FootageFlow 不读取浏览器 Cookie、不绕过 DRM，也不承诺每个视频都能下载。
+如果已经知道媒体 URL，链接下载会继续使用同一套项目、下载、历史和 Sidecar 系统。可选的前台剪贴板检测可以在本机识别复制的公开媒体链接；该功能默认关闭，不会上传剪贴板内容。
 
 ## 界面截图
 
@@ -85,111 +70,122 @@ FootageFlow 注重隐私，适合历史、国家、财经、人物、科普、�
 
 ![FootageFlow Provider 模式与十种界面语言](docs/images/provider-settings.png)
 
-## 在 macOS 安装
+## 功能摘要
 
-1. 从 Releases 下载 `FootageFlow-0.7.4-macOS-arm64.dmg`。
+- 17 个素材来源的渐进式搜索，单个 Provider 失败不影响其他来源
+- 十种界面语言的可见、可编辑复合查询，不需要付费 AI
+- 精准、均衡、宽泛三种本地概念相关性模式
+- 来源、类型、年份、时长、分辨率、Rights 和下载能力筛选
+- 视频/图片预览、多选、项目、收藏和历史记录
+- 完整媒体与片段下载，可选原始文件、M4A 或剪辑兼容 MP4
+- 每个成功下载文件自动生成 `.source.txt` 和 `.source.json`
+- “复制来源”和“复制署名”只使用 Provider 实际提供的元数据
+- 可选 API Key 只保存在 macOS Keychain 或 Windows Credential Manager
+- 可选的本机剪贴板链接检测，默认关闭
+- 支持 English、简体中文、繁體中文、西班牙语、巴西葡萄牙语、日语、韩语、德语、法语和俄语；首次启动默认 English
+- 跨平台更新提醒，不会静默安装或强制更新
+- 不含分析、广告、跟踪、云端账号、付费大模型，也不依赖 OpenAI API 或 Codex
+
+## 安装
+
+### macOS
+
+1. 从[最新正式版](https://github.com/xcslys99/FootageFlow/releases/latest)下载 `FootageFlow-<version>-macOS-arm64.dmg`。
 2. 打开 DMG，把 FootageFlow 拖入“应用程序”。
-3. 打开 FootageFlow。v0.7.4 使用 Ad Hoc 签名，尚未公证；如果首次启动被系统拦截，请前往“系统设置 → 隐私与安全性 → 仍要打开”。
+3. 打开 FootageFlow。当前版本使用 Ad Hoc 签名，尚未公证；如果首次启动被系统拦截，请前往“系统设置 → 隐私与安全性 → 仍要打开”。
 
-日常使用不需要打开终端。
+### Windows
 
-## 在 Windows 安装
-
-1. 在 Windows 11 x64 电脑上下载 `FootageFlow-Setup-0.7.4-Windows-x64.exe`。
+1. 在 Windows 11 x64 电脑上，从[最新正式版](https://github.com/xcslys99/FootageFlow/releases/latest)下载 `FootageFlow-Setup-<version>-Windows-x64.exe`。
 2. 使用同时提供的 `.sha256` 文件核对安装包，然后双击安装。
-3. 完成安装向导，从“开始”菜单打开 FootageFlow。
+3. 从“开始”菜单打开 FootageFlow。
 
-安装包已包含运行组件，普通用户不需要安装 Python、Node.js、Swift、.NET、yt-dlp 或 FFmpeg。Windows 安装包尚未代码签名，因此 Microsoft Defender SmartScreen 可能提示“无法识别的应用”。请只使用本仓库正式 Release 的安装包，并确认校验值一致。
+Windows 安装包已包含运行组件，但尚未代码签名，因此 SmartScreen 可能提示“无法识别的应用”。请只使用本仓库正式 Release 的安装包，并确认校验值一致。Release 也提供 `FootageFlow-<version>-Windows-x64-portable.zip`。
+
+日常使用不需要终端，也不需要另外安装 Python、Node.js、Swift、.NET、yt-dlp 或 FFmpeg。
 
 ## 第一次使用
 
-1. 打开 FootageFlow 后可立即搜索；首次启动不要求配置 API Key。
-2. 可先尝试 `Apollo 11` 或 `World War II`，再打开“高级筛选”或“仅显示可直接下载”。
-3. 勾选结果后，可批量下载、加入现有/新项目或复制来源信息。
-4. 发布前使用“复制署名信息”，并核对原始来源页。
-5. National Archives、Europeana 和 YouTube 接入官方免费 API 后搜索效果更好；如需配置，请进入“设置 → 素材来源”。
-6. 如需从公开媒体页面下载，进入“链接下载”，粘贴一个或多个 URL，选择实际可用格式后点击“下载所选”。
+1. 打开 FootageFlow 后可立即搜索；API Key 设置完全可选。
+2. 使用“高级筛选”或“仅显示可直接下载”缩小结果范围。
+3. 勾选素材后，可以下载、加入项目或复制来源信息。
+4. 发布前必须前往原始来源页核对版权与授权。
+5. National Archives、Europeana 和 YouTube 接入官方免费 API 后效果更好；可在“设置 → 素材来源”添加可选 Key。
+6. 如果已经有公开媒体 URL，进入“链接下载”解析链接、选择可用格式并下载。
 
-macOS 默认下载目录为 `~/Movies/FootageFlow/<项目名>/`，Windows 默认为 `%USERPROFILE%\Videos\FootageFlow\<项目名>\`，均可在设置中修改。删除数据库记录不会删除已经下载的素材文件。
+macOS 默认下载目录为 `~/Movies/FootageFlow/<项目名>/`，Windows 默认为 `%USERPROFILE%\Videos\FootageFlow\<项目名>\`，均可在设置中修改。
+
+## 素材来源与 Provider 模式
+
+FootageFlow 通过官方 API、公共接口、受限发现和尽力模式支持 17 个来源。除非某个 Provider 的完整官方搜索本身要求 Key，否则 API Key 都不是首次使用的前置条件。一个 Provider 失败不会清空其他来源的成功结果。
+
+当前来源包括 Pexels、Pixabay、Wikimedia Commons、Internet Archive、YouTube、NASA、Library of Congress、National Archives、Europeana、PeerTube/SepiaSearch、Videvo、Videezy、Mixkit、Coverr、Vimeo、Openverse 和 Dailymotion。
+
+| 接入方式 | 来源 | 实际行为 |
+|---|---|---|
+| 官方公共接口 | Wikimedia Commons、Internet Archive、NASA、Library of Congress、Openverse、Dailymotion、PeerTube/SepiaSearch | 无需用户 Key 即可搜索；具体素材能力仍可能不同 |
+| 可选 API + 无 Key 尽力模式 | Pexels、Pixabay、YouTube | 在支持时可无 Key 搜索；配置 Key 后 Metadata 更稳定或完整 |
+| 完整应用内搜索需要用户 Key | National Archives、Europeana、Coverr、Vimeo | 添加本机 Key/Token，或使用“打开官方搜索” |
+| 受限官方发现 | Videvo、Videezy、Mixkit | 打开官方搜索或原始页面，不抓取受限制网页 |
+
+每个 Provider 都声明真实的搜索、预览、Metadata、Rights、分页和下载能力。FootageFlow 不会仅因为能够发现一条结果就添加下载按钮。
+
+完整能力矩阵、API Key 行为、Rate Limit 和 Rights 元数据规则见 [Provider modes and API behavior](docs/PROVIDERS.md)（英文）。
 
 ## 软件更新
 
-从 v0.7.0 开始，FootageFlow 可以在主窗口加载后检查本仓库最新的 GitHub 稳定正式版。从 v0.7.4 开始，只要本机版本落后且联网，软件每次启动都会检查，并显示当前版本、最新版本、发布时间和该 Release 的真实更新说明。“查看更新”只会打开官方 GitHub Release 页面；“暂不更新”只关闭当前会话的弹窗。若仍未升级，彻底退出并再次启动后会重新检查和提醒。启动时断网或 GitHub 暂不可用会保持安静；也可在“设置 → 软件更新”中主动检查。FootageFlow 绝不会静默下载、自动安装或强制更新。
+v0.7.0 及以后版本可以检查最新 GitHub 稳定正式版。v0.7.4 及以后版本会在每次启动旧版时检查、显示真实 Release Notes，并提供“查看更新”和“暂不更新”。“暂不更新”只对当前会话有效。FootageFlow 绝不会静默下载、自动安装或强制更新。详见 [Software updates](docs/SOFTWARE_UPDATES.md)（英文）。
 
-v0.6.0 及更早版本本身没有更新检查代码，因此无法被远程补上提示。这些用户需要手动安装一次最新正式版；此后的新版本才能在应用内被发现。
+## Rights 与来源安全
 
-## 支持来源与 Provider 模式
+FootageFlow 绝不猜测 License。缺少数据时始终显示“版权 / 授权未知”，下载成功也不等于允许商业使用。通过 FootageFlow 找到的媒体继续受原始版权与授权约束；MIT License 只适用于本仓库源码。
 
-FootageFlow 不要求所有素材来源采用相同的接入方式。部分平台提供无需 API Key 的公开接口；部分平台在用户配置自己的 API Key 后可以获得更完整和稳定的搜索体验。在技术条件和平台规则允许的情况下，FootageFlow 仍会提供无需 API Key 的受限或尽力搜索模式。
+使用前必须核对原始来源页。详见 [Rights and attribution](docs/RIGHTS_AND_ATTRIBUTION.md)（英文）及 [PRIVACY.md](PRIVACY.md)。
 
-| Provider | 搜索 / API 模式 | 无 Key 模式 | 下载 | Rights 元数据 |
-|---|---|---|---|---|
-| [Pexels](https://www.pexels.com/api/) | 用户 Key + 官方 API | 直接搜索，尽力提供 | 来源给出媒体地址时可下载 | API 元数据；直接模式可能未知 |
-| [Pixabay](https://pixabay.com/api/docs/) | 用户 Key + 官方 API | 直接搜索，尽力提供 | 来源给出媒体地址时可下载 | API 元数据；直接模式可能未知 |
-| [Wikimedia Commons](https://commons.wikimedia.org/wiki/Commons:API) | 公共 MediaWiki API | 完整公共接口 | 来源给出原始媒体时可下载 | 来源 `extmetadata` |
-| [Internet Archive](https://archive.org/developers/) | 公共搜索和项目元数据 | 完整公共接口 | 按项目文件决定 | 来源提供 License/Rights 时显示 |
-| [YouTube](https://developers.google.com/youtube/v3/getting-started) | 用户 Key + Data API | yt-dlp 尽力搜索 | yt-dlp 条件性下载 | 通常无法确认，需核对原始页 |
-| [NASA](https://images.nasa.gov/docs/images.nasa.gov_api_docs.pdf) | 官方公开 Images API | 无需 Key | 来源提供官方 Asset 时可下载 | 仅按项目元数据；不自动视为 Public Domain |
-| [Library of Congress](https://www.loc.gov/apis/) | 官方公开 JSON API | 无需 Key | 来源给出且未限制的资源 | Rights Advisory/Access 字段 |
-| [National Archives](https://www.archives.gov/research/catalog/help/api) | 用户 Key + Catalog API | 受限：打开官方搜索 | 来源给出 Digital Object 时可下载 | 来源限制/Rights 字段 |
-| [Europeana](https://europeana.atlassian.net/wiki/spaces/EF/pages/2462351393/Accessing+the+APIs) | 用户 Key + Search API | 受限：打开官方搜索 | 来源给出直接媒体时可下载 | 来源 `edmRights`/rights |
-| [PeerTube / SepiaSearch](https://docs.joinpeertube.org/api-rest-reference.html) | 公开 SepiaSearch API | 无需 Key | 仅发现 | 来源明确提供的单项 License |
-| [Videvo](https://www.videvo.net/) | 受限发现 | 打开官方搜索 | 仅打开原始页面 | 逐项核对原始页面 |
-| [Videezy](https://www.videezy.com/) | 受限发现 | 打开官方搜索 | 仅打开原始页面 | 免费素材可能要求署名，逐项核对 |
-| [Mixkit](https://mixkit.co/) | 受限发现 | 打开官方搜索 | 仅打开原始页面 | 免费/受限授权不同，逐项核对 |
-| [Coverr](https://api.coverr.co/docs) | 用户 Key + 官方 API | 受限：打开官方搜索 | API 提供媒体地址时可下载 | 保留 Coverr API/License 与署名信息 |
-| [Vimeo](https://developer.vimeo.com/api/reference) | 用户 Token + 官方 API | 受限：打开官方搜索 | 默认仅发现 | 仅显示来源明确提供的 License |
-| [Openverse](https://api.openverse.org/) | 公开图片/音频 API | 可匿名访问 | 来源提供原始媒体时可下载 | 每项实际返回的许可、链接、作者与署名元数据 |
-| [Dailymotion](https://developers.dailymotion.com/reference/api-list-videos) | 公开视频发现接口 | 当前公开字段无需 Key | 仅发现 | 除非元数据明确提供，否则保持未知 |
+FootageFlow 不含分析、广告或 Telemetry SDK，也没有 FootageFlow 云端账号。搜索只会发送给完成请求所需的已启用 Provider。项目、文稿、收藏、历史和 API Key 保留在本机；可选 Key 由操作系统安全凭据存储保存。
 
-API Key 是开发接口凭据，不等同于平台登录账号。Key 只留在本机、界面默认隐藏，可在“设置 → 素材来源”中添加、替换、测试或删除。Key 不会进入普通设置、日志、源码、Git、Telemetry 或请求 URL。
+## 常见问题速查
 
-## 链接下载
+- **显示受限模式**：添加该 Provider 的可选 Key 进行完整应用内搜索，或点击“打开官方搜索”。
+- **直接搜索暂不可用**：Pexels/Pixabay 无 Key 搜索属于尽力模式；稍后重试或配置官方 API。
+- **请求过于频繁**：等待后再试；FootageFlow 会遵守 Provider Rate Limit。
+- **缩略图或下载不可用**：如界面提供可重试缩略图；来源没有兼容媒体 URL 时打开原始页。
+- **Rights 未知**：前往原始来源核对；FootageFlow 不会因下载成功而推测授权。
+- **日志**：进入“设置 → 打开日志”；技术日志经过脱敏，不会包含 API Key。
 
-进入“链接下载”，粘贴一个或多个公开媒体页面 URL，然后点击“解析”。FootageFlow 使用内置、隔离用户配置的 yt-dlp 适配器读取来源实际提供的元数据、可用视频高度、纯音频流和字幕。你可以选择完整媒体或经过校验的开始/结束片段，并保留原输出、生成剪辑兼容 MP4，或提取 M4A 音频。YouTube、X/Twitter、Vimeo、Dailymotion 及内置工具支持的其他公开网站可能可用，但不承诺任何网站或具体链接 100% 可下载。
+macOS Gatekeeper、Windows SmartScreen、更新检查、链接下载限制和 Provider 具体排错见 [故障排查](docs/TROUBLESHOOTING.md)（英文）。
 
-所选任务全部进入搜索下载共用的 Download Manager，继续支持进度、速度、取消、重试、打开文件夹、下载记录和来源 Sidecar。输出预设与片段时间会保留在下载记录和 Sidecar 中。FootageFlow 不读取浏览器 Cookie、不绕过 DRM、不绕过登录/私人视频权限，也不破解付费或会员内容；同时拒绝包含内嵌凭据或敏感查询参数的链接，并阻止本机与私有网络地址。无法访问时请使用“打开原始页面”。
+## 文档
 
-下载可用性取决于来源网站、具体媒体、访问权限以及平台变化。用户应遵守来源网站条款、版权规则及适用法律。
+- [Provider 模式与 API 行为](docs/PROVIDERS.md)（英文）
+- [链接下载](docs/LINK_DOWNLOADER.md)（英文）
+- [软件更新](docs/SOFTWARE_UPDATES.md)（英文）
+- [Rights 与署名](docs/RIGHTS_AND_ATTRIBUTION.md)（英文）
+- [故障排查](docs/TROUBLESHOOTING.md)（英文）
+- [开发指南](DEVELOPMENT.md)（英文）
+- [参与贡献](CONTRIBUTING.md)（英文）
+- [Roadmap](ROADMAP.md)（英文）
+- [Changelog](CHANGELOG.md)（英文）
+- [安全政策](SECURITY.md)（英文）
 
 ## 反馈与社区
 
 - Bug → [GitHub Issues](https://github.com/xcslys99/FootageFlow/issues/new?template=bug_report.yml)
 - 功能建议 → [GitHub Discussions](https://github.com/xcslys99/FootageFlow/discussions/categories/ideas)
 - 提问 → [GitHub Discussions Q&A](https://github.com/xcslys99/FootageFlow/discussions/categories/q-a)
-- 版本下载 → [GitHub Releases](https://github.com/xcslys99/FootageFlow/releases)
+- 计划工作 → [Roadmap Issues](https://github.com/xcslys99/FootageFlow/issues?q=is%3Aissue+is%3Aopen+label%3Aroadmap)
 
-应用内链接只预填 FootageFlow 版本、平台、系统版本和界面语言，不会附带凭据、本地路径、历史记录、下载记录或项目内容。
-
-## Rights 与来源安全
-
-FootageFlow 绝不猜测 Rights 或 License。缺少元数据时显示“版权 / 授权未知”。下载成功不等于允许商业使用。Internet Archive、NASA、Library of Congress、National Archives、Europeana 和 Wikimedia 素材都不会被自动视为 Public Domain。使用前必须核对原始来源页。
-
-This product uses the National Archives Catalog API but is not endorsed or certified by the National Archives and Records Administration.
-
-本项目与列出的素材 Provider 均无隶属或背书关系。请阅读 [PRIVACY.md](PRIVACY.md) 和 [YouTube API 服务条款](https://developers.google.com/youtube/terms/api-services-terms-of-service)。
-
-FootageFlow 源码采用 [MIT License](LICENSE)。通过软件找到的媒体仍受各来源自身的版权和授权条件约束。
+应用内链接不会附带凭据、本地路径、历史记录、下载记录或项目内容。参与社区前请阅读 [Code of Conduct](CODE_OF_CONDUCT.md)。
 
 ## 从源码构建
 
-普通用户应直接安装 Release，无需开发环境。macOS 开发需要 Swift 6 和完整 Xcode；Windows 开发需要 Swift 6.3.3、.NET 10、Visual Studio 2022 C++ 环境和 Inno Setup 7。
+普通用户应直接安装 Release。macOS 开发需要 Swift 6 和完整 Xcode；Windows 开发需要 Swift 6.3.3、.NET 10、Visual Studio 2022 C++ 环境和 Inno Setup 7。
 
 ```bash
+scripts/lint.sh
+scripts/secret_scan.sh
 swift build -c release
 swift test
-scripts/build_app.sh
-scripts/verify_app.sh
 ```
 
-Windows 打包、干净安装、GUI 启动、卸载和 Provider 冒烟验收由 Windows 11 x64 GitHub Actions 执行。架构与新增 Provider 方法见 [DEVELOPMENT.md](DEVELOPMENT.md)。
-
-## 常见问题
-
-- **National Archives/Europeana 显示受限模式**：添加自己的 Key 进行完整应用内搜索，或点“打开官方搜索”。
-- **Pexels/Pixabay 直接搜索暂不可用**：稍后重试，或选择添加对应 API Key。
-- **请求次数过多**：稍后重试；FootageFlow 不会绕过平台限制。
-- **一个 Provider 失败**：其他来源的成功结果仍然可用。
-- **没有预览/下载按钮**：来源没有提供兼容的官方媒体地址，请打开原始页。
-- **Rights 未知**：以当前原始来源页为准，FootageFlow 不推测使用权限。
-- **查看日志**：进入“设置 → 打开日志”。日志不会记录 API Key。
+架构和新增 Provider 方法见 [DEVELOPMENT.md](DEVELOPMENT.md)。安装、Provider、缩略图、下载和更新问题见 [故障排查](docs/TROUBLESHOOTING.md)（英文）。

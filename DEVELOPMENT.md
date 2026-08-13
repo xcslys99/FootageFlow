@@ -1,5 +1,7 @@
 # FootageFlow development guide
 
+User-facing behavior is documented separately in [Provider modes](docs/PROVIDERS.md), [Link Downloader](docs/LINK_DOWNLOADER.md), [Software updates](docs/SOFTWARE_UPDATES.md), [Rights and attribution](docs/RIGHTS_AND_ATTRIBUTION.md), and [Troubleshooting](docs/TROUBLESHOOTING.md). Planned work belongs in [ROADMAP.md](ROADMAP.md) and public Roadmap Issues rather than being described as completed behavior here.
+
 ## Toolchain
 
 - Swift 6 / Swift Package Manager
@@ -11,7 +13,7 @@
 - Apple Translation where available, with a rule-based fallback
 - Checksum-pinned yt-dlp plus redistributable GPL FFmpeg/FFprobe tooling are bundled for best-effort media analysis, clip extraction, merging, audio extraction, and editing-compatible output
 
-FootageFlow v0.7.4 targets Apple Silicon macOS 15+ and Windows 11 x64. SwiftUI, AppKit, AVKit, Apple Translation, and Security.framework remain macOS-only. The Windows WPF layer calls a local Swift Core Host over JSON stdin/stdout so all 17 search providers, ten-language query planning, pagination continuations, normalized models, rights rules, local relevance ranking, clip/output metadata, attribution, sidecars, update-version logic, and the Codable project database remain single-source Swift implementations. Credentials never appear in command-line arguments.
+The latest stable FootageFlow release targets Apple Silicon macOS 15+ and Windows 11 x64. SwiftUI, AppKit, AVKit, Apple Translation, and Security.framework remain macOS-only. The Windows WPF layer calls a local Swift Core Host over JSON stdin/stdout so all 17 search providers, ten-language query planning, pagination continuations, normalized models, rights rules, local relevance ranking, clip/output metadata, attribution, sidecars, update-version logic, and the Codable project database remain single-source Swift implementations. Credentials never appear in command-line arguments.
 
 ## Multilingual search
 
