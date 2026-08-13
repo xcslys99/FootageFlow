@@ -36,7 +36,7 @@ for locale in "${locales[@]}"; do
 done
 
 plutil -lint "$english" "$repo_root"/Sources/FootageFlow/Resources/*.lproj/Localizable.strings >/dev/null
-if rg -n '__FF(?:SEP|PH)' "$repo_root/Sources/FootageFlow/Resources"; then
+if grep -R -n -E '__FF(SEP|PH)' "$repo_root/Sources/FootageFlow/Resources"; then
   printf 'Localization generation marker remains in a resource file.\n'
   exit 1
 fi

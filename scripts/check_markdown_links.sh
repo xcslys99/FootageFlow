@@ -7,7 +7,7 @@ cd "$repo_root"
 temp_file="$(mktemp)"
 trap 'rm -f "$temp_file"' EXIT
 
-markdown_files=("${(@f)$(rg --files -g '*.md' | LC_ALL=C sort)}")
+markdown_files=("${(@f)$(git ls-files '*.md' | LC_ALL=C sort)}")
 (( ${#markdown_files[@]} > 0 )) || { printf 'No Markdown files found.\n'; exit 1; }
 
 /usr/bin/perl -ne '
