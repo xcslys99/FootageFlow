@@ -1,0 +1,144 @@
+name: Create Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Release version without the v prefix
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+env:
+  DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+
+jobs:
+  macos-package:
+    name: Package macOS arm64
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Verify requested version
+        run: |
+          actual="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' Resources/Info.plist)"
+          test "$actual" = "${{ inputs.version }}"
+
+      - name: Build and verify application
+        run: |
+          scripts/build_app.sh
+          scripts/binary_privacy_scan.sh
+          codesign --verify --deep --strict dist/FootageFlow.app
+          dist/FootageFlow.app/Contents/MacOS/FootageFlow --self-test
+
+      - name: Build disk image and checksum
+        run: scripts/build_dmg.sh
+
+      - name: Upload macOS release files
+        uses: actions/upload-artifact@v4
+        with:
+          name: FootageFlow-${{ inputs.version }}-macOS-arm64
+          path: |
+            dist/FootageFlow-${{ inputs.version }}-macOS-arm64.dmg
+            dist/FootageFlow-${{ inputs.version }}-macOS-arm64.dmg.sha256
+          if-no-files-found: error
+
+  windows-package:
+    name: Package Windows x64
+    runs-on: windows-2022
+    timeout-minutes: 45
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Install official Swift 6.3.3 toolchain
+        uses: compnerd/gha-setup-swift@eeda069c5bc95ac8a9ac5cea7d4f588ae5420ca5
+        with:
+          swift-version: swift-6.3.3-release
+          swift-build: 6.3.3-RELEASE
+
+      - name: Install .NET 10 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.302
+
+      - name: Build self-contained Windows package
+        shell: pwsh
+        run: scripts/windows/build-package.ps1 -Version "${{ inputs.version }}"
+
+      - name: Compile installer and checksums
+        shell: pwsh
+        run: |
+          $compiler = (& scripts/windows/install-inno.ps1 | Select-Object -Last 1)
+          $stage = (Resolve-Path ".build\windows-stage").Path
+          $output = (Resolve-Path "dist\windows").Path
+          & $compiler "/DAppVersion=${{ inputs.version }}" "/DSourceDirectory=$stage" "/DOutputDirectory=$output" "Windows\Installer\FootageFlow.iss"
+          if ($LASTEXITCODE -ne 0) { throw "The Windows installer could not be compiled." }
+          $installer = Join-Path $output "FootageFlow-Setup-${{ inputs.version }}-Windows-x64.exe"
+          if (-not (Test-Path $installer -PathType Leaf)) { throw "The Windows installer is missing." }
+          (Get-FileHash $installer -Algorithm SHA256).Hash.ToLowerInvariant() + "  " + (Split-Path $installer -Leaf) |
+            Set-Content ($installer + ".sha256") -Encoding ascii -NoNewline
+
+      - name: Verify release files
+        shell: pwsh
+        run: |
+          $output = (Resolve-Path "dist\windows").Path
+          $files = @(
+            "FootageFlow-${{ inputs.version }}-Windows-x64-portable.zip",
+            "FootageFlow-${{ inputs.version }}-Windows-x64-portable.zip.sha256",
+            "FootageFlow-Setup-${{ inputs.version }}-Windows-x64.exe",
+            "FootageFlow-Setup-${{ inputs.version }}-Windows-x64.exe.sha256"
+          )
+          foreach ($file in $files) {
+            if (-not (Test-Path (Join-Path $output $file) -PathType Leaf)) {
+              throw "Missing release file: $file"
+            }
+          }
+          Get-ChildItem $output -File | ForEach-Object { "{0} {1}" -f $_.Name, $_.Length }
+
+      - name: Upload Windows release files
+        uses: actions/upload-artifact@v4
+        with:
+          name: FootageFlow-${{ inputs.version }}-Windows-x64
+          path: dist/windows/*
+          if-no-files-found: error
+
+  publish:
+    name: Publish GitHub Release
+    needs: [macos-package, windows-package]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out release notes
+        uses: actions/checkout@v4
+
+      - name: Download release files
+        uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+          merge-multiple: true
+
+      - name: Verify files and publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          test -f "release-assets/FootageFlow-${VERSION}-macOS-arm64.dmg"
+          test -f "release-assets/FootageFlow-${VERSION}-macOS-arm64.dmg.sha256"
+          test -f "release-assets/FootageFlow-${VERSION}-Windows-x64-portable.zip"
+          test -f "release-assets/FootageFlow-${VERSION}-Windows-x64-portable.zip.sha256"
+          test -f "release-assets/FootageFlow-Setup-${VERSION}-Windows-x64.exe"
+          test -f "release-assets/FootageFlow-Setup-${VERSION}-Windows-x64.exe.sha256"
+          (cd release-assets && shasum -a 256 -c "FootageFlow-${VERSION}-macOS-arm64.dmg.sha256")
+          (cd release-assets && sha256sum -c "FootageFlow-${VERSION}-Windows-x64-portable.zip.sha256")
+          (cd release-assets && sha256sum -c "FootageFlow-Setup-${VERSION}-Windows-x64.exe.sha256")
+          gh release create "v${VERSION}" \
+            --target "$GITHUB_SHA" \
+            --title "FootageFlow v${VERSION}" \
+            --notes-file "docs/releases/v${VERSION}.md" \
+            release-assets/*
