@@ -139,24 +139,25 @@ import Foundation
     }
 
     @Test("project duplicate decisions suppress only that project until reset")
-    @MainActor func duplicateDecisions() async throws {
-      let store = DataStore(inMemory: true)
+    func duplicateDecisions() throws {
+      let store = PersistentStore(inMemory: true)
       let project = store.addProject(name: "Duplicate test")
       let first = asset(id: "one", provider: .wikimedia)
       var second = asset(id: "two", provider: .pixabay)
       second.sourcePageURL = first.sourcePageURL
       store.addFavorite(asset: first, projectID: project.id)
       store.addFavorite(asset: second, projectID: project.id)
-      let initial = await store.findDuplicates(projectID: project.id)
+      let initial = DuplicateDetectionEngine.find(
+        items: ProjectAssetInventory.items(projectID: project.id, database: store.database))
       let group = try #require(initial.first(where: { $0.reason == .sameOriginalURL }))
       store.setDuplicateDecision(
         projectID: project.id, pairKey: group.decisionKey, decision: .notDuplicate)
-      #expect((await store.findDuplicates(projectID: project.id)).isEmpty)
+      let ignored = Set(store.duplicateDecisions.map(\.pairKey))
+      #expect(initial.filter { !ignored.contains($0.decisionKey) }.isEmpty)
       store.resetDuplicateDecisions(projectID: project.id)
-      #expect(
-        (await store.findDuplicates(projectID: project.id)).contains {
-          $0.reason == .sameOriginalURL
-        })
+      let afterReset = DuplicateDetectionEngine.find(
+        items: ProjectAssetInventory.items(projectID: project.id, database: store.database))
+      #expect(afterReset.contains { $0.reason == .sameOriginalURL })
     }
 
     @Test("inventory and duplicate grouping remain deterministic for large projects")
