@@ -44,6 +44,26 @@ struct SavedAssetRecord: Identifiable, Codable, Hashable {
     savedAt = .now
     self.asset = asset
   }
+
+  init(
+    stableID: String, providerRaw: String, title: String, thumbnailURL: String?,
+    sourcePageURL: String,
+    licenseName: String?, licenseStatusRaw: String, projectID: UUID?, segmentIndex: Int?,
+    savedAt: Date,
+    asset: MediaAsset
+  ) {
+    self.stableID = stableID
+    self.providerRaw = providerRaw
+    self.title = title
+    self.thumbnailURL = thumbnailURL
+    self.sourcePageURL = sourcePageURL
+    self.licenseName = licenseName
+    self.licenseStatusRaw = licenseStatusRaw
+    self.projectID = projectID
+    self.segmentIndex = segmentIndex
+    self.savedAt = savedAt
+    self.asset = asset
+  }
 }
 
 struct SearchHistoryRecord: Identifiable, Codable, Hashable {
@@ -85,6 +105,9 @@ struct DownloadRecord: Identifiable, Codable, Hashable {
   var clipStartSeconds: Double?
   var clipEndSeconds: Double?
   var clipDurationSeconds: Double?
+  /// A full, non-secret asset snapshot was added in v0.8.0. It stays optional so
+  /// records written by earlier FootageFlow versions remain readable.
+  var asset: MediaAsset?
 
   init(asset: MediaAsset, fileURL: URL, projectID: UUID?) {
     stableAssetID = asset.stableID
@@ -100,6 +123,32 @@ struct DownloadRecord: Identifiable, Codable, Hashable {
     clipStartSeconds = asset.originalMetadata["linkClipStart"].flatMap(Double.init)
     clipEndSeconds = asset.originalMetadata["linkClipEnd"].flatMap(Double.init)
     clipDurationSeconds = asset.originalMetadata["linkClipDuration"].flatMap(Double.init)
+    self.asset = asset
+  }
+
+  init(
+    stableAssetID: String, providerRaw: String, sourceName: String?, title: String,
+    fileName: String,
+    localPath: String, thumbnailURL: String?, sourcePageURL: String, projectID: UUID?,
+    downloadedAt: Date, outputPresetRaw: String?, clipStartSeconds: Double?,
+    clipEndSeconds: Double?,
+    clipDurationSeconds: Double?, asset: MediaAsset?
+  ) {
+    self.stableAssetID = stableAssetID
+    self.providerRaw = providerRaw
+    self.sourceName = sourceName
+    self.title = title
+    self.fileName = fileName
+    self.localPath = localPath
+    self.thumbnailURL = thumbnailURL
+    self.sourcePageURL = sourcePageURL
+    self.projectID = projectID
+    self.downloadedAt = downloadedAt
+    self.outputPresetRaw = outputPresetRaw
+    self.clipStartSeconds = clipStartSeconds
+    self.clipEndSeconds = clipEndSeconds
+    self.clipDurationSeconds = clipDurationSeconds
+    self.asset = asset
   }
 
   var workflowSummary: String? {
@@ -118,10 +167,48 @@ struct DownloadRecord: Identifiable, Codable, Hashable {
   }
 }
 
+/// User acknowledgement only. It deliberately never changes source-supplied
+/// rights metadata or turns an unknown license into a known one.
+struct ProjectReviewRecord: Identifiable, Codable, Hashable {
+  var id: UUID = UUID()
+  var projectID: UUID
+  var stableAssetID: String
+  var reviewedAt: Date = .now
+}
+
+enum DuplicateDecision: String, Codable, Hashable, Sendable {
+  case keepBoth
+  case notDuplicate
+}
+
+/// A project-scoped decision for one deterministic pair of assets. Keeping it
+/// separate from provider metadata preserves the original provider record.
+struct DuplicateDecisionRecord: Identifiable, Codable, Hashable {
+  var id: UUID = UUID()
+  var projectID: UUID
+  var pairKey: String
+  var decision: DuplicateDecision
+  var updatedAt: Date = .now
+}
+
+struct FileHashCacheRecord: Identifiable, Codable, Hashable {
+  var id: String { localPath }
+  var localPath: String
+  var fileSize: Int64
+  var modificationDate: Date
+  var sha256: String
+  var calculatedAt: Date = .now
+}
+
 struct PersistentDatabase: Codable {
   var projects: [ProjectRecord] = []
   var segments: [ScriptSegmentRecord] = []
   var favorites: [SavedAssetRecord] = []
   var history: [SearchHistoryRecord] = []
   var downloads: [DownloadRecord] = []
+  // Optional collections provide additive, backward-compatible decoding for
+  // databases created before the v0.8.0 project workflow release.
+  var reviewedAssets: [ProjectReviewRecord]? = []
+  var duplicateDecisions: [DuplicateDecisionRecord]? = []
+  var fileHashCache: [FileHashCacheRecord]? = []
 }

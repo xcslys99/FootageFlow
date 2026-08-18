@@ -37,6 +37,16 @@ public sealed class CoreRequest
     public string? ExternalToolOutputBase64 { get; init; }
     public string? FeedbackDestination { get; init; }
     public bool? SmartExpansion { get; init; }
+    public string? ExportFormat { get; init; }
+    public bool? IncludeLocalFilePaths { get; init; }
+    public string? CreditsStyle { get; init; }
+    public string? DataBase64 { get; init; }
+    public int? Columns { get; init; }
+    public bool? IncludeRights { get; init; }
+    public string? StableAssetID { get; init; }
+    public bool? Reviewed { get; init; }
+    public string? PairKey { get; init; }
+    public string? DuplicateDecision { get; init; }
 }
 
 public sealed class CoreResponse
@@ -58,6 +68,11 @@ public sealed class CoreResponse
     public string? Text { get; init; }
     public string? UpdateStatus { get; init; }
     public AppReleaseInfo? Release { get; init; }
+    public IReadOnlyList<ProjectAssetItem>? ProjectItems { get; init; }
+    public RightsAuditReport? RightsAudit { get; init; }
+    public IReadOnlyList<DuplicateGroup>? DuplicateGroups { get; init; }
+    public ContactSheetPlan? ContactSheetPlan { get; init; }
+    public string? DataBase64 { get; init; }
 }
 
 public sealed class AppReleaseInfo
@@ -297,4 +312,94 @@ public sealed class RightsInfo
     public bool OpenLicense { get; init; }
     public bool AttributionRequired { get; init; }
     public bool? CommercialUseKnown { get; init; }
+}
+
+public sealed class ProjectAssetItem
+{
+    public string StableID { get; init; } = "";
+    public string ProviderRaw { get; init; } = "";
+    public string ProviderName { get; init; } = "";
+    public string? ProviderNativeID { get; init; }
+    public string Title { get; init; } = "";
+    public string? Creator { get; init; }
+    public string? ThumbnailURL { get; init; }
+    public string? SourcePageURL { get; init; }
+    public string? MediaURL { get; init; }
+    public string? MediaType { get; init; }
+    public string? FileType { get; init; }
+    public int? Width { get; init; }
+    public int? Height { get; init; }
+    public double? Duration { get; init; }
+    public string? License { get; init; }
+    public string? LicenseURL { get; init; }
+    public string LicenseStatus { get; init; } = "UNKNOWN";
+    public RightsInfo? RightsInfo { get; init; }
+    public string? SearchKeyword { get; init; }
+    public int? SegmentIndex { get; init; }
+    public DateTimeOffset? SavedAt { get; init; }
+    public DateTimeOffset? DownloadedAt { get; init; }
+    public string? LocalFileName { get; init; }
+    public string? LocalPath { get; init; }
+    public string? OutputPresetRaw { get; init; }
+    public double? ClipStartSeconds { get; init; }
+    public double? ClipEndSeconds { get; init; }
+    public string? SourceSidecarFileName { get; init; }
+    public bool LocalMediaMissing { get; init; }
+    [JsonIgnore] public string Id => StableID;
+}
+
+public sealed class RightsAuditEntry
+{
+    public ProjectAssetItem Item { get; init; } = new();
+    public bool Reviewed { get; init; }
+    public bool PublicDomain { get; init; }
+    public bool RightsKnown { get; init; }
+    public bool AttributionRequired { get; init; }
+    public bool OriginalPageUnavailable { get; init; }
+    [JsonIgnore] public string Id => Item.StableID;
+    [JsonIgnore] public bool NeedsReview => !Reviewed && (!RightsKnown || OriginalPageUnavailable);
+}
+
+public sealed class RightsAuditSummary
+{
+    public int TotalAssets { get; init; }
+    public int PublicDomain { get; init; }
+    public int RightsKnown { get; init; }
+    public int AttributionRequired { get; init; }
+    public int RightsUnknown { get; init; }
+    public int OriginalPageUnavailable { get; init; }
+}
+
+public sealed class RightsAuditReport
+{
+    public IReadOnlyList<RightsAuditEntry> Entries { get; init; } = [];
+    public RightsAuditSummary Summary { get; init; } = new();
+}
+
+public sealed class DuplicateGroup
+{
+    public string Reason { get; init; } = "possibleMetadata";
+    public string? DisplayReason { get; init; }
+    public IReadOnlyList<ProjectAssetItem> Items { get; init; } = [];
+    public string Key { get; init; } = "";
+    [JsonIgnore] public string DecisionKey => string.Join("|", Items.Select(item => item.StableID).OrderBy(value => value));
+}
+
+public sealed class ContactSheetItem
+{
+    public int Index { get; init; }
+    public string Title { get; init; } = "";
+    public string Provider { get; init; } = "";
+    public string RightsStatus { get; init; } = "";
+    public string? ThumbnailURL { get; init; }
+    public string? LocalPath { get; init; }
+    public double? Duration { get; init; }
+}
+
+public sealed class ContactSheetPlan
+{
+    public string ProjectName { get; init; } = "";
+    public int Columns { get; init; } = 4;
+    public bool IncludeRights { get; init; } = true;
+    public IReadOnlyList<ContactSheetItem> Items { get; init; } = [];
 }

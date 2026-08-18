@@ -327,6 +327,84 @@ if (OperatingSystem.IsWindows())
         Check(added.Project?.Name == projectName, "Shared project create");
         if (added.Project is { } project)
         {
+            var firstFavorite = await core.SendAsync(new CoreRequest
+            {
+                Action = "addFavorite", ProjectID = project.Id.ToString(), Asset = media, Language = "en"
+            });
+            Check(firstFavorite.Success, "Shared project favorite create");
+            var duplicate = new MediaAsset
+            {
+                Id = "fixture-copy", Provider = "pixabay", Title = media.Title,
+                SourcePageURL = media.SourcePageURL, DownloadURL = media.DownloadURL,
+                License = media.License, LicenseStatus = media.LicenseStatus, MediaType = media.MediaType,
+                Downloadable = media.Downloadable, SearchKeyword = media.SearchKeyword,
+                OriginalMetadata = new Dictionary<string, string>()
+            };
+            var secondFavorite = await core.SendAsync(new CoreRequest
+            {
+                Action = "addFavorite", ProjectID = project.Id.ToString(), Asset = duplicate, Language = "en"
+            });
+            Check(secondFavorite.Success, "Shared project duplicate fixture create");
+            var workflow = await core.SendAsync(new CoreRequest
+            {
+                Action = "projectWorkflowSnapshot", ProjectID = project.Id.ToString(), Language = "en"
+            });
+            Check(workflow.ProjectItems?.Count == 2 && workflow.RightsAudit?.Summary.RightsKnown == 2,
+                "Shared project workflow snapshot and rights audit");
+            var report = await core.SendAsync(new CoreRequest
+            {
+                Action = "exportProjectReport", ProjectID = project.Id.ToString(), ExportFormat = "csv",
+                IncludeLocalFilePaths = false, Language = "en"
+            });
+            var reportText = report.DataBase64 is { } reportData
+                ? Encoding.UTF8.GetString(Convert.FromBase64String(reportData)) : "";
+            Check(report.Success, "Shared attribution export succeeds");
+            Check(reportText.StartsWith("\uFEFF\"Index\"", StringComparison.Ordinal),
+                "Shared attribution export is UTF-8 CSV");
+            Check(!reportText.Contains("\\Users\\", StringComparison.OrdinalIgnoreCase),
+                "Shared attribution export is private-path safe by default");
+            var duplicates = await core.SendAsync(new CoreRequest
+            {
+                Action = "findProjectDuplicates", ProjectID = project.Id.ToString(), Language = "en"
+            });
+            var group = duplicates.DuplicateGroups?.FirstOrDefault(value => value.Reason == "sameOriginalURL");
+            Check(group is not null, "Shared duplicate detection");
+            if (group is not null)
+            {
+                var ignored = await core.SendAsync(new CoreRequest
+                {
+                    Action = "setDuplicateDecision", ProjectID = project.Id.ToString(), PairKey = group.DecisionKey,
+                    DuplicateDecision = "notDuplicate", Language = "en"
+                });
+                Check(ignored.Success, "Shared duplicate decision save");
+                var filtered = await core.SendAsync(new CoreRequest
+                {
+                    Action = "findProjectDuplicates", ProjectID = project.Id.ToString(), Language = "en"
+                });
+                Check(filtered.DuplicateGroups?.Count == 0, "Shared duplicate decision suppresses later scans");
+            }
+            var backup = await core.SendAsync(new CoreRequest
+            {
+                Action = "exportProjectBackup", ProjectID = project.Id.ToString(), Language = "en"
+            });
+            byte[] backupData = backup.DataBase64 is { } backupEncoded ? Convert.FromBase64String(backupEncoded) : [];
+            Check(backup.Success && Encoding.UTF8.GetString(backupData).Contains("schemaVersion", StringComparison.Ordinal),
+                "Shared portable project backup");
+            var imported = await core.SendAsync(new CoreRequest
+            {
+                Action = "importProjectBackup", DataBase64 = Convert.ToBase64String(backupData), Language = "en"
+            });
+            Check(imported.Success && imported.Project is { } importedProject && importedProject.Id != project.Id,
+                "Shared portable project import remaps project identity");
+            var plan = await core.SendAsync(new CoreRequest
+            {
+                Action = "contactSheetPlan", ProjectID = project.Id.ToString(), Columns = 9,
+                IncludeRights = false, Language = "en"
+            });
+            Check(plan.ContactSheetPlan?.Columns == 5 && plan.ContactSheetPlan?.Items.Count == 2,
+                "Shared contact sheet plan");
+            if (imported.Project is { } importedProjectToDelete)
+                _ = await core.SendAsync(new CoreRequest { Action = "deleteProject", ProjectID = importedProjectToDelete.Id.ToString() });
             var deleted = await core.SendAsync(new CoreRequest { Action = "deleteProject", ProjectID = project.Id.ToString() });
             Check(deleted.Database?.Projects.All(value => value.Id != project.Id) == true, "Shared project delete");
         }

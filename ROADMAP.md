@@ -24,37 +24,15 @@ Roadmap items are intentions, not promises. Provider policies, platform rules, a
 - Feedback & Community links
 - GitHub Release update notifications
 - Every-launch reminders for outdated installations
+- Project attribution reports in Markdown, CSV, JSON, and HTML
+- Credits generation and provider-reported rights audit
+- Portable `.footageflowproject` backup and cross-platform import
+- Local-first duplicate detection with user decisions and lazy SHA-256
+- PNG contact-sheet generation
 
 ## Current Priorities
 
-### 1. Project Export & Attribution ([#15](https://github.com/xcslys99/FootageFlow/issues/15))
-
-- Export project metadata as Markdown, CSV, and JSON
-- Export a human-readable HTML attribution report
-- Generate creator, source, and license credits
-- Preserve original source URLs and license URLs
-
-### 2. Rights Audit ([#16](https://github.com/xcslys99/FootageFlow/issues/16))
-
-- Show Rights Known, Attribution Required, Public Domain, and Rights Unknown
-- Warn before exporting projects with incomplete rights metadata
-- Never infer missing permissions
-
-### 3. Project Backup & Cross-platform Import ([#17](https://github.com/xcslys99/FootageFlow/issues/17))
-
-- Export a portable FootageFlow project manifest
-- Import the manifest on macOS or Windows
-- Preserve project structure, source metadata, search terms, and relative file references
-- Do not bundle large media by default
-
-### 4. Duplicate Detection ([#18](https://github.com/xcslys99/FootageFlow/issues/18))
-
-- Detect duplicate Provider IDs
-- Detect duplicate original and download URLs
-- Detect duplicate local files by hash where practical
-- Keep false positives low and allow user review
-
-### 5. Accessibility & Keyboard Navigation ([#19](https://github.com/xcslys99/FootageFlow/issues/19))
+### Accessibility & Keyboard Navigation ([#19](https://github.com/xcslys99/FootageFlow/issues/19))
 
 - Improve VoiceOver and Windows screen-reader labels
 - Add predictable keyboard navigation and visible focus indicators
@@ -64,12 +42,13 @@ Roadmap items are intentions, not promises. Provider policies, platform rules, a
 
 ### v0.8.0 — Project Export & Attribution Update
 
-This is a planned direction, not a delivery promise.
+Delivered in v0.8.0:
 
-- Project attribution export
-- Rights audit
+- Project attribution export and concise/detailed credits
+- Rights audit with non-blocking export review warning
 - Project backup and cross-platform import
-- Duplicate detection
+- Duplicate detection with user decisions
+- Contact-sheet generation
 
 ### v0.9.0 — Research & Culture Update ([#20](https://github.com/xcslys99/FootageFlow/issues/20))
 

@@ -50,7 +50,8 @@ FootageFlow 面向纪录片、历史、国家、财经、人物、科普和短�
 3. 使用相关性模式、来源、类型、年份、时长、分辨率、Rights 或直接下载筛选缩小范围。
 4. 预览合适素材、复制来源信息、收藏或加入项目。
 5. 把可下载素材批量加入共用队列；对仅发现结果打开原始来源页。
-6. 把自动生成的来源 Sidecar 与项目一起保留，并在发布前核对当前授权。
+6. 打开“项目操作”，即可生成素材署名、导出来源报告、检查版权信息、制作可移植备份、扫描重复素材或生成联系表。
+7. 把自动生成的来源 Sidecar 与项目一起保留，并在发布前核对当前授权。
 
 如果已经知道媒体 URL，链接下载会继续使用同一套项目、下载、历史和 Sidecar 系统。可选的前台剪贴板检测可以在本机识别复制的公开媒体链接；该功能默认关闭，不会上传剪贴板内容。
 
@@ -70,6 +71,10 @@ FootageFlow 面向纪录片、历史、国家、财经、人物、科普和短�
 
 ![FootageFlow Provider 模式与十种界面语言](docs/images/provider-settings.png)
 
+![FootageFlow 项目版权信息检查与 Provider 实际来源元数据](docs/images/project-rights-audit-v080.png)
+
+![FootageFlow 本地重复素材检查与不删除源文件的项目操作](docs/images/project-duplicate-detection-v080.png)
+
 ## 功能摘要
 
 - 17 个素材来源的渐进式搜索，单个 Provider 失败不影响其他来源
@@ -77,6 +82,9 @@ FootageFlow 面向纪录片、历史、国家、财经、人物、科普和短�
 - 精准、均衡、宽泛三种本地概念相关性模式
 - 来源、类型、年份、时长、分辨率、Rights 和下载能力筛选
 - 视频/图片预览、多选、项目、收藏和历史记录
+- 项目来源报告（Markdown、CSV、JSON、HTML）、简洁/详细素材署名和版权信息检查
+- 可跨平台导入的 `.footageflowproject` 项目备份，不包含媒体、凭据或绝对路径
+- 本地优先的重复素材检查与带编号的素材联系表 PNG 导出
 - 完整媒体与片段下载，可选原始文件、M4A 或剪辑兼容 MP4
 - 每个成功下载文件自动生成 `.source.txt` 和 `.source.json`
 - “复制来源”和“复制署名”只使用 Provider 实际提供的元数据
@@ -142,6 +150,10 @@ FootageFlow 绝不猜测 License。缺少数据时始终显示“版权 / 授权
 
 使用前必须核对原始来源页。详见 [Rights and attribution](docs/RIGHTS_AND_ATTRIBUTION.md)（英文）及 [PRIVACY.md](PRIVACY.md)。
 
+## 项目交付
+
+“项目操作”支持导出 Markdown/CSV/JSON/HTML 素材来源报告、生成素材署名、执行版权信息检查、创建可跨平台导入的 `.footageflowproject` 备份、查找可能重复的素材，以及导出 PNG 素材联系表。报告默认不含本机绝对路径；项目备份绝不包含媒体二进制、API Key、Cookie、Token 或绝对路径。导入到新电脑后找不到的素材会保留在项目中，并清楚显示“未找到本地媒体文件”。详见[项目工作流、导出与署名](docs/PROJECT_WORKFLOW.md)（英文）。
+
 FootageFlow 不含分析、广告或 Telemetry SDK，也没有 FootageFlow 云端账号。搜索只会发送给完成请求所需的已启用 Provider。项目、文稿、收藏、历史和 API Key 保留在本机；可选 Key 由操作系统安全凭据存储保存。
 
 ## 常见问题速查
@@ -161,6 +173,7 @@ macOS Gatekeeper、Windows SmartScreen、更新检查、链接下载限制和 Pr
 - [链接下载](docs/LINK_DOWNLOADER.md)（英文）
 - [软件更新](docs/SOFTWARE_UPDATES.md)（英文）
 - [Rights 与署名](docs/RIGHTS_AND_ATTRIBUTION.md)（英文）
+- [项目工作流、导出与署名](docs/PROJECT_WORKFLOW.md)（英文）
 - [故障排查](docs/TROUBLESHOOTING.md)（英文）
 - [开发指南](DEVELOPMENT.md)（英文）
 - [参与贡献](CONTRIBUTING.md)（英文）

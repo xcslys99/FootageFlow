@@ -1,0 +1,18 @@
+{
+  "application" : "FootageFlow",
+  "applicationVersion" : "0.8.0",
+  "createdAt" : "2026-08-18T00:00:00Z",
+  "duplicateDecisions" : [],
+  "downloads" : [],
+  "favorites" : [],
+  "project" : {
+    "createdAt" : "2026-08-18T00:00:00Z",
+    "name" : "macOS Portable Fixture",
+    "script" : "A portable project fixture.",
+    "updatedAt" : "2026-08-18T00:00:00Z"
+  },
+  "reviewedStableAssetIDs" : [],
+  "schemaVersion" : 1,
+  "searchHistory" : [],
+  "segments" : []
+}

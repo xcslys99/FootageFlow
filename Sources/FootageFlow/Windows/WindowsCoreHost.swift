@@ -33,6 +33,16 @@
     var externalToolOutputBase64: String? = nil
     var feedbackDestination: FeedbackDestination? = nil
     var smartExpansion: Bool? = nil
+    var exportFormat: String? = nil
+    var includeLocalFilePaths: Bool? = nil
+    var creditsStyle: String? = nil
+    var dataBase64: String? = nil
+    var columns: Int? = nil
+    var includeRights: Bool? = nil
+    var stableAssetID: String? = nil
+    var reviewed: Bool? = nil
+    var pairKey: String? = nil
+    var duplicateDecision: DuplicateDecision? = nil
   }
 
   private struct WindowsCoreResponse: Encodable {
@@ -53,6 +63,11 @@
     var text: String? = nil
     var updateStatus: String? = nil
     var release: AppRelease? = nil
+    var projectItems: [ProjectAssetItem]? = nil
+    var rightsAudit: RightsAuditReport? = nil
+    var duplicateGroups: [DuplicateGroup]? = nil
+    var contactSheetPlan: ContactSheetPlan? = nil
+    var dataBase64: String? = nil
   }
 
   private struct WindowsProviderDescriptor: Encodable {
@@ -180,6 +195,25 @@
         guard let asset = request.asset else { return invalidRecordID(request.id) }
         return WindowsCoreResponse(
           id: request.id, success: true, text: AttributionFormatter.attribution(for: asset))
+      case "projectWorkflowSnapshot":
+        return projectWorkflowSnapshot(request)
+      case "projectRightsAudit":
+        return projectRightsAudit(request)
+      case "findProjectDuplicates":
+        return findProjectDuplicates(request)
+      case "setProjectReviewed", "setDuplicateDecision", "resetDuplicateDecisions",
+        "removeAssetFromProject":
+        return projectDecision(request)
+      case "exportProjectReport":
+        return exportProjectReport(request)
+      case "generateProjectCredits":
+        return generateProjectCredits(request)
+      case "exportProjectBackup":
+        return exportProjectBackup(request)
+      case "importProjectBackup":
+        return importProjectBackup(request)
+      case "contactSheetPlan":
+        return contactSheetPlan(request)
       case "databaseSnapshot", "addProject", "deleteProject", "updateProject",
         "toggleFavorite", "addFavorite", "addHistory", "deleteHistory", "clearHistory",
         "addDownload",
@@ -491,6 +525,180 @@
       guard let data = try? encoder.encode(response) else { return }
       FileHandle.standardOutput.write(data)
       FileHandle.standardOutput.write(Data([0x0A]))
+    }
+    private static func projectWorkflowSnapshot(_ request: WindowsCoreRequest)
+      -> WindowsCoreResponse
+    {
+      guard let id = uuid(request.projectID), let snapshot = projectSnapshot(id: id) else {
+        return invalidRecordID(request.id)
+      }
+      return WindowsCoreResponse(
+        id: request.id, success: true, project: snapshot.project, projectItems: snapshot.items,
+        rightsAudit: RightsAuditEngine.audit(
+          items: snapshot.items, reviewed: snapshot.store.reviewedAssets, projectID: id))
+    }
+
+    private static func projectRightsAudit(_ request: WindowsCoreRequest) -> WindowsCoreResponse {
+      projectWorkflowSnapshot(request)
+    }
+
+    private static func findProjectDuplicates(_ request: WindowsCoreRequest) -> WindowsCoreResponse
+    {
+      guard let id = uuid(request.projectID), let snapshot = projectSnapshot(id: id) else {
+        return invalidRecordID(request.id)
+      }
+      let hashes = calculateHashes(for: snapshot.items, store: snapshot.store)
+      let ignored = Set(
+        snapshot.store.duplicateDecisions.filter { $0.projectID == id }.map(\.pairKey))
+      return WindowsCoreResponse(
+        id: request.id, success: true, project: snapshot.project, projectItems: snapshot.items,
+        duplicateGroups: DuplicateDetectionEngine.find(items: snapshot.items, hashes: hashes)
+          .filter { !ignored.contains($0.decisionKey) })
+    }
+
+    private static func projectDecision(_ request: WindowsCoreRequest) -> WindowsCoreResponse {
+      guard let projectID = uuid(request.projectID) else { return invalidRecordID(request.id) }
+      let store = PersistentStore()
+      switch request.action {
+      case "setProjectReviewed":
+        guard let stableID = nonempty(request.stableAssetID) else {
+          return invalidRecordID(request.id)
+        }
+        store.setReviewed(
+          projectID: projectID, stableAssetID: stableID, reviewed: request.reviewed ?? false)
+      case "setDuplicateDecision":
+        guard let pairKey = nonempty(request.pairKey), let decision = request.duplicateDecision
+        else {
+          return invalidRecordID(request.id)
+        }
+        store.setDuplicateDecision(projectID: projectID, pairKey: pairKey, decision: decision)
+      case "resetDuplicateDecisions":
+        store.resetDuplicateDecisions(projectID: projectID)
+      case "removeAssetFromProject":
+        guard let stableID = nonempty(request.stableAssetID) else {
+          return invalidRecordID(request.id)
+        }
+        store.removeAssetFromProject(projectID: projectID, stableAssetID: stableID)
+      default:
+        return WindowsCoreResponse(
+          id: request.id, success: false, errorCode: "unsupportedAction",
+          errorMessage: "Unsupported core action.")
+      }
+      return WindowsCoreResponse(id: request.id, success: true, database: store.database)
+    }
+
+    private static func exportProjectReport(_ request: WindowsCoreRequest) -> WindowsCoreResponse {
+      guard let id = uuid(request.projectID), let snapshot = projectSnapshot(id: id),
+        let format = request.exportFormat.flatMap(AttributionExportFormat.init(rawValue:))
+      else { return invalidRecordID(request.id) }
+      do {
+        let data = try AttributionExporter.data(
+          format: format, project: snapshot.project, items: snapshot.items,
+          options: AttributionExportOptions(
+            includeLocalFilePaths: request.includeLocalFilePaths ?? false))
+        return WindowsCoreResponse(
+          id: request.id, success: true, dataBase64: data.base64EncodedString())
+      } catch {
+        return WindowsCoreResponse(
+          id: request.id, success: false, errorCode: "exportFailed",
+          errorMessage: "The project report could not be generated.")
+      }
+    }
+
+    private static func generateProjectCredits(_ request: WindowsCoreRequest) -> WindowsCoreResponse
+    {
+      guard let id = uuid(request.projectID), let snapshot = projectSnapshot(id: id) else {
+        return invalidRecordID(request.id)
+      }
+      let style = request.creditsStyle.flatMap(CreditsStyle.init(rawValue:)) ?? .concise
+      return WindowsCoreResponse(
+        id: request.id, success: true,
+        text: AttributionExporter.credits(items: snapshot.items, style: style))
+    }
+
+    private static func exportProjectBackup(_ request: WindowsCoreRequest) -> WindowsCoreResponse {
+      guard let id = uuid(request.projectID), let snapshot = projectSnapshot(id: id) else {
+        return invalidRecordID(request.id)
+      }
+      do {
+        let manifest = PortableProjectCodec.manifest(
+          project: snapshot.project, database: snapshot.store.database)
+        return WindowsCoreResponse(
+          id: request.id, success: true,
+          dataBase64: try PortableProjectCodec.data(manifest).base64EncodedString())
+      } catch {
+        return WindowsCoreResponse(
+          id: request.id, success: false, errorCode: "backupFailed",
+          errorMessage: "The project backup could not be created.")
+      }
+    }
+
+    private static func importProjectBackup(_ request: WindowsCoreRequest) -> WindowsCoreResponse {
+      guard let encoded = request.dataBase64, let data = Data(base64Encoded: encoded) else {
+        return WindowsCoreResponse(
+          id: request.id, success: false, errorCode: "invalidManifest",
+          errorMessage: "The project backup could not be read.")
+      }
+      do {
+        let manifest = try PortableProjectCodec.decode(data)
+        let store = PersistentStore()
+        let payload = try PortableProjectCodec.importedPayload(
+          from: manifest,
+          existingProjectNames: Set(store.projects.map { $0.name.localizedLowercase }))
+        store.importProject(payload)
+        return WindowsCoreResponse(
+          id: request.id, success: true, database: store.database, project: payload.project)
+      } catch let error as PortableProjectError {
+        return WindowsCoreResponse(
+          id: request.id, success: false, errorCode: "projectImportFailed",
+          errorMessage: error.localizedDescription)
+      } catch {
+        return WindowsCoreResponse(
+          id: request.id, success: false, errorCode: "projectImportFailed",
+          errorMessage: "The project backup could not be imported.")
+      }
+    }
+
+    private static func contactSheetPlan(_ request: WindowsCoreRequest) -> WindowsCoreResponse {
+      guard let id = uuid(request.projectID), let snapshot = projectSnapshot(id: id) else {
+        return invalidRecordID(request.id)
+      }
+      return WindowsCoreResponse(
+        id: request.id, success: true,
+        contactSheetPlan: ContactSheetPlanner.plan(
+          project: snapshot.project, items: snapshot.items, columns: request.columns ?? 4,
+          includeRights: request.includeRights ?? true))
+    }
+
+    private static func projectSnapshot(id: UUID) -> (
+      store: PersistentStore, project: ProjectRecord, items: [ProjectAssetItem]
+    )? {
+      let store = PersistentStore()
+      guard let project = store.projects.first(where: { $0.id == id }) else { return nil }
+      return (store, project, ProjectAssetInventory.items(projectID: id, database: store.database))
+    }
+
+    private static func calculateHashes(for items: [ProjectAssetItem], store: PersistentStore)
+      -> [String: String]
+    {
+      var result: [String: String] = [:]
+      for item in items {
+        if let cached = FileHashService.cachedHash(for: item, cache: store.fileHashCache) {
+          result[item.stableID] = cached
+          continue
+        }
+        guard let path = item.localPath, FileManager.default.fileExists(atPath: path),
+          let attributes = try? FileManager.default.attributesOfItem(atPath: path),
+          let size = (attributes[.size] as? NSNumber)?.int64Value,
+          let modified = attributes[.modificationDate] as? Date,
+          let digest = try? FileHashService.sha256(of: URL(fileURLWithPath: path))
+        else { continue }
+        result[item.stableID] = digest
+        store.updateFileHashCache(
+          FileHashCacheRecord(
+            localPath: path, fileSize: size, modificationDate: modified, sha256: digest))
+      }
+      return result
     }
   }
 #endif

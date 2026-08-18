@@ -20,6 +20,12 @@ Provider identity never determines an item's rights by itself. Internet Archive,
 
 Missing fields remain explicit. FootageFlow does not fill them with “free to use,” “commercial use allowed,” or Public Domain guesses.
 
+## Project reports and audit
+
+Project attribution reports and credits use the same stored Provider metadata. Reports can be exported as Markdown, CSV, JSON, or HTML; local absolute paths are excluded unless the user explicitly requests them. Sensitive URL values, common credential assignments, and private paths are redacted from normal exports and portable project backups.
+
+The project Rights Audit groups selected assets by Rights Known, Attribution Required, Public Domain, Rights Unknown, and missing original page. Marking an item as reviewed records only a local user acknowledgement; it never changes the original rights state. FootageFlow warns before a report is exported with unknown rights, while leaving the final export decision to the user.
+
 ## Source sidecars
 
 Every successful download creates matching `.source.txt` and `.source.json` files beside the media. Depending on available metadata, they record:
