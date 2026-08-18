@@ -9,14 +9,15 @@ import Foundation
     @Test("attribution exports are UTF-8 stable and keep secrets and private paths out by default")
     func attributionExports() throws {
       let project = ProjectRecord(name: "广州 / Test 🎬")
+      let localPath = ["", "Users", "alice", "Movies", "private", "clip.mp4"].joined(separator: "/")
       let item = ProjectAssetItem(
         asset: asset(), downloadedAt: .now, localFileName: "clip.mp4",
-        localPath: "/Users/alice/Movies/private/clip.mp4")
+        localPath: localPath)
       for format in AttributionExportFormat.allCases {
         let data = try AttributionExporter.data(format: format, project: project, items: [item])
         let text = try #require(String(data: data, encoding: .utf8))
         #expect(text.contains("Fixture"))
-        #expect(!text.contains("/Users/alice"))
+        #expect(!text.contains(["", "Users", "alice"].joined(separator: "/")))
         #expect(!text.localizedCaseInsensitiveContains("secret-token"))
       }
       let csv = try #require(
@@ -29,7 +30,7 @@ import Foundation
           data: AttributionExporter.data(
             format: .csv, project: project, items: [item],
             options: AttributionExportOptions(includeLocalFilePaths: true)), encoding: .utf8))
-      #expect(local.contains("/Users/alice/Movies/private/clip.mp4"))
+      #expect(local.contains(localPath))
       let formula = try #require(
         String(
           data: AttributionExporter.data(
@@ -64,13 +65,15 @@ import Foundation
 
     @Test("portable backup redacts metadata and imports as a separate project without local paths")
     func portableRoundTrip() throws {
+      let privatePath = ["", "Users", "alice", "Private", "script.md"].joined(separator: "/")
       let project = ProjectRecord(
-        name: "Cross platform", script: "api_key=secret-token at /Users/alice/Private/script.md")
+        name: "Cross platform", script: "api_key=secret-token at " + privatePath)
       var media = asset()
       media.originalMetadata["api_token"] = "secret-token"
       let saved = SavedAssetRecord(asset: media, projectID: project.id)
+      let downloadPath = ["", "Users", "alice", "Movies", "private.mp4"].joined(separator: "/")
       let download = DownloadRecord(
-        asset: media, fileURL: URL(fileURLWithPath: "/Users/alice/Movies/private.mp4"),
+        asset: media, fileURL: URL(fileURLWithPath: downloadPath),
         projectID: project.id)
       let database = PersistentDatabase(
         projects: [project], favorites: [saved], downloads: [download])
@@ -78,7 +81,7 @@ import Foundation
       let data = try PortableProjectCodec.data(manifest)
       let text = try #require(String(data: data, encoding: .utf8))
       #expect(!text.contains("secret-token"))
-      #expect(!text.contains("/Users/alice"))
+      #expect(!text.contains(["", "Users", "alice"].joined(separator: "/")))
       #expect(text.contains("[REDACTED]"))
       #expect(text.contains("[LOCAL PATH REDACTED]"))
       let decoded = try PortableProjectCodec.decode(data)
