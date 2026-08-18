@@ -102,7 +102,10 @@ $report = [ordered]@{
     wikimedia = Test-PublicProvider "wikimedia" "bank" "image"
     internetArchive = Test-PublicProvider "internetArchive" "Argentina financial crisis 2001" "video"
     nasa = Test-PublicProvider "nasa" "Apollo 11" "video"
-    libraryOfCongress = Test-PublicProvider "libraryOfCongress" "Apollo 11" "video"
+    # The LOC catalog can return Apollo-program material whose metadata omits the mission number.
+    # This is a provider-availability smoke test, so use a stable topical query rather than
+    # turning the relevance filter into a false negative for an otherwise healthy API.
+    libraryOfCongress = Test-PublicProvider "libraryOfCongress" "Apollo" "video"
     openverseImages = Test-PublicProvider "openverse" "coffee" "image"
     openverseAudio = Test-PublicProvider "openverse" "coffee" "audio"
     dailymotion = Test-PublicProvider "dailymotion" "coffee" "video"
