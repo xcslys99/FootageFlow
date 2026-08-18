@@ -1,6 +1,6 @@
 # FootageFlow development guide
 
-User-facing behavior is documented separately in [Provider modes](docs/PROVIDERS.md), [Link Downloader](docs/LINK_DOWNLOADER.md), [Software updates](docs/SOFTWARE_UPDATES.md), [Rights and attribution](docs/RIGHTS_AND_ATTRIBUTION.md), and [Troubleshooting](docs/TROUBLESHOOTING.md). Planned work belongs in [ROADMAP.md](ROADMAP.md) and public Roadmap Issues rather than being described as completed behavior here.
+User-facing behavior is documented separately in [Provider modes](docs/PROVIDERS.md), [Link Downloader](docs/LINK_DOWNLOADER.md), [Software updates](docs/SOFTWARE_UPDATES.md), [Rights and attribution](docs/RIGHTS_AND_ATTRIBUTION.md), [Project workflow](docs/PROJECT_WORKFLOW.md), and [Troubleshooting](docs/TROUBLESHOOTING.md). Planned work belongs in [ROADMAP.md](ROADMAP.md) and public Roadmap Issues rather than being described as completed behavior here.
 
 ## Toolchain
 
@@ -13,7 +13,7 @@ User-facing behavior is documented separately in [Provider modes](docs/PROVIDERS
 - Apple Translation where available, with a rule-based fallback
 - Checksum-pinned yt-dlp plus redistributable GPL FFmpeg/FFprobe tooling are bundled for best-effort media analysis, clip extraction, merging, audio extraction, and editing-compatible output
 
-The latest stable FootageFlow release targets Apple Silicon macOS 15+ and Windows 11 x64. SwiftUI, AppKit, AVKit, Apple Translation, and Security.framework remain macOS-only. The Windows WPF layer calls a local Swift Core Host over JSON stdin/stdout so all 17 search providers, ten-language query planning, pagination continuations, normalized models, rights rules, local relevance ranking, clip/output metadata, attribution, sidecars, update-version logic, and the Codable project database remain single-source Swift implementations. Credentials never appear in command-line arguments.
+The latest stable FootageFlow release targets Apple Silicon macOS 15+ and Windows 11 x64. SwiftUI, AppKit, AVKit, Apple Translation, and Security.framework remain macOS-only. The Windows WPF layer calls a local Swift Core Host over JSON stdin/stdout so all 17 search providers, ten-language query planning, pagination continuations, normalized models, rights rules, local relevance ranking, clip/output metadata, attribution, sidecars, update-version logic, portable project manifests, duplicate detection, contact-sheet plans, and the Codable project database remain single-source Swift implementations. Credentials never appear in command-line arguments.
 
 ## Multilingual search
 
@@ -29,7 +29,7 @@ Searches use a global 12-request gate. Official/public APIs run at most two quer
 - `Providers/`: independent implementations of the `MediaProvider` protocol.
 - `Networking/`: validated HTTPS requests, readable error mapping, cancellation, bounded retries, and rate-limit handling.
 - `Persistence/`: projects, script segments, favorites, history, and download metadata in an atomic Codable database.
-- `Services/`: downloads, cache, localization, logging, credential storage, settings, preview, and source sidecars.
+- `Services/`: downloads, cache, localization, logging, credential storage, settings, preview, source sidecars, and shared project-workflow exports/audits/backups/deduplication.
 - `Platform/`: replaceable system paths, file/folder opening, file reveal, and directory selection.
 - `ViewModels/`: provider orchestration, progressive results, deduplication, filtering, and sorting.
 - `Views/`: macOS SwiftUI presentation only.
@@ -108,6 +108,14 @@ macOS uses `AppUpdateController` and a SwiftUI sheet; Windows sends `checkUpdate
 
 `AttributionFormatter` is shared by macOS, the Windows Core Host, result-card copy actions, batch source copying, and source sidecars. It omits missing optional fields and uses the localized unknown-rights warning rather than inventing a license.
 
+## Project workflow and portability
+
+`ProjectAssetInventory` is a project-scoped view over the existing favorite and download records rather than a new asset database. `AttributionExporter` creates Markdown/CSV/JSON/HTML reports and concise/detailed credits from selected metadata. Absolute local paths are omitted by default, sensitive URL values and common credential/path patterns are redacted, HTML is escaped, and CSV formula-like values are neutralized. A rights-audit acknowledgement is independent from `RightsInfo`, so a user cannot accidentally convert unknown provider data into a known license.
+
+`PortableProjectCodec` serializes the versioned `.footageflowproject` UTF-8 JSON manifest. It includes project structure and selected metadata, but no media binaries, secure credentials, or absolute paths. Imports validate schema, project identity, asset metadata, and relative references before `PersistentStore` writes the fully constructed payload atomically. Old databases retain optional v0.8 fields and decode without migration.
+
+`DuplicateDetectionEngine` evaluates stable Provider IDs, canonical original/download URLs, optional lazy SHA-256 hashes, then possible metadata. Hashes use chunked reads and a size/modification cache; they never leave the device. `ContactSheetPlanner` is shared; macOS and Windows render its PNG with their native frameworks, first reusing thumbnails and then optionally extracting a bounded 15%-timeline local-video frame through bundled FFmpeg.
+
 To add a provider:
 
 1. Add a type conforming to `MediaProvider` under `Providers/`.
@@ -126,7 +134,7 @@ Downloads are restricted to the configured root for app-initiated deletion. A su
 
 ## Localization
 
-English is the fixed first-launch default. `en.lproj` is the fallback for missing translations. v0.7.4 ships `en`, `zh-Hans`, `zh-Hant`, `es`, `pt-BR`, `ja`, `ko`, `de`, `fr`, and `ru`. SwiftPM may normalize language-directory casing in the built resource bundle, so locale lookup also checks normalized identifiers.
+English is the fixed first-launch default. `en.lproj` is the fallback for missing translations. v0.8.0 ships `en`, `zh-Hans`, `zh-Hant`, `es`, `pt-BR`, `ja`, `ko`, `de`, `fr`, and `ru`. SwiftPM may normalize language-directory casing in the built resource bundle, so locale lookup also checks normalized identifiers.
 
 Run `scripts/check_localizations.sh` after changing UI copy. `localization.fallbackProbe` intentionally exists only in English to exercise fallback behavior.
 
@@ -152,7 +160,7 @@ The package uses the official `swift-testing` dependency so the full platform-ne
 
 ## Packaging
 
-`scripts/build_app.sh` builds a Release executable; bundles checksum-pinned yt-dlp; builds static GPL FFmpeg 8.0.3 with pinned x264, Apple SecureTransport, and no `nonfree` component; copies all applicable license texts; creates the `.app`; and performs Ad Hoc signing. The FFmpeg configuration uses a neutral build prefix and the packaging scan rejects private developer paths. `scripts/binary_privacy_scan.sh` scans the app executable and bundled tools for credential-like strings. `scripts/build_dmg.sh` creates the drag-to-Applications DMG and SHA-256 checksum. No Developer ID certificate or notarization is claimed for v0.7.4.
+`scripts/build_app.sh` builds a Release executable; bundles checksum-pinned yt-dlp; builds static GPL FFmpeg 8.0.3 with pinned x264, Apple SecureTransport, and no `nonfree` component; copies all applicable license texts; creates the `.app`; and performs Ad Hoc signing. The FFmpeg configuration uses a neutral build prefix and the packaging scan rejects private developer paths. `scripts/binary_privacy_scan.sh` scans the app executable and bundled tools for credential-like strings. `scripts/build_dmg.sh` creates the drag-to-Applications DMG and SHA-256 checksum. No Developer ID certificate or notarization is claimed for v0.8.0.
 
 ## Windows architecture
 

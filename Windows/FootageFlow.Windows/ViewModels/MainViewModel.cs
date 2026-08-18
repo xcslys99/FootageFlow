@@ -50,6 +50,10 @@ public sealed class MainViewModel : ObservableObject
     private string _updateStatusCode = "";
     private readonly UpdateCheckSession _updateSession = new();
     private bool _showAllSearchLanguages;
+    private RightsAuditReport? _rightsAudit;
+    private string _selectedRightsAuditFilter = "all";
+    private string _projectActionStatus = "";
+    private bool _isProjectWorking;
     private static readonly SemaphoreSlim SearchNetworkLimit = new(12, 12);
 
     public MainViewModel()
@@ -133,6 +137,13 @@ public sealed class MainViewModel : ObservableObject
         ClearProjectCommand = new RelayCommand(_ => CurrentProject = null);
         SaveProjectCommand = new AsyncRelayCommand(_ => SaveProjectAsync(), _ => CurrentProject is not null);
         DeleteProjectCommand = new AsyncRelayCommand(project => DeleteProjectAsync(project as ProjectRecord));
+        RefreshRightsAuditCommand = new AsyncRelayCommand(_ => RefreshRightsAuditAsync(), _ => CurrentProject is not null && !IsProjectWorking);
+        FindDuplicatesCommand = new AsyncRelayCommand(_ => FindDuplicatesAsync(), _ => CurrentProject is not null && !IsProjectWorking);
+        MarkReviewedCommand = new AsyncRelayCommand(value => SetReviewedAsync(value as RightsAuditEntry, true));
+        KeepBothCommand = new AsyncRelayCommand(value => SetDuplicateDecisionAsync(value as DuplicateGroup, "keepBoth"));
+        NotDuplicateCommand = new AsyncRelayCommand(value => SetDuplicateDecisionAsync(value as DuplicateGroup, "notDuplicate"));
+        ResetDuplicateDecisionsCommand = new AsyncRelayCommand(_ => ResetDuplicateDecisionsAsync(), _ => CurrentProject is not null);
+        RemoveAssetFromProjectCommand = new AsyncRelayCommand(value => RemoveAssetFromProjectAsync(value as ProjectAssetItem));
         SearchHistoryCommand = new AsyncRelayCommand(history => SearchHistoryAsync(history as SearchHistoryRecord));
         DeleteHistoryCommand = new AsyncRelayCommand(history => DeleteHistoryAsync(history as SearchHistoryRecord));
         ClearHistoryCommand = new AsyncRelayCommand(_ => ClearHistoryAsync());
@@ -197,6 +208,7 @@ public sealed class MainViewModel : ObservableObject
     public ICollectionView DownloadRecordsView { get; }
     public ObservableCollection<string> ScriptSegments { get; } = [];
     public ObservableCollection<LinkDownloadItem> LinkItems { get; } = [];
+    public ObservableCollection<DuplicateGroup> DuplicateGroups { get; } = [];
 
     public ICommand NavigateCommand { get; }
     public ICommand SearchCommand { get; }
@@ -224,6 +236,13 @@ public sealed class MainViewModel : ObservableObject
     public ICommand ClearProjectCommand { get; }
     public ICommand SaveProjectCommand { get; }
     public ICommand DeleteProjectCommand { get; }
+    public ICommand RefreshRightsAuditCommand { get; }
+    public ICommand FindDuplicatesCommand { get; }
+    public ICommand MarkReviewedCommand { get; }
+    public ICommand KeepBothCommand { get; }
+    public ICommand NotDuplicateCommand { get; }
+    public ICommand ResetDuplicateDecisionsCommand { get; }
+    public ICommand RemoveAssetFromProjectCommand { get; }
     public ICommand SearchHistoryCommand { get; }
     public ICommand DeleteHistoryCommand { get; }
     public ICommand ClearHistoryCommand { get; }
@@ -387,11 +406,61 @@ public sealed class MainViewModel : ObservableObject
             FavoritesView.Refresh();
             HistoryView.Refresh();
             DownloadRecordsView.Refresh();
+            RightsAudit = null;
+            DuplicateGroups.Clear();
+            if (value is not null) _ = RefreshRightsAuditAsync();
         }
     }
     public string NewProjectName { get => _newProjectName; set => Set(ref _newProjectName, value); }
     public string ProjectEditName { get => _projectEditName; set => Set(ref _projectEditName, value); }
     public string ScriptText { get => _scriptText; set => Set(ref _scriptText, value); }
+    public RightsAuditReport? RightsAudit
+    {
+        get => _rightsAudit;
+        private set
+        {
+            if (!Set(ref _rightsAudit, value)) return;
+            OnPropertyChanged(nameof(RightsAuditSummaryText));
+            OnPropertyChanged(nameof(FilteredRightsAuditEntries));
+        }
+    }
+    public IReadOnlyList<AuditFilterOption> RightsAuditFilters =>
+    [
+        new("all", T("project.filterAll")),
+        new("needsReview", T("project.needsReview")),
+        new("attributionRequired", T("license.attribution")),
+        new("publicDomain", T("license.publicDomain")),
+        new("rightsUnknown", T("project.rightsUnknown"))
+    ];
+    public string SelectedRightsAuditFilter
+    {
+        get => _selectedRightsAuditFilter;
+        set
+        {
+            if (Set(ref _selectedRightsAuditFilter, value)) OnPropertyChanged(nameof(FilteredRightsAuditEntries));
+        }
+    }
+    public IReadOnlyList<RightsAuditEntry> FilteredRightsAuditEntries => RightsAudit?.Entries.Where(entry => SelectedRightsAuditFilter switch
+    {
+        "needsReview" => entry.NeedsReview,
+        "attributionRequired" => entry.AttributionRequired,
+        "publicDomain" => entry.PublicDomain,
+        "rightsUnknown" => !entry.RightsKnown,
+        _ => true
+    }).ToArray() ?? [];
+    public string ProjectActionStatus { get => _projectActionStatus; private set => Set(ref _projectActionStatus, value); }
+    public bool IsProjectWorking
+    {
+        get => _isProjectWorking;
+        private set
+        {
+            if (!Set(ref _isProjectWorking, value)) return;
+            (RefreshRightsAuditCommand as AsyncRelayCommand)?.RaiseCanExecuteChanged();
+            (FindDuplicatesCommand as AsyncRelayCommand)?.RaiseCanExecuteChanged();
+        }
+    }
+    public string RightsAuditSummaryText => RightsAudit is null ? "" :
+        $"{T("project.totalAssets")}: {RightsAudit.Summary.TotalAssets} · {T("project.rightsUnknown")}: {RightsAudit.Summary.RightsUnknown} · {T("license.attribution")}: {RightsAudit.Summary.AttributionRequired}";
     public string LinkInput
     {
         get => _linkInput;
@@ -420,7 +489,7 @@ public sealed class MainViewModel : ObservableObject
         get
         {
             var version = typeof(MainViewModel).Assembly.GetName().Version;
-            return version is null ? "0.7.4" : $"{version.Major}.{version.Minor}.{Math.Max(0, version.Build)}";
+            return version is null ? "0.8.0" : $"{version.Major}.{version.Minor}.{Math.Max(0, version.Build)}";
         }
     }
     public bool IsUpdateChecking
@@ -483,6 +552,25 @@ public sealed class MainViewModel : ObservableObject
     public string ScriptAnalyze => T("script.analyze");
     public string ProjectsTitle => T("project.title");
     public string NewProjectTitle => T("project.new");
+    public string ProjectActionsTitle => T("project.actions");
+    public string ExportProjectText => T("project.export");
+    public string AttributionReportText => T("project.attributionReport");
+    public string GenerateCreditsText => T("project.generateCredits");
+    public string RightsAuditText => T("project.rightsAudit");
+    public string RightsAuditDisclaimerText => T("project.rightsAuditDisclaimer");
+    public string MissingLocalMediaText => T("project.missingLocalMedia");
+    public string ProjectBackupText => T("project.backup");
+    public string ImportProjectText => T("project.import");
+    public string FindDuplicatesText => T("project.findDuplicates");
+    public string ContactSheetText => T("project.contactSheet");
+    public string ResetDuplicateDecisionsText => T("project.resetDuplicateDecisions");
+    public string MarkReviewedText => T("project.markReviewed");
+    public string KeepBothText => T("project.keepBoth");
+    public string NotDuplicateText => T("project.notDuplicate");
+    public string NeedsReviewText => T("project.needsReview");
+    public string OpenOriginalText => T("project.openOriginal");
+    public string RevealFileText => T("project.revealFile");
+    public string RemoveFromProjectText => T("project.removeFromProject");
     public string FavoritesTitle => T("nav.favorites");
     public string DownloadsTitle => T("download.title");
     public string HistoryTitle => T("search.history");
@@ -1168,6 +1256,172 @@ public sealed class MainViewModel : ObservableObject
         ApplyDatabase(response.Database);
     }
 
+    private async Task RefreshRightsAuditAsync()
+    {
+        if (CurrentProject is null || IsProjectWorking) return;
+        IsProjectWorking = true;
+        ProjectActionStatus = T("project.auditLoading");
+        try
+        {
+            var response = await _core.SendAsync(new CoreRequest
+            {
+                Action = "projectRightsAudit", ProjectID = CurrentProject.Id.ToString(),
+                Language = _settings.Current.Language
+            }, timeout: TimeSpan.FromSeconds(45));
+            if (!response.Success) throw new CoreHostException(response.ErrorCode ?? "projectAuditFailed", response.ErrorMessage ?? T("project.actionFailed"));
+            RightsAudit = response.RightsAudit;
+            OnPropertyChanged(nameof(FilteredRightsAuditEntries));
+            ProjectActionStatus = "";
+        }
+        catch { ProjectActionStatus = T("project.actionFailed"); }
+        finally { IsProjectWorking = false; }
+    }
+
+    private async Task FindDuplicatesAsync()
+    {
+        if (CurrentProject is null || IsProjectWorking) return;
+        IsProjectWorking = true;
+        ProjectActionStatus = T("project.scanningDuplicates");
+        try
+        {
+            var response = await _core.SendAsync(new CoreRequest
+            {
+                Action = "findProjectDuplicates", ProjectID = CurrentProject.Id.ToString(),
+                Language = _settings.Current.Language
+            }, timeout: TimeSpan.FromMinutes(5));
+            if (!response.Success) throw new CoreHostException(response.ErrorCode ?? "duplicateFailed", response.ErrorMessage ?? T("project.actionFailed"));
+            Replace(DuplicateGroups, response.DuplicateGroups ?? []);
+            ProjectActionStatus = DuplicateGroups.Count == 0 ? T("project.noDuplicates") : "";
+        }
+        catch { ProjectActionStatus = T("project.actionFailed"); }
+        finally { IsProjectWorking = false; }
+    }
+
+    private async Task SetReviewedAsync(RightsAuditEntry? entry, bool reviewed)
+    {
+        if (CurrentProject is null || entry is null) return;
+        var response = await _core.SendAsync(new CoreRequest
+        {
+            Action = "setProjectReviewed", ProjectID = CurrentProject.Id.ToString(),
+            StableAssetID = entry.Item.StableID, Reviewed = reviewed, Language = _settings.Current.Language
+        });
+        ApplyDatabase(response.Database);
+        await RefreshRightsAuditAsync();
+    }
+
+    private async Task SetDuplicateDecisionAsync(DuplicateGroup? group, string decision)
+    {
+        if (CurrentProject is null || group is null) return;
+        var response = await _core.SendAsync(new CoreRequest
+        {
+            Action = "setDuplicateDecision", ProjectID = CurrentProject.Id.ToString(),
+            PairKey = group.DecisionKey, DuplicateDecision = decision, Language = _settings.Current.Language
+        });
+        ApplyDatabase(response.Database);
+        DuplicateGroups.Remove(group);
+    }
+
+    private async Task ResetDuplicateDecisionsAsync()
+    {
+        if (CurrentProject is null) return;
+        var response = await _core.SendAsync(new CoreRequest
+        {
+            Action = "resetDuplicateDecisions", ProjectID = CurrentProject.Id.ToString(),
+            Language = _settings.Current.Language
+        });
+        ApplyDatabase(response.Database);
+        await FindDuplicatesAsync();
+    }
+
+    public async Task<RightsAuditReport?> GetCurrentRightsAuditAsync()
+    {
+        if (CurrentProject is null) return null;
+        var response = await _core.SendAsync(new CoreRequest
+        {
+            Action = "projectRightsAudit", ProjectID = CurrentProject.Id.ToString(),
+            Language = _settings.Current.Language
+        }, timeout: TimeSpan.FromSeconds(45));
+        if (!response.Success) throw new CoreHostException(response.ErrorCode ?? "projectAuditFailed", response.ErrorMessage ?? T("project.actionFailed"));
+        RightsAudit = response.RightsAudit;
+        OnPropertyChanged(nameof(FilteredRightsAuditEntries));
+        return RightsAudit;
+    }
+
+    private async Task RemoveAssetFromProjectAsync(ProjectAssetItem? item)
+    {
+        if (CurrentProject is null || item is null) return;
+        var response = await _core.SendAsync(new CoreRequest
+        {
+            Action = "removeAssetFromProject", ProjectID = CurrentProject.Id.ToString(),
+            StableAssetID = item.StableID, Language = _settings.Current.Language
+        });
+        if (!response.Success) throw new CoreHostException(response.ErrorCode ?? "projectRemovalFailed", response.ErrorMessage ?? T("project.actionFailed"));
+        ApplyDatabase(response.Database);
+        await RefreshRightsAuditAsync();
+        await FindDuplicatesAsync();
+    }
+
+    public async Task<byte[]?> BuildProjectReportAsync(string format, bool includeLocalPaths)
+    {
+        if (CurrentProject is null) return null;
+        var response = await _core.SendAsync(new CoreRequest
+        {
+            Action = "exportProjectReport", ProjectID = CurrentProject.Id.ToString(), ExportFormat = format,
+            IncludeLocalFilePaths = includeLocalPaths, Language = _settings.Current.Language
+        }, timeout: TimeSpan.FromSeconds(60));
+        if (!response.Success || string.IsNullOrWhiteSpace(response.DataBase64))
+            throw new CoreHostException(response.ErrorCode ?? "exportFailed", response.ErrorMessage ?? T("project.actionFailed"));
+        return Convert.FromBase64String(response.DataBase64);
+    }
+
+    public async Task<string?> BuildProjectCreditsAsync(string style)
+    {
+        if (CurrentProject is null) return null;
+        var response = await _core.SendAsync(new CoreRequest
+        {
+            Action = "generateProjectCredits", ProjectID = CurrentProject.Id.ToString(), CreditsStyle = style,
+            Language = _settings.Current.Language
+        });
+        if (!response.Success) throw new CoreHostException(response.ErrorCode ?? "creditsFailed", response.ErrorMessage ?? T("project.actionFailed"));
+        return response.Text;
+    }
+
+    public async Task<byte[]?> BuildProjectBackupAsync()
+    {
+        if (CurrentProject is null) return null;
+        var response = await _core.SendAsync(new CoreRequest
+        {
+            Action = "exportProjectBackup", ProjectID = CurrentProject.Id.ToString(), Language = _settings.Current.Language
+        }, timeout: TimeSpan.FromSeconds(60));
+        if (!response.Success || string.IsNullOrWhiteSpace(response.DataBase64))
+            throw new CoreHostException(response.ErrorCode ?? "backupFailed", response.ErrorMessage ?? T("project.actionFailed"));
+        return Convert.FromBase64String(response.DataBase64);
+    }
+
+    public async Task<bool> ImportProjectBackupAsync(byte[] data)
+    {
+        var response = await _core.SendAsync(new CoreRequest
+        {
+            Action = "importProjectBackup", DataBase64 = Convert.ToBase64String(data), Language = _settings.Current.Language
+        }, timeout: TimeSpan.FromSeconds(60));
+        if (!response.Success) throw new CoreHostException(response.ErrorCode ?? "projectImportFailed", response.ErrorMessage ?? T("project.actionFailed"));
+        ApplyDatabase(response.Database);
+        CurrentProject = response.Project;
+        return response.Project is not null;
+    }
+
+    public async Task<ContactSheetPlan?> BuildContactSheetPlanAsync(int columns, bool includeRights)
+    {
+        if (CurrentProject is null) return null;
+        var response = await _core.SendAsync(new CoreRequest
+        {
+            Action = "contactSheetPlan", ProjectID = CurrentProject.Id.ToString(), Columns = columns,
+            IncludeRights = includeRights, Language = _settings.Current.Language
+        }, timeout: TimeSpan.FromSeconds(60));
+        if (!response.Success) throw new CoreHostException(response.ErrorCode ?? "contactSheetFailed", response.ErrorMessage ?? T("project.actionFailed"));
+        return response.ContactSheetPlan;
+    }
+
     private async Task SearchHistoryAsync(SearchHistoryRecord? history)
     {
         if (history is null) return;
@@ -1490,6 +1744,8 @@ public sealed class MainViewModel : ObservableObject
     private void RefreshLanguage()
     {
         OnPropertyChanged(null);
+        OnPropertyChanged(nameof(RightsAuditFilters));
+        OnPropertyChanged(nameof(FilteredRightsAuditEntries));
         foreach (var item in LinkItems)
         {
             item.ConfigureQualityLabels(QualityLabel);
@@ -1502,6 +1758,14 @@ public sealed class MainViewModel : ObservableObject
         foreach (var record in DownloadRecords) record.WorkflowSummary = DownloadWorkflowSummary(record);
         DownloadRecordsView.Refresh();
         SearchStatus = T("search.initialStatus");
+        if (CurrentProject is not null && !IsProjectWorking)
+            _ = RefreshLocalizedProjectDetailsAsync();
+    }
+
+    private async Task RefreshLocalizedProjectDetailsAsync()
+    {
+        await RefreshRightsAuditAsync();
+        await FindDuplicatesAsync();
     }
 
     private string DownloadWorkflowSummary(DownloadRecord record)
@@ -1524,3 +1788,5 @@ public sealed class MainViewModel : ObservableObject
     private static string Timecode(double seconds) =>
         TimeSpan.FromSeconds(Math.Max(0, Math.Floor(seconds))).ToString(@"hh\:mm\:ss");
 }
+
+public sealed record AuditFilterOption(string Id, string Label);

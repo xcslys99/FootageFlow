@@ -1,10 +1,10 @@
 # Windows architecture audit
 
-Status: Windows 11 x64 is supported from FootageFlow v0.2.0. The v0.7.4 candidate keeps the same shared-core boundary and changes update reminder lifetime without duplicating release parsing, version comparison, Provider, or download logic. Windows-native installation and runtime checks are performed on a clean Windows GitHub Actions runner before release.
+Status: Windows 11 x64 is supported from FootageFlow v0.2.0. v0.8.0 adds project export, attribution, audit, backup/import, duplicate, and contact-sheet workflows while retaining the same shared-core boundary. Windows-native installation and runtime checks are performed on a clean Windows GitHub Actions runner before release.
 
 ## Current shared code
 
-All 17 search Provider implementations, API/direct-mode selection, pagination continuations, `HTTPClient`, normalized `MediaAsset`, rights mapping, Provider capabilities and errors, smart keyword rules, clip/output models, clipboard URL parsing, update release parsing/version comparison/Release Notes sanitizing, deduplication, filters, filename suggestions, feedback URLs, source-sidecar generation, path roots, log redaction, and Codable persistence are platform-neutral Swift. macOS and Windows therefore use one business implementation for the existing providers plus Openverse and Dailymotion.
+All 17 search Provider implementations, API/direct-mode selection, pagination continuations, `HTTPClient`, normalized `MediaAsset`, rights mapping, Provider capabilities and errors, smart keyword rules, clip/output models, clipboard URL parsing, update release parsing/version comparison/Release Notes sanitizing, deduplication, filters, filename suggestions, feedback URLs, source-sidecar generation, path roots, log redaction, and Codable persistence are platform-neutral Swift. v0.8.0 adds the same attribution exporter, rights audit, portable manifest/import validator, duplicate engine, lazy SHA-256 cache, export redaction, and contact-sheet plan to that shared layer. macOS and Windows therefore use one business implementation for the existing providers plus Openverse and Dailymotion.
 
 `PersistentStore` owns project, segment, favorite, history, and download-record behavior. The macOS `DataStore` is a small Combine presentation facade over this shared repository. Windows calls the same repository through the local Core Host.
 
@@ -81,11 +81,12 @@ The Windows scheduler enforces the same 12-request global limit, two requests pe
 - v0.7.2 adds shared ten-language compound search, structured query metadata, and language-aware ranking without duplicating the lexicon in C#.
 - v0.7.3 hardens session-only clipboard suggestions, direct-media format fallback, Openverse filtering, link error classification, and real creator-workflow validation.
 - v0.7.4 removes the persisted 24-hour update deferral. Not Now is session-only, so an outdated online installation checks and reminds again after a complete restart without forcing an update.
+- v0.8.0 adds the shared project export/attribution/rights/backup/duplicate/contact-sheet model. WPF provides native save/open/reveal/clipboard/PNG-rendering glue only; it does not duplicate the project business rules.
 - Windows 10 x64 is not declared supported because it has not completed the same validation.
 
-## v0.7.4 release validation gate
+## v0.8.0 release validation gate
 
-Before publishing v0.7.4, CI must complete all of the following on a clean Windows runner:
+Before publishing v0.8.0, CI must complete all of the following on a clean Windows runner:
 
 - Shared Swift Release build, Core Host health check, and cross-platform tests.
 - Native WPF Release build and Windows platform acceptance checks.
@@ -94,5 +95,6 @@ Before publishing v0.7.4, CI must complete all of the following on a clean Windo
 - Real public Provider smoke tests; optional key paths run only when repository secrets are configured.
 - Real YouTube analysis or correct hosted-IP access-limit classification, real Dailymotion and public direct-media analysis, plus a validated 10-second editing-compatible MP4 clip and source sidecars.
 - Portable archive, installer, SHA-256 verification, runtime/license inventory, tracked-secret scan, and candidate artifact upload.
+- Cross-platform portable-project fixtures, project-report formats, rights-audit/duplicate decisions, and the shared contact-sheet plan.
 
 No developer credential, browser cookie, token, password, private-link query value, or user path may be embedded in source, logs, feedback URLs, sidecars, or release packages.

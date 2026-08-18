@@ -50,7 +50,8 @@ FootageFlow is designed for documentary, history, country profile, finance, scie
 3. Narrow results with relevance mode, source, media type, year, duration, resolution, rights, or direct-download filters.
 4. Preview useful items, copy source information, save favorites, or add them to a project.
 5. Batch-download available media through the shared queue, or open the original page for discovery-only results.
-6. Keep the generated source sidecars with the project and verify current rights before publishing.
+6. Open **Project Actions** to generate credits, export a source/attribution report, audit rights, make a portable backup, scan duplicates, or create a contact sheet.
+7. Keep the generated source sidecars with the project and verify current rights before publishing.
 
 If you already know the media URL, Link Downloader uses the same project, download, history, and sidecar system. Optional foreground-only clipboard detection can recognize copied public media links locally; it is disabled by default and never uploads clipboard contents.
 
@@ -70,6 +71,10 @@ These screenshots are from FootageFlow on macOS. The Windows edition follows the
 
 ![FootageFlow provider modes and ten interface languages](docs/images/provider-settings.png)
 
+![FootageFlow project Rights Audit with provider-supplied source metadata](docs/images/project-rights-audit-v080.png)
+
+![FootageFlow local duplicate review with non-destructive project actions](docs/images/project-duplicate-detection-v080.png)
+
 ## Features
 
 - Progressive search across 17 sources with Provider failure isolation
@@ -77,6 +82,9 @@ These screenshots are from FootageFlow on macOS. The Windows edition follows the
 - Concept-aware local reranking with Precise, Balanced, and Broad modes
 - Source, media type, year, duration, resolution, rights, and downloadability filters
 - Video/image preview, batch selection, projects, favorites, and history
+- Project attribution reports in Markdown, CSV, JSON, and HTML; concise/detailed credits; and rights audit
+- Portable `.footageflowproject` backup/import with no bundled media, credentials, or absolute paths
+- Local-first duplicate detection and numbered contact-sheet PNG export
 - Full-media and clip downloads with original, M4A, or editing-compatible MP4 output
 - `.source.txt` and `.source.json` beside every successful download
 - Copy Source and Copy Attribution using only Provider-supplied metadata
@@ -142,6 +150,10 @@ FootageFlow never guesses a license. Missing data stays **Rights / License unkno
 
 Always verify the original source page before reuse. See [Rights and attribution](docs/RIGHTS_AND_ATTRIBUTION.md) and [PRIVACY.md](PRIVACY.md).
 
+## Project handoff
+
+Project Actions can export Markdown/CSV/JSON/HTML attribution reports, generate credits, run a Rights Audit, create a portable cross-platform `.footageflowproject` backup, identify likely duplicates, and generate a contact-sheet PNG. Reports exclude local absolute paths by default; backup files never contain media binaries, API keys, cookies, tokens, or absolute paths. Imported media that is not present on the new computer remains in the project and is clearly marked **Local media file not found**. See [Project workflow, export, and attribution](docs/PROJECT_WORKFLOW.md).
+
 FootageFlow has no analytics, advertising, telemetry SDK, or FootageFlow cloud account. Searches are sent only to the enabled Providers required to perform the request. Projects, scripts, favorites, history, and API keys remain on the device; the operating system's secure credential store holds optional keys.
 
 ## Troubleshooting quick answers
@@ -161,6 +173,7 @@ See [Troubleshooting](docs/TROUBLESHOOTING.md) for macOS Gatekeeper, Windows Sma
 - [Link Downloader](docs/LINK_DOWNLOADER.md)
 - [Software updates](docs/SOFTWARE_UPDATES.md)
 - [Rights and attribution](docs/RIGHTS_AND_ATTRIBUTION.md)
+- [Project workflow, export, and attribution](docs/PROJECT_WORKFLOW.md)
 - [Troubleshooting](docs/TROUBLESHOOTING.md)
 - [Development guide](DEVELOPMENT.md)
 - [Contributing](CONTRIBUTING.md)

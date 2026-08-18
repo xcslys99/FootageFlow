@@ -321,13 +321,34 @@
               <ListBox.ItemTemplate><DataTemplate><Grid Margin="8"><Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><StackPanel><TextBlock Text="{Binding Name}" FontWeight="SemiBold" /><TextBlock Text="{Binding UpdatedAt}" Foreground="{StaticResource SubtleTextBrush}" /></StackPanel><Button Grid.Column="1" Content="{Binding DataContext.DeleteText, RelativeSource={RelativeSource AncestorType=Window}}" Command="{Binding DataContext.DeleteProjectCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" /></Grid></DataTemplate></ListBox.ItemTemplate>
             </ListBox>
             <Border Grid.Column="2" Background="White" BorderBrush="#E1E5EA" BorderThickness="1" CornerRadius="8" Padding="16">
-              <Grid><Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+              <ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel>
                 <TextBlock Text="{Binding ProjectTitle}" FontSize="17" FontWeight="SemiBold" />
-                <TextBox Grid.Row="1" Text="{Binding ProjectEditName, UpdateSourceTrigger=PropertyChanged}" Margin="0,10,0,12" />
-                <TextBlock Grid.Row="2" Text="{Binding ScriptTitle}" FontWeight="SemiBold" />
-                <TextBox Grid.Row="3" Text="{Binding ScriptText, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" Margin="0,8,0,10" />
-                <Button Grid.Row="4" Content="{Binding SaveText}" Command="{Binding SaveProjectCommand}" Style="{StaticResource PrimaryButton}" HorizontalAlignment="Right" />
-              </Grid>
+                <TextBox Text="{Binding ProjectEditName, UpdateSourceTrigger=PropertyChanged}" Margin="0,10,0,12" />
+                <TextBlock Text="{Binding ProjectActionsTitle}" FontWeight="SemiBold" />
+                <WrapPanel Margin="0,7,0,7">
+                  <Button Content="{Binding ExportProjectText}" Click="ProjectExport_Click" />
+                  <Button Content="{Binding GenerateCreditsText}" Click="ProjectCredits_Click" />
+                  <Button Content="{Binding RightsAuditText}" Command="{Binding RefreshRightsAuditCommand}" />
+                  <Button Content="{Binding ProjectBackupText}" Click="ProjectBackup_Click" />
+                  <Button Content="{Binding ImportProjectText}" Click="ProjectImport_Click" />
+                  <Button Content="{Binding FindDuplicatesText}" Command="{Binding FindDuplicatesCommand}" />
+                  <Button Content="{Binding ContactSheetText}" Click="ContactSheet_Click" />
+                  <Button Content="{Binding ResetDuplicateDecisionsText}" Command="{Binding ResetDuplicateDecisionsCommand}" />
+                </WrapPanel>
+                <TextBlock Text="{Binding ProjectActionStatus}" Foreground="{StaticResource SubtleTextBrush}" TextWrapping="Wrap" />
+                <TextBlock Text="{Binding RightsAuditSummaryText}" FontWeight="SemiBold" Margin="0,7,0,4" TextWrapping="Wrap" />
+                <TextBlock Text="{Binding RightsAuditDisclaimerText}" Foreground="{StaticResource SubtleTextBrush}" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,3" />
+                <ComboBox ItemsSource="{Binding RightsAuditFilters}" DisplayMemberPath="Label" SelectedValuePath="Id" SelectedValue="{Binding SelectedRightsAuditFilter}" Width="220" Margin="0,4,0,2" />
+                <ItemsControl ItemsSource="{Binding FilteredRightsAuditEntries}">
+                  <ItemsControl.ItemTemplate><DataTemplate><Border BorderBrush="#E1E5EA" BorderThickness="0,0,0,1" Padding="0,6"><Grid><Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><StackPanel><TextBlock Text="{Binding Item.Title}" FontWeight="SemiBold" TextWrapping="Wrap" /><TextBlock Text="{Binding Item.ProviderName}" Foreground="{StaticResource SubtleTextBrush}" /><TextBlock Text="{Binding Item.License}" Foreground="{StaticResource SubtleTextBrush}" /><TextBlock Text="{Binding Item.SourcePageURL}" Foreground="{StaticResource SubtleTextBrush}" TextTrimming="CharacterEllipsis" /><TextBlock Text="{Binding DataContext.MissingLocalMediaText, RelativeSource={RelativeSource AncestorType=Window}}" Foreground="#B26A00" Visibility="{Binding Item.LocalMediaMissing, Converter={StaticResource BoolVisibility}}" /></StackPanel><WrapPanel Grid.Column="1"><Button Content="{Binding DataContext.MarkReviewedText, RelativeSource={RelativeSource AncestorType=Window}}" Command="{Binding DataContext.MarkReviewedCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" Visibility="{Binding NeedsReview, Converter={StaticResource BoolVisibility}}" /><Button Content="{Binding DataContext.OpenOriginalText, RelativeSource={RelativeSource AncestorType=Window}}" Tag="{Binding Item.SourcePageURL}" Click="OpenProjectOriginal_Click" /></WrapPanel></Grid></Border></DataTemplate></ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <ItemsControl ItemsSource="{Binding DuplicateGroups}" Margin="0,8,0,0">
+                  <ItemsControl.ItemTemplate><DataTemplate><Border Background="#FFF8E8" BorderBrush="#E9D8A6" BorderThickness="1" CornerRadius="6" Padding="8" Margin="0,0,0,6"><StackPanel><TextBlock Text="{Binding DisplayReason}" FontWeight="SemiBold" /><ItemsControl ItemsSource="{Binding Items}"><ItemsControl.ItemTemplate><DataTemplate><Grid Margin="0,3"><Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><TextBlock Text="{Binding Title}" VerticalAlignment="Center" /><WrapPanel Grid.Column="1"><Button Content="{Binding DataContext.OpenOriginalText, RelativeSource={RelativeSource AncestorType=Window}}" Tag="{Binding SourcePageURL}" Click="OpenProjectOriginal_Click" /><Button Content="{Binding DataContext.RevealFileText, RelativeSource={RelativeSource AncestorType=Window}}" Tag="{Binding LocalPath}" Click="RevealProjectItem_Click" /><Button Content="{Binding DataContext.RemoveFromProjectText, RelativeSource={RelativeSource AncestorType=Window}}" Command="{Binding DataContext.RemoveAssetFromProjectCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" /></WrapPanel></Grid></DataTemplate></ItemsControl.ItemTemplate></ItemsControl><WrapPanel><Button Content="{Binding DataContext.KeepBothText, RelativeSource={RelativeSource AncestorType=Window}}" Command="{Binding DataContext.KeepBothCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" /><Button Content="{Binding DataContext.NotDuplicateText, RelativeSource={RelativeSource AncestorType=Window}}" Command="{Binding DataContext.NotDuplicateCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" /></WrapPanel></StackPanel></Border></DataTemplate></ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <TextBlock Text="{Binding ScriptTitle}" FontWeight="SemiBold" Margin="0,12,0,0" />
+                <TextBox Text="{Binding ScriptText, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" Height="190" Margin="0,8,0,10" />
+                <Button Content="{Binding SaveText}" Command="{Binding SaveProjectCommand}" Style="{StaticResource PrimaryButton}" HorizontalAlignment="Right" />
+              </StackPanel></ScrollViewer>
             </Border>
           </Grid>
         </Grid>

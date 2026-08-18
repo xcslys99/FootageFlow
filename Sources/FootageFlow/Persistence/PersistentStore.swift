@@ -9,6 +9,9 @@ final class PersistentStore {
   var favorites: [SavedAssetRecord] { database.favorites }
   var history: [SearchHistoryRecord] { database.history }
   var downloads: [DownloadRecord] { database.downloads }
+  var reviewedAssets: [ProjectReviewRecord] { database.reviewedAssets ?? [] }
+  var duplicateDecisions: [DuplicateDecisionRecord] { database.duplicateDecisions ?? [] }
+  var fileHashCache: [FileHashCacheRecord] { database.fileHashCache ?? [] }
 
   init(inMemory: Bool = false, fileURL: URL? = nil) {
     if inMemory {
@@ -61,6 +64,8 @@ final class PersistentStore {
       if value.projectID == id { value.projectID = nil }
       return value
     }
+    database.reviewedAssets?.removeAll { $0.projectID == id }
+    database.duplicateDecisions?.removeAll { $0.projectID == id }
     save()
   }
 
@@ -132,6 +137,75 @@ final class PersistentStore {
 
   func deleteDownloadRecord(id: UUID) {
     database.downloads.removeAll { $0.id == id }
+    save()
+  }
+
+  func setReviewed(projectID: UUID, stableAssetID: String, reviewed: Bool) {
+    var records = database.reviewedAssets ?? []
+    records.removeAll { $0.projectID == projectID && $0.stableAssetID == stableAssetID }
+    if reviewed {
+      records.append(ProjectReviewRecord(projectID: projectID, stableAssetID: stableAssetID))
+    }
+    database.reviewedAssets = records
+    touchProject(projectID)
+    save()
+  }
+
+  func setDuplicateDecision(projectID: UUID, pairKey: String, decision: DuplicateDecision) {
+    var records = database.duplicateDecisions ?? []
+    records.removeAll { $0.projectID == projectID && $0.pairKey == pairKey }
+    records.append(
+      DuplicateDecisionRecord(projectID: projectID, pairKey: pairKey, decision: decision))
+    database.duplicateDecisions = records
+    touchProject(projectID)
+    save()
+  }
+
+  func resetDuplicateDecisions(projectID: UUID) {
+    database.duplicateDecisions = (database.duplicateDecisions ?? []).filter {
+      $0.projectID != projectID
+    }
+    touchProject(projectID)
+    save()
+  }
+
+  /// Removes only the project association. Downloaded media and the global
+  /// download record are retained, so resolving a duplicate never deletes a
+  /// creator's local file by surprise.
+  func removeAssetFromProject(projectID: UUID, stableAssetID: String) {
+    database.favorites.removeAll { $0.projectID == projectID && $0.stableID == stableAssetID }
+    database.downloads = database.downloads.map { record in
+      var value = record
+      if value.projectID == projectID && value.stableAssetID == stableAssetID {
+        value.projectID = nil
+      }
+      return value
+    }
+    database.reviewedAssets?.removeAll {
+      $0.projectID == projectID && $0.stableAssetID == stableAssetID
+    }
+    touchProject(projectID)
+    save()
+  }
+
+  func updateFileHashCache(_ value: FileHashCacheRecord) {
+    var records = database.fileHashCache ?? []
+    records.removeAll { $0.localPath == value.localPath }
+    records.append(value)
+    database.fileHashCache = records
+    save()
+  }
+
+  /// Commits a fully-validated import in one atomic database write. The caller
+  /// must construct the payload before this method is invoked.
+  func importProject(_ payload: ImportedProjectPayload) {
+    database.projects.append(payload.project)
+    database.segments += payload.segments
+    database.favorites += payload.favorites
+    database.history += payload.history
+    database.downloads += payload.downloads
+    database.reviewedAssets = (database.reviewedAssets ?? []) + payload.reviewedAssets
+    database.duplicateDecisions = (database.duplicateDecisions ?? []) + payload.duplicateDecisions
     save()
   }
 

@@ -2,6 +2,25 @@ import Foundation
 
 enum PlatformPaths {
   static var applicationData: URL {
+    // The normal application never sets this. It provides an isolated data
+    // root for automated acceptance tests and lets both desktop platforms
+    // verify import/export flows without touching a creator's real projects.
+    if let override = Bundle.main.object(forInfoDictionaryKey: "FootageFlowApplicationDataRoot")
+      as? String,
+      !override.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    {
+      return URL(fileURLWithPath: override, isDirectory: true)
+    }
+    if let argumentIndex = CommandLine.arguments.firstIndex(of: "--application-data-root"),
+      CommandLine.arguments.indices.contains(argumentIndex + 1)
+    {
+      return URL(fileURLWithPath: CommandLine.arguments[argumentIndex + 1], isDirectory: true)
+    }
+    if let override = ProcessInfo.processInfo.environment["FOOTAGEFLOW_APPLICATION_DATA"],
+      !override.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    {
+      return URL(fileURLWithPath: override, isDirectory: true)
+    }
     #if os(Windows)
       let base =
         ProcessInfo.processInfo.environment["LOCALAPPDATA"].map {

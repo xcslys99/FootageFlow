@@ -2,6 +2,41 @@
 
 All notable FootageFlow changes are documented here.
 
+## [0.8.0] - 2026-08-18
+
+### Added
+
+- Project-level attribution reports in Markdown, CSV, JSON, and offline HTML
+- Concise and detailed credits for video descriptions, end credits, README files, and project notes
+- Rights Audit with Public Domain, Rights Known, Attribution Required, Rights Unknown, and Original Page Unavailable summaries and filters
+- Portable, versioned `.footageflowproject` backup/import across macOS and Windows without bundling large media
+- Project duplicate detection for Provider IDs, normalized source/download URLs, lazy local SHA-256 hashes, and cautious metadata matches
+- User-controlled duplicate decisions, including **Keep Both**, **Not a Duplicate**, and reset; removing an item from a project never deletes the media file
+- PNG contact sheets with 3/4/5-column layouts, optional rights labels, shared thumbnail cache reuse, and best-effort local FFmpeg representative frames
+
+### Improved
+
+- Project workflow now carries existing favorites, downloads, source sidecars, search history, rights metadata, and editing/clip metadata through attribution, backup, and review tasks
+- macOS and Windows use the same Swift Core export schema, rights audit, portable manifest, duplicate rules, hash cache, privacy redaction, and contact-sheet plan
+- Project actions are organized under a discoverable native menu instead of adding a second project/download system
+
+### Privacy and safety
+
+- Exports and backups exclude API keys, credentials, cookies, private logs, raw clipboard content, sensitive URL query values, and absolute local paths by default
+- CSV formula-like cells are neutralized; HTML reports escape metadata and do not require JavaScript or remote services
+- Missing rights are never guessed, and FootageFlow continues to provide organization metadata rather than legal clearance
+
+### Platforms
+
+- macOS 15+ on Apple Silicon
+- Windows 11 x64
+
+### Validation
+
+- Added project export, credits, rights-audit, portable-import, duplicate-decision, streaming SHA-256, large-project, localization, and cross-platform manifest fixture coverage
+- macOS release build, app bundle, DMG, self-test, privacy scan, source/thumbnail/contact-sheet fallback, and installed-app smoke remain release gates
+- Windows CI is the release gate for Shared Core, WPF, project workflow host tests, installer, clean installation, startup, and uninstall
+
 ## [0.7.4] - 2026-08-13
 
 ### Improved
