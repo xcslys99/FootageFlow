@@ -358,9 +358,11 @@ if (OperatingSystem.IsWindows())
             });
             var reportText = report.DataBase64 is { } reportData
                 ? Encoding.UTF8.GetString(Convert.FromBase64String(reportData)) : "";
-            Check(report.Success && reportText.StartsWith("\uFEFFIndex", StringComparison.Ordinal) &&
-                !reportText.Contains("\\Users\\", StringComparison.OrdinalIgnoreCase),
-                "Shared attribution export is UTF-8 and private-path safe by default");
+            Check(report.Success, "Shared attribution export succeeds");
+            Check(reportText.StartsWith("\uFEFF\"Index\"", StringComparison.Ordinal),
+                "Shared attribution export is UTF-8 CSV");
+            Check(!reportText.Contains("\\Users\\", StringComparison.OrdinalIgnoreCase),
+                "Shared attribution export is private-path safe by default");
             var duplicates = await core.SendAsync(new CoreRequest
             {
                 Action = "findProjectDuplicates", ProjectID = project.Id.ToString(), Language = "en"
