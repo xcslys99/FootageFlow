@@ -517,6 +517,12 @@ struct WorkspaceCommandPalette: View {
   }
 }
 
+private struct WorkspaceSearchGroup: Identifiable {
+  let kind: WorkspaceItemKind
+  let entries: [WorkspaceSearchEntry]
+  var id: String { kind.rawValue }
+}
+
 struct WorkspaceGlobalSearch: View {
   let onSelect: (WorkspaceSearchEntry) -> Void
   @EnvironmentObject private var store: DataStore
@@ -526,37 +532,19 @@ struct WorkspaceGlobalSearch: View {
   @State private var selectedID: String?
   @FocusState private var queryFocused: Bool
 
+  private var groups: [WorkspaceSearchGroup] {
+    WorkspaceItemKind.allCases.compactMap { kind in
+      let entries = results.filter { $0.kind == kind }
+      guard !entries.isEmpty else { return nil }
+      return WorkspaceSearchGroup(kind: kind, entries: entries)
+    }
+  }
+
   var body: some View {
     VStack(spacing: 0) {
-      TextField(tr("workspace.globalSearchPlaceholder"), text: $query)
-        .textFieldStyle(.roundedBorder).font(.title3).padding(18)
-        .accessibilityLabel(tr("workspace.globalSearch"))
-        .focused($queryFocused)
-        .onSubmit { openSelected() }
+      searchField
       Divider()
-      List(selection: $selectedID) {
-        ForEach(WorkspaceItemKind.allCases, id: \.self) { kind in
-          let section = results.filter { $0.kind == kind }
-          if !section.isEmpty {
-            Section(tr(kind.localizationKey)) {
-              ForEach(section) { entry in
-                Button {
-                  dismiss()
-                  onSelect(entry)
-                } label: {
-                  VStack(alignment: .leading, spacing: 3) {
-                    Text(entry.title)
-                    if !entry.detail.isEmpty {
-                      Text(entry.detail).font(.caption).foregroundStyle(.secondary).lineLimit(1)
-                    }
-                  }
-                }.buttonStyle(.plain).tag(entry.id)
-                  .accessibilityLabel("\(tr(kind.localizationKey)): \(entry.title)")
-              }
-            }
-          }
-        }
-      }
+      resultsList
     }
     .frame(width: 760, height: 560)
     .task {
@@ -584,6 +572,36 @@ struct WorkspaceGlobalSearch: View {
     .onExitCommand { dismiss() }
   }
 
+  private var searchField: some View {
+    TextField(tr("workspace.globalSearchPlaceholder"), text: $query)
+      .textFieldStyle(.roundedBorder)
+      .font(.title3)
+      .padding(18)
+      .accessibilityLabel(tr("workspace.globalSearch"))
+      .focused($queryFocused)
+      .onSubmit { openSelected() }
+  }
+
+  private var resultsList: some View {
+    List(selection: $selectedID) {
+      ForEach(groups) { group in
+        Section(tr(group.kind.localizationKey)) {
+          ForEach(group.entries) { entry in
+            WorkspaceSearchResultRow(
+              entry: entry,
+              kind: group.kind,
+              onSelect: {
+                dismiss()
+                onSelect(entry)
+              }
+            )
+            .tag(entry.id)
+          }
+        }
+      }
+    }
+  }
+
   private func rebuildAndSearch() async {
     await WorkspaceSearchIndex.shared.rebuild(snapshot: store.workspaceSnapshot())
     let values = await WorkspaceSearchIndex.shared.search(query)
@@ -596,5 +614,27 @@ struct WorkspaceGlobalSearch: View {
     else { return }
     dismiss()
     onSelect(entry)
+  }
+}
+
+private struct WorkspaceSearchResultRow: View {
+  let entry: WorkspaceSearchEntry
+  let kind: WorkspaceItemKind
+  let onSelect: () -> Void
+
+  var body: some View {
+    Button(action: onSelect) {
+      VStack(alignment: .leading, spacing: 3) {
+        Text(entry.title)
+        if !entry.detail.isEmpty {
+          Text(entry.detail)
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .lineLimit(1)
+        }
+      }
+    }
+    .buttonStyle(.plain)
+    .accessibilityLabel("\(tr(kind.localizationKey)): \(entry.title)")
   }
 }
