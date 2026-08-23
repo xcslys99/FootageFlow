@@ -19,16 +19,29 @@ function Invoke-Core([hashtable]$Request) {
     return $response
 }
 
-function Test-PublicProvider([string]$Provider, [string]$Query, [string]$MediaType) {
-    $response = Invoke-Core @{
-        action = "search"; query = $Query; mediaType = $MediaType; orientation = "all"
-        resolution = "all"; duration = "all"; pageSize = 6; providerIDs = @($Provider); language = "en"
+function Test-PublicProvider([string]$Provider, [string[]]$Queries, [string]$MediaType) {
+    # A public catalog can temporarily time out or rank an otherwise healthy
+    # endpoint's first narrow query to zero. Try at most two ordinary topical
+    # queries; never retry aggressively or bypass a provider restriction.
+    $lastBatch = $null
+    foreach ($Query in $Queries) {
+        $response = Invoke-Core @{
+            action = "search"; query = $Query; mediaType = $MediaType; orientation = "all"
+            resolution = "all"; duration = "all"; pageSize = 6; providerIDs = @($Provider); language = "en"
+        }
+        $batch = $response.providerBatches | Select-Object -First 1
+        $lastBatch = $batch
+        if ($batch -and $batch.assets.Count -ge 1) {
+            $asset = $batch.assets | Select-Object -First 1
+            if ($asset.sourcePageURL -notmatch '^https://') { throw "$Provider returned an invalid source page." }
+            return @{ status = "passed"; mode = $batch.mode; count = $batch.assets.Count; sample = $asset.title; query = $Query }
+        }
     }
-    $batch = $response.providerBatches | Select-Object -First 1
-    if (-not $batch -or $batch.assets.Count -lt 1) { throw "$Provider did not return a real search result." }
-    $asset = $batch.assets | Select-Object -First 1
-    if ($asset.sourcePageURL -notmatch '^https://') { throw "$Provider returned an invalid source page." }
-    return @{ status = "passed"; mode = $batch.mode; count = $batch.assets.Count; sample = $asset.title }
+    if ($lastBatch -and $lastBatch.errorCode -in @("noNetwork", "rateLimited", "serverUnavailable", "temporarilyBlocked")) {
+        return @{ status = "graceful-$($lastBatch.errorCode)"; mode = $lastBatch.mode; count = 0; errorCode = $lastBatch.errorCode }
+    }
+    $state = if ($lastBatch) { "$($lastBatch.state.availability) / $($lastBatch.errorCode)" } else { "no provider batch" }
+    throw "$Provider did not return a real search result after bounded attempts ($state)."
 }
 
 function Test-OptionalProvider([string]$Provider, [string]$Query, [string]$MediaType, [string]$Key) {
@@ -99,16 +112,16 @@ function Test-LimitedProvider([string]$Provider, [string]$Query, [string]$MediaT
 $report = [ordered]@{
     generatedAt = [DateTimeOffset]::UtcNow.ToString("O")
     platform = "windows-x64"
-    wikimedia = Test-PublicProvider "wikimedia" "bank" "image"
-    internetArchive = Test-PublicProvider "internetArchive" "Argentina financial crisis 2001" "video"
-    nasa = Test-PublicProvider "nasa" "Apollo 11" "video"
+    wikimedia = Test-PublicProvider "wikimedia" @("bank") "image"
+    internetArchive = Test-PublicProvider "internetArchive" @("Argentina financial crisis 2001") "video"
+    nasa = Test-PublicProvider "nasa" @("Apollo 11") "video"
     # The LOC catalog can return Apollo-program material whose metadata omits the mission number.
-    # This is a provider-availability smoke test, so use a stable topical query rather than
+    # This is a provider-availability smoke test, so use two stable topical queries rather than
     # turning the relevance filter into a false negative for an otherwise healthy API.
-    libraryOfCongress = Test-PublicProvider "libraryOfCongress" "Apollo" "video"
-    openverseImages = Test-PublicProvider "openverse" "coffee" "image"
-    openverseAudio = Test-PublicProvider "openverse" "coffee" "audio"
-    dailymotion = Test-PublicProvider "dailymotion" "coffee" "video"
+    libraryOfCongress = Test-PublicProvider "libraryOfCongress" @("Apollo", "film") "video"
+    openverseImages = Test-PublicProvider "openverse" @("coffee") "image"
+    openverseAudio = Test-PublicProvider "openverse" @("coffee") "audio"
+    dailymotion = Test-PublicProvider "dailymotion" @("coffee") "video"
     nationalArchives = Test-LimitedProvider "nationalArchives" "Apollo 11" "video" $env:NARA_API_KEY
     europeana = Test-LimitedProvider "europeana" "historic city" "image" $env:EUROPEANA_API_KEY
     pexels = Test-OptionalProvider "pexels" "bank" "image" $env:PEXELS_API_KEY
