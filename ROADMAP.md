@@ -36,11 +36,13 @@ Roadmap items are intentions, not promises. Provider policies, platform rules, a
 
 ### Accessibility & Keyboard Navigation ([#19](https://github.com/xcslys99/FootageFlow/issues/19))
 
-Delivered in v0.10.0:
+v0.10.0 provides the first cross-platform accessibility and keyboard-navigation foundation:
 
 - VoiceOver and Windows screen-reader labels for the primary workspace and media actions
 - Predictable keyboard navigation, native visible focus, Command Palette, Global Search, and a discoverable shortcut reference
 - Local Workspace dashboards, Saved Searches, Smart Collections, and manual Provider Health checks
+
+Issue #19 remains open for continued manual VoiceOver/Narrator verification across the broader creator workflow.
 
 ## Planned Feature Releases
 
