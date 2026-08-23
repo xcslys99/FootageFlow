@@ -6,6 +6,8 @@
 
 一款面向视频创作者的免费开源桌面工具，支持 macOS 和 Windows。你既可以一次搜索多个素材来源，也可以粘贴支持的公开媒体链接，尝试解析和下载媒体。
 
+**研究主题、保存资料引用，并将来源与项目统一整理。**
+
 [![最新正式版](https://img.shields.io/github/v/release/xcslys99/FootageFlow?display_name=tag&sort=semver)](https://github.com/xcslys99/FootageFlow/releases/latest)
 [![CI](https://github.com/xcslys99/FootageFlow/actions/workflows/ci.yml/badge.svg)](https://github.com/xcslys99/FootageFlow/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
@@ -53,6 +55,12 @@ FootageFlow 面向纪录片、历史、国家、财经、人物、科普和短�
 6. 打开“项目操作”，即可生成素材署名、导出来源报告、检查版权信息、制作可移植备份、扫描重复素材或生成联系表。
 7. 把自动生成的来源 Sidecar 与项目一起保留，并在发布前核对当前授权。
 
+### 研究与文化资料工作区
+
+使用 **素材 / 资料 / 全部**，将媒体发现与资料研究清晰区分。资料模式通过公共接口搜索 Wikipedia、Wikidata、大都会艺术博物馆、芝加哥艺术学院、Crossref 和 GDELT。将记录添加到**研究笔记**后，可以写本地笔记和标签、复制基于真实元数据的引用、稍后刷新来源，或使用**查找相关素材**回到已有的 17 来源素材搜索工作流。
+
+资料记录并不等于已经获得可用素材。Crossref 不会下载论文全文；GDELT 仅用于新闻发现；Wikipedia 缩略图用于资料预览，使用前必须到 Wikimedia Commons 核对具体授权。只有大都会艺术博物馆或芝加哥艺术学院明确返回 Public Domain 和公开原图地址时，才会显示**添加为素材**；绝不根据预览图或页面自行推断。详见[研究与文化资料工作流](docs/RESEARCH_WORKFLOW.md)。
+
 如果已经知道媒体 URL，链接下载会继续使用同一套项目、下载、历史和 Sidecar 系统。可选的前台剪贴板检测可以在本机识别复制的公开媒体链接；该功能默认关闭，不会上传剪贴板内容。
 
 ## 界面截图
@@ -75,6 +83,18 @@ FootageFlow 面向纪录片、历史、国家、财经、人物、科普和短�
 
 ![FootageFlow 本地重复素材检查与不删除源文件的项目操作](docs/images/project-duplicate-detection-v080.png)
 
+![FootageFlow 资料模式中的文化与参考资料结果](docs/images/research-mode-v090.png)
+
+![FootageFlow Crossref 资料记录中的 DOI 元数据与来源引用](docs/images/research-crossref-v090.png)
+
+![FootageFlow 全部模式将素材与资料结果分组显示](docs/images/research-all-v090.png)
+
+![FootageFlow 查找相关素材会回到已有的可下载素材工作流](docs/images/research-related-media-v090.png)
+
+![FootageFlow 仅对来源明确 Public Domain 的博物馆记录显示添加为素材](docs/images/research-public-domain-media-v090.png)
+
+![FootageFlow 项目研究笔记、纯文本笔记与引用](docs/images/research-notes-v090.png)
+
 ## 功能摘要
 
 - 17 个素材来源的渐进式搜索，单个 Provider 失败不影响其他来源
@@ -83,6 +103,8 @@ FootageFlow 面向纪录片、历史、国家、财经、人物、科普和短�
 - 来源、类型、年份、时长、分辨率、Rights 和下载能力筛选
 - 视频/图片预览、多选、项目、收藏和历史记录
 - 项目来源报告（Markdown、CSV、JSON、HTML）、简洁/详细素材署名和版权信息检查
+- 素材 / 资料 / 全部三种搜索模式，支持 Wikipedia、Wikidata、大都会艺术博物馆、芝加哥艺术学院、Crossref 和 GDELT
+- 本地研究笔记、基于来源事实的引用、相关素材查询、资料引用导出和项目可移植资料记录
 - 可跨平台导入的 `.footageflowproject` 项目备份，不包含媒体、凭据或绝对路径
 - 本地优先的重复素材检查与带编号的素材联系表 PNG 导出
 - 完整媒体与片段下载，可选原始文件、M4A 或剪辑兼容 MP4
@@ -152,7 +174,7 @@ FootageFlow 绝不猜测 License。缺少数据时始终显示“版权 / 授权
 
 ## 项目交付
 
-“项目操作”支持导出 Markdown/CSV/JSON/HTML 素材来源报告、生成素材署名、执行版权信息检查、创建可跨平台导入的 `.footageflowproject` 备份、查找可能重复的素材，以及导出 PNG 素材联系表。报告默认不含本机绝对路径；项目备份绝不包含媒体二进制、API Key、Cookie、Token 或绝对路径。导入到新电脑后找不到的素材会保留在项目中，并清楚显示“未找到本地媒体文件”。详见[项目工作流、导出与署名](docs/PROJECT_WORKFLOW.md)（英文）。
+“项目操作”支持导出 Markdown/CSV/JSON/HTML 的素材来源、资料引用或综合项目报告；生成素材署名；执行版权信息检查；创建可跨平台导入的 `.footageflowproject` 备份；查找可能重复的素材；以及导出 PNG 素材联系表。报告默认不含本机绝对路径；项目备份绝不包含媒体二进制、API Key、Cookie、Token 或绝对路径。导入到新电脑后找不到的素材会保留在项目中，并清楚显示“未找到本地媒体文件”。详见[项目工作流、导出与署名](docs/PROJECT_WORKFLOW.md)（英文）和[研究与文化资料工作流](docs/RESEARCH_WORKFLOW.md)。
 
 FootageFlow 不含分析、广告或 Telemetry SDK，也没有 FootageFlow 云端账号。搜索只会发送给完成请求所需的已启用 Provider。项目、文稿、收藏、历史和 API Key 保留在本机；可选 Key 由操作系统安全凭据存储保存。
 
@@ -174,6 +196,7 @@ macOS Gatekeeper、Windows SmartScreen、更新检查、链接下载限制和 Pr
 - [软件更新](docs/SOFTWARE_UPDATES.md)（英文）
 - [Rights 与署名](docs/RIGHTS_AND_ATTRIBUTION.md)（英文）
 - [项目工作流、导出与署名](docs/PROJECT_WORKFLOW.md)（英文）
+- [研究与文化资料工作流](docs/RESEARCH_WORKFLOW.md)（英文）
 - [故障排查](docs/TROUBLESHOOTING.md)（英文）
 - [开发指南](DEVELOPMENT.md)（英文）
 - [参与贡献](CONTRIBUTING.md)（英文）

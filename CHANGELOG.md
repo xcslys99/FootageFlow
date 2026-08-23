@@ -2,6 +2,32 @@
 
 All notable FootageFlow changes are documented here.
 
+## [0.9.0] - 2026-08-23
+
+### Added
+
+- Media, Research, and All search modes; All keeps media and research in separate result groups
+- Public research discovery through Wikipedia, Wikidata, The Metropolitan Museum of Art, Art Institute of Chicago, Crossref, and GDELT
+- Project-scoped Research Notes with provider facts, local plain-text My Notes, tags, search/filter/sort, citation copy, original-page opening, related-media queries, and source-metadata refresh
+- Research Reference and Combined Project Report export in Markdown, CSV, JSON, and HTML
+- Portable `.footageflowproject` schema v2 containing sanitized research references, notes, and UTF-8 tags while retaining schema v1 import compatibility
+- Research pagination, provider-level error isolation, controlled museum detail batches, public-interface request pacing, and bounded English fallback for sparse Wikipedia/Wikidata results
+- **Add as Media** for a Met/AIC record only when its provider explicitly reports Public Domain and a public original-image URL
+
+### Safety and rights
+
+- Research results are not presented as free media: Crossref remains metadata-only, GDELT remains discovery-only, Wikipedia images require separate Commons rights verification, and museum rights are only displayed from explicit provider metadata
+- Research exports and backups retain the existing secret, signed-query, private-path, HTML, and CSV formula protections
+
+### Platforms
+
+- macOS Apple Silicon and Windows 11 x64 share Research models, relevance ranking, citations, persistence, exports, portable-project migration, and provider behavior
+
+### Validation
+
+- Added research workflow tests for bounded query planning, relevance coverage, citation safety, research-reference persistence/deduplication, portable schema v2, and scoped/escaped reports
+- Live public-provider smoke validated Wikipedia, Wikidata, The Met, Art Institute of Chicago, and Crossref; GDELT rate-limit responses remain isolated and non-fatal
+
 ## [0.8.0] - 2026-08-18
 
 ### Added

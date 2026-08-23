@@ -10,6 +10,7 @@ final class DataStore: ObservableObject {
   @Published private(set) var downloads: [DownloadRecord] = []
   @Published private(set) var reviewedAssets: [ProjectReviewRecord] = []
   @Published private(set) var duplicateDecisions: [DuplicateDecisionRecord] = []
+  @Published private(set) var researchReferences: [ResearchReferenceRecord] = []
 
   private let repository: PersistentStore
 
@@ -102,6 +103,29 @@ final class DataStore: ObservableObject {
     synchronize()
   }
 
+  @discardableResult
+  func addResearchReference(_ record: ResearchReferenceRecord) -> Bool {
+    let added = repository.addResearchReference(record)
+    synchronize()
+    return added
+  }
+
+  func updateResearchReference(_ record: ResearchReferenceRecord) {
+    repository.updateResearchReference(record)
+    synchronize()
+  }
+
+  func deleteResearchReference(id: UUID) {
+    repository.deleteResearchReference(id: id)
+    synchronize()
+  }
+
+  func researchReferences(projectID: UUID) -> [ResearchReferenceRecord] {
+    repository.researchReferences.filter { $0.projectID == projectID }.sorted {
+      $0.addedAt > $1.addedAt
+    }
+  }
+
   func importProject(_ payload: ImportedProjectPayload) {
     repository.importProject(payload)
     synchronize()
@@ -129,8 +153,17 @@ final class DataStore: ObservableObject {
     project: ProjectRecord, format: AttributionExportFormat,
     options: AttributionExportOptions = .init()
   ) throws -> Data {
+    try projectReportData(project: project, format: format, section: .combined, options: options)
+  }
+
+  func projectReportData(
+    project: ProjectRecord, format: AttributionExportFormat, section: ProjectExportSection,
+    options: AttributionExportOptions = .init()
+  ) throws -> Data {
     try AttributionExporter.data(
-      format: format, project: project, items: projectItems(projectID: project.id), options: options
+      format: format, project: project, items: projectItems(projectID: project.id),
+      options: options,
+      researchReferences: researchReferences(projectID: project.id), section: section
     )
   }
 
@@ -197,5 +230,6 @@ final class DataStore: ObservableObject {
     downloads = repository.downloads
     reviewedAssets = repository.reviewedAssets
     duplicateDecisions = repository.duplicateDecisions
+    researchReferences = repository.researchReferences
   }
 }

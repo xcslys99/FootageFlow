@@ -35,22 +35,26 @@ enum AppLanguage: String, CaseIterable, Identifiable, Codable, Sendable {
 }
 
 struct LocalizationCatalog: Sendable {
-  private let languageBundles: [AppLanguage: Bundle]
+  /// Loading a `.lproj` directory as a Bundle lets Foundation choose the
+  /// system-preferred language again, even when the user selected a different
+  /// FootageFlow language. Keep a parsed table for each explicit locale so the
+  /// in-app switcher changes every `tr(...)` string immediately.
+  private let languageTables: [AppLanguage: [String: String]]
 
   init() {
-    var bundles: [AppLanguage: Bundle] = [:]
+    var tables: [AppLanguage: [String: String]] = [:]
     for language in AppLanguage.allCases {
       search: for root in Self.resourceRoots() {
         for name in [language.rawValue, language.rawValue.lowercased()] {
           let directory = root.appendingPathComponent("\(name).lproj", isDirectory: true)
-          if let bundle = Bundle(url: directory) {
-            bundles[language] = bundle
+          if let table = Self.readStrings(in: directory), !table.isEmpty {
+            tables[language] = table
             break search
           }
         }
       }
     }
-    languageBundles = bundles
+    languageTables = tables
   }
 
   func text(_ key: String, language: AppLanguage, arguments: [CVarArg]) -> String {
@@ -63,9 +67,29 @@ struct LocalizationCatalog: Sendable {
   }
 
   private func localizedValue(_ key: String, language: AppLanguage) -> String? {
-    guard let bundle = languageBundles[language] else { return nil }
-    let value = bundle.localizedString(forKey: key, value: nil, table: nil)
-    return value == key ? nil : value
+    languageTables[language]?[key]
+  }
+
+  private static func readStrings(in directory: URL) -> [String: String]? {
+    let file = directory.appendingPathComponent("Localizable.strings")
+    guard let text = try? String(contentsOf: file, encoding: .utf8) else { return nil }
+    let pattern = #"^\s*\"((?:\\.|[^\"])*)\"\s*=\s*\"((?:\\.|[^\"])*)\"\s*;"#
+    guard let expression = try? NSRegularExpression(pattern: pattern, options: [.anchorsMatchLines])
+    else { return nil }
+    let range = NSRange(text.startIndex..., in: text)
+    return expression.matches(in: text, range: range).reduce(into: [:]) { result, match in
+      guard let keyRange = Range(match.range(at: 1), in: text),
+        let valueRange = Range(match.range(at: 2), in: text)
+      else { return }
+      result[decode(String(text[keyRange]))] = decode(String(text[valueRange]))
+    }
+  }
+
+  private static func decode(_ value: String) -> String {
+    value
+      .replacingOccurrences(of: #"\n"#, with: "\n")
+      .replacingOccurrences(of: #"\""#, with: "\"")
+      .replacingOccurrences(of: #"\\"#, with: "\\")
   }
 
   private static func resourceRoots() -> [URL] {

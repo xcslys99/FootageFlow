@@ -19,12 +19,15 @@ public sealed class MainViewModel : ObservableObject
     private CancellationTokenSource? _searchCancellation;
     private string _currentPage = "search";
     private string _query = "";
+    private string _searchScope = "media";
     private string _searchStatus = "";
     private bool _isSearching;
     private bool _isLoadingMore;
     private string _lastEffectiveQuery = "";
     private string[] _lastSearchQueries = [];
     private readonly Dictionary<string, ProviderContinuation> _continuations = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, ProviderContinuation> _researchContinuations = new(StringComparer.OrdinalIgnoreCase);
+    private string _lastResearchQuery = "";
     private string _mediaType = "video";
     private string _orientation = "all";
     private string _resolution = "all";
@@ -95,6 +98,15 @@ public sealed class MainViewModel : ObservableObject
                 _settings.Save();
                 ResultsView.Refresh();
             };
+        ResearchProviders = new ObservableCollection<ProviderOption>(new[]
+        {
+            new ProviderOption("wikipedia", "Wikipedia", true),
+            new ProviderOption("wikidata", "Wikidata", true),
+            new ProviderOption("metropolitanMuseum", "The Metropolitan Museum of Art", true),
+            new ProviderOption("artInstituteChicago", "Art Institute of Chicago", true),
+            new ProviderOption("crossref", "Crossref", true),
+            new ProviderOption("gdelt", "GDELT", true)
+        });
         NavigateCommand = new RelayCommand(page => CurrentPage = page?.ToString() ?? "search");
         SearchCommand = new AsyncRelayCommand(_ => SearchAsync(), _ => !IsSearching);
         AddSearchKeywordCommand = new RelayCommand(_ =>
@@ -133,6 +145,18 @@ public sealed class MainViewModel : ObservableObject
         CopySelectedSourceCommand = new AsyncRelayCommand(_ => CopySelectedSourcesAsync());
         CopySourceCommand = new AsyncRelayCommand(asset => CopyTextAsync(asset as MediaAsset, "formatSource"));
         CopyAttributionCommand = new AsyncRelayCommand(asset => CopyTextAsync(asset as MediaAsset, "formatAttribution"));
+        AddResearchNoteCommand = new AsyncRelayCommand(record => AddResearchNoteAsync(record as ResearchRecord), _ => CurrentProject is not null);
+        CopyResearchCitationCommand = new RelayCommand(record =>
+        {
+            if (record is ResearchRecord value) Clipboard.SetText(value.Citation);
+        });
+        FindRelatedMediaCommand = new AsyncRelayCommand(record => FindRelatedMediaAsync(record as ResearchRecord));
+        AddResearchAsMediaCommand = new AsyncRelayCommand(record => AddResearchAsMediaAsync(record as ResearchRecord));
+        OpenResearchSourceCommand = new RelayCommand(record =>
+            ShellService.OpenUrl((record as ResearchRecord)?.CanonicalURL));
+        SaveResearchNoteCommand = new AsyncRelayCommand(reference => SaveResearchNoteAsync(reference as ResearchReferenceRecord));
+        RefreshResearchMetadataCommand = new AsyncRelayCommand(reference => RefreshResearchMetadataAsync(reference as ResearchReferenceRecord));
+        DeleteResearchNoteCommand = new AsyncRelayCommand(reference => DeleteResearchNoteAsync(reference as ResearchReferenceRecord));
         CreateProjectCommand = new AsyncRelayCommand(_ => CreateProjectAsync());
         ClearProjectCommand = new RelayCommand(_ => CurrentProject = null);
         SaveProjectCommand = new AsyncRelayCommand(_ => SaveProjectAsync(), _ => CurrentProject is not null);
@@ -195,7 +219,10 @@ public sealed class MainViewModel : ObservableObject
     public event Action<AppReleaseInfo>? UpdateAvailable;
     public DownloadQueueService Downloads { get; }
     public ObservableCollection<ProviderOption> Providers { get; }
+    public ObservableCollection<ProviderOption> ResearchProviders { get; }
     public ObservableCollection<MediaAsset> Results { get; } = [];
+    public ObservableCollection<ResearchRecord> ResearchResults { get; } = [];
+    public ObservableCollection<ResearchReferenceRecord> ResearchReferences { get; } = [];
     public ICollectionView ResultsView { get; }
     public ObservableCollection<SearchKeyword> SearchKeywords { get; } = [];
     public ICollectionView SearchKeywordsView { get; }
@@ -232,6 +259,14 @@ public sealed class MainViewModel : ObservableObject
     public ICommand CopySelectedSourceCommand { get; }
     public ICommand CopySourceCommand { get; }
     public ICommand CopyAttributionCommand { get; }
+    public ICommand AddResearchNoteCommand { get; }
+    public ICommand CopyResearchCitationCommand { get; }
+    public ICommand FindRelatedMediaCommand { get; }
+    public ICommand AddResearchAsMediaCommand { get; }
+    public ICommand OpenResearchSourceCommand { get; }
+    public ICommand SaveResearchNoteCommand { get; }
+    public ICommand RefreshResearchMetadataCommand { get; }
+    public ICommand DeleteResearchNoteCommand { get; }
     public ICommand CreateProjectCommand { get; }
     public ICommand ClearProjectCommand { get; }
     public ICommand SaveProjectCommand { get; }
@@ -290,6 +325,25 @@ public sealed class MainViewModel : ObservableObject
     public bool IsLinkDownloaderPage => CurrentPage == "linkDownloader";
     public bool IsFeedbackPage => CurrentPage == "feedback";
     public string Query { get => _query; set => Set(ref _query, value); }
+    public string SearchScope
+    {
+        get => _searchScope;
+        set
+        {
+            var normalized = value is "research" or "all" ? value : "media";
+            if (!Set(ref _searchScope, normalized)) return;
+            OnPropertyChanged(nameof(IsMediaSearchScope));
+            OnPropertyChanged(nameof(IsResearchSearchScope));
+            OnPropertyChanged(nameof(IsAllSearchScope));
+            OnPropertyChanged(nameof(HasMediaSearchScope));
+            OnPropertyChanged(nameof(HasResearchSearchScope));
+        }
+    }
+    public bool IsMediaSearchScope => SearchScope == "media";
+    public bool IsResearchSearchScope => SearchScope == "research";
+    public bool IsAllSearchScope => SearchScope == "all";
+    public bool HasMediaSearchScope => SearchScope != "research";
+    public bool HasResearchSearchScope => SearchScope != "media";
     public bool ShowAllSearchLanguages
     {
         get => _showAllSearchLanguages;
@@ -322,7 +376,7 @@ public sealed class MainViewModel : ObservableObject
             (LoadMoreCommand as AsyncRelayCommand)?.RaiseCanExecuteChanged();
         }
     }
-    public bool CanLoadMore => _continuations.Count > 0;
+    public bool CanLoadMore => _continuations.Count > 0 || _researchContinuations.Count > 0;
     public string MediaType { get => _mediaType; set { if (Set(ref _mediaType, value)) ResultsView.Refresh(); } }
     public string Orientation { get => _orientation; set { if (Set(ref _orientation, value)) ResultsView.Refresh(); } }
     public string Resolution { get => _resolution; set { if (Set(ref _resolution, value)) ResultsView.Refresh(); } }
@@ -403,9 +457,11 @@ public sealed class MainViewModel : ObservableObject
             ScriptText = value?.Script ?? "";
             (SaveProjectCommand as AsyncRelayCommand)?.RaiseCanExecuteChanged();
             (AddSelectedToProjectCommand as AsyncRelayCommand)?.RaiseCanExecuteChanged();
+            (AddResearchNoteCommand as AsyncRelayCommand)?.RaiseCanExecuteChanged();
             FavoritesView.Refresh();
             HistoryView.Refresh();
             DownloadRecordsView.Refresh();
+            OnPropertyChanged(nameof(CurrentResearchReferences));
             RightsAudit = null;
             DuplicateGroups.Clear();
             if (value is not null) _ = RefreshRightsAuditAsync();
@@ -489,7 +545,7 @@ public sealed class MainViewModel : ObservableObject
         get
         {
             var version = typeof(MainViewModel).Assembly.GetName().Version;
-            return version is null ? "0.8.0" : $"{version.Major}.{version.Minor}.{Math.Max(0, version.Build)}";
+            return version is null ? "0.9.0" : $"{version.Major}.{version.Minor}.{Math.Max(0, version.Build)}";
         }
     }
     public bool IsUpdateChecking
@@ -576,6 +632,7 @@ public sealed class MainViewModel : ObservableObject
     public string HistoryTitle => T("search.history");
     public string SettingsTitle => T("nav.settings");
     public string SourcesTitle => T("settings.sourcesProviders");
+    public string ResearchSourcesTitle => $"{SearchScopeResearchText} {T(\"filter.source\")}";
     public string ApiExplanation => T("settings.optionalAPIExplanation");
     public string PrivacyTitle => T("settings.privacy");
     public string PrivacyBody => T("settings.privacyBody");
@@ -623,6 +680,21 @@ public sealed class MainViewModel : ObservableObject
     public string DownloadFolderText => T("settings.downloadRoot");
     public string ChooseText => T("settings.choose");
     public string DownloadableOnlyText => T("filter.downloadableOnly");
+    public string SearchScopeTitle => T("search.scope");
+    public string SearchScopeMediaText => T("search.scope.media");
+    public string SearchScopeResearchText => T("search.scope.research");
+    public string SearchScopeAllText => T("search.scope.all");
+    public string ResearchNotesText => T("research.notes");
+    public string ResearchAddToNotesText => T("research.addToNotes");
+    public string ResearchCopyCitationText => T("research.copyCitation");
+    public string ResearchFindRelatedText => T("research.findRelatedMedia");
+    public string ResearchAddAsMediaText => T("research.addAsMedia");
+    public string ResearchSaveNoteText => T("common.save");
+    public string ResearchRefreshMetadataText => T("research.refreshMetadata");
+    public string ResearchTagsText => T("research.tags");
+    public IReadOnlyList<ResearchReferenceRecord> CurrentResearchReferences =>
+        CurrentProject is null ? [] : ResearchReferences.Where(value => value.ProjectID == CurrentProject.Id)
+            .OrderByDescending(value => value.AddedAt).ToArray();
     public string YearFromText => T("filter.yearFrom");
     public string YearToText => T("filter.yearTo");
     public string SelectAllVisibleText => T("selection.selectAllVisible");
@@ -849,11 +921,31 @@ public sealed class MainViewModel : ObservableObject
         _searchCancellation = new CancellationTokenSource();
         var cancellationToken = _searchCancellation.Token;
         IsSearching = true;
-        Results.Clear(); _candidateResults.Clear(); SelectedCount = 0;
+        Results.Clear(); _candidateResults.Clear(); ResearchResults.Clear(); SelectedCount = 0;
         _continuations.Clear();
+        _researchContinuations.Clear();
         OnPropertyChanged(nameof(CanLoadMore));
+        if (SearchScope == "research")
+        {
+            try { await SearchResearchAsync(clean, cancellationToken, recordHistory: true); }
+            catch (OperationCanceledException) { SearchStatus = T("search.stopped"); }
+            catch (Exception error) { SearchStatus = error.Message; }
+            finally { IsSearching = false; }
+            return;
+        }
         var selected = Providers.Where(x => x.Enabled).ToList();
-        if (selected.Count == 0) { SearchStatus = T("search.noResults"); IsSearching = false; return; }
+        if (selected.Count == 0)
+        {
+            if (SearchScope == "all")
+            {
+                try { await SearchResearchAsync(clean, cancellationToken, recordHistory: true); }
+                catch (OperationCanceledException) { SearchStatus = T("search.stopped"); }
+                catch (Exception error) { SearchStatus = error.Message; }
+            }
+            else SearchStatus = T("search.noResults");
+            IsSearching = false;
+            return;
+        }
         SearchStatus = T("search.searchingOthers");
         try
         {
@@ -867,6 +959,9 @@ public sealed class MainViewModel : ObservableObject
                       Language = _settings.Current.Language, Priority = 0 }];
             _lastSearchQueries = effectiveKeywords.Select(x => x.Text.Trim()).ToArray();
             _lastEffectiveQuery = _lastSearchQueries[0];
+            var researchTask = SearchScope == "all"
+                ? SearchResearchAsync(clean, cancellationToken, recordHistory: false)
+                : Task.CompletedTask;
             var tasks = selected.ToDictionary(option => option.Id,
                 option => SearchProviderExpandedAsync(option, effectiveKeywords, cancellationToken));
             var pending = tasks.Values.ToList();
@@ -895,11 +990,60 @@ public sealed class MainViewModel : ObservableObject
                 ProviderIDs = selected.Select(x => x.Id).ToArray(), ProjectID = CurrentProject?.Id.ToString(),
                 ResultCount = Results.Count, Language = _settings.Current.Language
             }, cancellationToken: cancellationToken);
+            await researchTask;
             await LoadDatabaseAsync();
         }
         catch (OperationCanceledException) { SearchStatus = T("search.stopped"); }
         catch (Exception error) { SearchStatus = error.Message; }
         finally { IsSearching = false; }
+    }
+
+    private async Task SearchResearchAsync(string query, CancellationToken cancellationToken, bool recordHistory)
+    {
+        var selected = ResearchProviders.Where(provider => provider.Enabled).Select(provider => provider.Id).ToArray();
+        if (selected.Length == 0)
+        {
+            ResearchResults.Clear();
+            _researchContinuations.Clear();
+            SearchStatus = T("search.noResults");
+            OnPropertyChanged(nameof(CanLoadMore));
+            return;
+        }
+        SearchStatus = T("search.searchingOthers");
+        var response = await _core.SendAsync(new CoreRequest
+        {
+            Action = "researchSearch", Query = query, Language = _settings.Current.Language,
+            PageSize = 12, ProviderIDs = selected
+        }, cancellationToken: cancellationToken);
+        var records = (response.ResearchBatches ?? [])
+            .SelectMany(batch => batch.Records)
+            .GroupBy(record => $"{record.Provider}:{record.SourceNativeID ?? record.CanonicalURL}", StringComparer.OrdinalIgnoreCase)
+            .Select(group => group.First()).ToArray();
+        _researchContinuations.Clear();
+        foreach (var batch in response.ResearchBatches ?? [])
+            if (batch.Continuation is not null) _researchContinuations[batch.Provider] = batch.Continuation;
+        _lastResearchQuery = query;
+        OnPropertyChanged(nameof(CanLoadMore));
+        var ranked = await _core.SendAsync(new CoreRequest
+        {
+            Action = "rankResearch", Query = query, ResearchRecords = records,
+            Keywords = SearchKeywords.Where(keyword => keyword.IsEnabled).Select(keyword => keyword.Text).ToArray(),
+            RelevanceMode = RelevanceMode, Language = _settings.Current.Language
+        }, cancellationToken: cancellationToken);
+        ResearchResults.Clear();
+        foreach (var record in ranked.ResearchRecords ?? records) ResearchResults.Add(record);
+        SearchStatus = _localization.Text("research.found", ResearchResults.Count);
+        if (recordHistory)
+        {
+            await _core.SendAsync(new CoreRequest
+            {
+                Action = "addHistory", Query = query, Keywords = SearchKeywords.Select(keyword => keyword.Text).ToArray(),
+                KeywordDetails = SearchKeywords.Where(keyword => keyword.IsEnabled).ToArray(),
+                ProviderIDs = [], ProjectID = CurrentProject?.Id.ToString(), ResultCount = ResearchResults.Count,
+                Language = _settings.Current.Language
+            }, cancellationToken: cancellationToken);
+            await LoadDatabaseAsync();
+        }
     }
 
     private async Task RegenerateKeywordsAsync(CancellationToken cancellationToken = default)
@@ -1039,6 +1183,11 @@ public sealed class MainViewModel : ObservableObject
 
     private async Task LoadMoreAsync()
     {
+        if (SearchScope == "research" || (_continuations.Count == 0 && _researchContinuations.Count > 0))
+        {
+            await LoadMoreResearchAsync();
+            return;
+        }
         if (_continuations.Count == 0 || string.IsNullOrWhiteSpace(_lastEffectiveQuery)) return;
         IsLoadingMore = true;
         var cancellationToken = _searchCancellation?.Token ?? CancellationToken.None;
@@ -1069,6 +1218,52 @@ public sealed class MainViewModel : ObservableObject
                 await ApplyRankedCandidatesAsync(Query.Trim(), cancellationToken);
                 SearchStatus = _localization.Text("search.found", Results.Count);
             }
+        }
+        catch (OperationCanceledException) { SearchStatus = T("search.stopped"); }
+        finally
+        {
+            IsLoadingMore = false;
+            OnPropertyChanged(nameof(CanLoadMore));
+            (LoadMoreCommand as AsyncRelayCommand)?.RaiseCanExecuteChanged();
+        }
+    }
+
+    private async Task LoadMoreResearchAsync()
+    {
+        if (_researchContinuations.Count == 0 || string.IsNullOrWhiteSpace(_lastResearchQuery)) return;
+        IsLoadingMore = true;
+        var cancellationToken = _searchCancellation?.Token ?? CancellationToken.None;
+        try
+        {
+            var targets = _researchContinuations.ToArray();
+            foreach (var target in targets)
+            {
+                var response = await _core.SendAsync(new CoreRequest
+                {
+                    Action = "researchSearch", Query = _lastResearchQuery, Language = _settings.Current.Language,
+                    PageSize = 12, ProviderIDs = [target.Key], Continuation = target.Value
+                }, cancellationToken: cancellationToken);
+                var batch = response.ResearchBatches?.FirstOrDefault();
+                if (batch is null || !string.IsNullOrWhiteSpace(batch.ErrorCode)) continue;
+                if (batch.Continuation is null) _researchContinuations.Remove(target.Key);
+                else _researchContinuations[target.Key] = batch.Continuation;
+                var known = ResearchResults.Select(record => $"{record.Provider}:{record.SourceNativeID ?? record.CanonicalURL}")
+                    .ToHashSet(StringComparer.OrdinalIgnoreCase);
+                foreach (var record in batch.Records)
+                    if (known.Add($"{record.Provider}:{record.SourceNativeID ?? record.CanonicalURL}")) ResearchResults.Add(record);
+            }
+            var ranked = await _core.SendAsync(new CoreRequest
+            {
+                Action = "rankResearch", Query = _lastResearchQuery,
+                ResearchRecords = ResearchResults.ToArray(), Keywords = SearchKeywords.Where(value => value.IsEnabled).Select(value => value.Text).ToArray(),
+                RelevanceMode = RelevanceMode, Language = _settings.Current.Language
+            }, cancellationToken: cancellationToken);
+            if (ranked.ResearchRecords is not null)
+            {
+                ResearchResults.Clear();
+                foreach (var record in ranked.ResearchRecords) ResearchResults.Add(record);
+            }
+            SearchStatus = _localization.Text("research.found", ResearchResults.Count);
         }
         catch (OperationCanceledException) { SearchStatus = T("search.stopped"); }
         finally
@@ -1361,13 +1556,13 @@ public sealed class MainViewModel : ObservableObject
         await FindDuplicatesAsync();
     }
 
-    public async Task<byte[]?> BuildProjectReportAsync(string format, bool includeLocalPaths)
+    public async Task<byte[]?> BuildProjectReportAsync(string format, string section, bool includeLocalPaths)
     {
         if (CurrentProject is null) return null;
         var response = await _core.SendAsync(new CoreRequest
         {
             Action = "exportProjectReport", ProjectID = CurrentProject.Id.ToString(), ExportFormat = format,
-            IncludeLocalFilePaths = includeLocalPaths, Language = _settings.Current.Language
+            ExportSection = section, IncludeLocalFilePaths = includeLocalPaths, Language = _settings.Current.Language
         }, timeout: TimeSpan.FromSeconds(60));
         if (!response.Success || string.IsNullOrWhiteSpace(response.DataBase64))
             throw new CoreHostException(response.ErrorCode ?? "exportFailed", response.ErrorMessage ?? T("project.actionFailed"));
@@ -1589,6 +1784,95 @@ public sealed class MainViewModel : ObservableObject
         _ => T("link.downloadUnavailable")
     } : T("link.downloadUnavailable");
 
+    private async Task AddResearchNoteAsync(ResearchRecord? record)
+    {
+        if (record is null || CurrentProject is null) return;
+        var response = await _core.SendAsync(new CoreRequest
+        {
+            Action = "addResearchReference", ProjectID = CurrentProject.Id.ToString(),
+            ResearchRecord = record, Language = _settings.Current.Language
+        });
+        if (!response.Success)
+        {
+            ProjectActionStatus = response.ErrorMessage ?? T("research.alreadyInNotes");
+            return;
+        }
+        ApplyDatabase(response.Database);
+        ProjectActionStatus = T("research.addedToNotes");
+    }
+
+    private async Task FindRelatedMediaAsync(ResearchRecord? record)
+    {
+        if (record is null) return;
+        Query = record.RelatedMediaQueryHints.FirstOrDefault() ?? record.Title;
+        SearchScope = "media";
+        CurrentPage = "search";
+        await RegenerateKeywordsAsync();
+        await SearchAsync();
+    }
+
+    private async Task AddResearchAsMediaAsync(ResearchRecord? record)
+    {
+        if (record is null) return;
+        var response = await _core.SendAsync(new CoreRequest
+        {
+            Action = "researchMediaAsset", ResearchRecord = record, Language = _settings.Current.Language
+        });
+        var asset = response.Assets?.FirstOrDefault();
+        if (!response.Success || asset is null)
+        {
+            SearchStatus = response.ErrorMessage ?? T("link.downloadUnavailable");
+            return;
+        }
+        Results.Clear();
+        _candidateResults.Clear();
+        _candidateResults.Add(asset);
+        Results.Add(asset);
+        SearchScope = "media";
+        MediaType = "image";
+        SearchStatus = _localization.Text("search.found", 1);
+        ResultsView.Refresh();
+    }
+
+    private async Task SaveResearchNoteAsync(ResearchReferenceRecord? reference)
+    {
+        if (reference is null) return;
+        var response = await _core.SendAsync(new CoreRequest
+        {
+            Action = "updateResearchReference", ResearchReferenceID = reference.Id.ToString(),
+            ResearchNote = reference.MyNote, ResearchTags = reference.Tags,
+            Language = _settings.Current.Language
+        });
+        ApplyDatabase(response.Database);
+    }
+
+    private async Task DeleteResearchNoteAsync(ResearchReferenceRecord? reference)
+    {
+        if (reference is null) return;
+        var response = await _core.SendAsync(new CoreRequest
+        {
+            Action = "deleteResearchReference", ResearchReferenceID = reference.Id.ToString(),
+            Language = _settings.Current.Language
+        });
+        ApplyDatabase(response.Database);
+    }
+
+    private async Task RefreshResearchMetadataAsync(ResearchReferenceRecord? reference)
+    {
+        if (reference is null) return;
+        var response = await _core.SendAsync(new CoreRequest
+        {
+            Action = "refreshResearchReference", ResearchReferenceID = reference.Id.ToString(),
+            Language = _settings.Current.Language
+        });
+        if (!response.Success)
+        {
+            ProjectActionStatus = response.ErrorMessage ?? T("settings.connectionFailed");
+            return;
+        }
+        ApplyDatabase(response.Database);
+    }
+
     private string QualityLabel(string value) => T($"link.quality.{value}");
 
     private async Task RemoveDownloadRecordAsync(DownloadRecord? record)
@@ -1623,6 +1907,8 @@ public sealed class MainViewModel : ObservableObject
         Replace(History, database.History.OrderByDescending(x => x.SearchedAt));
         foreach (var record in database.Downloads) record.WorkflowSummary = DownloadWorkflowSummary(record);
         Replace(DownloadRecords, database.Downloads.OrderByDescending(x => x.DownloadedAt));
+        Replace(ResearchReferences, database.ResearchReferences.OrderByDescending(x => x.AddedAt));
+        OnPropertyChanged(nameof(CurrentResearchReferences));
         if (CurrentProject is not null) CurrentProject = Projects.FirstOrDefault(x => x.Id == CurrentProject.Id);
     }
 

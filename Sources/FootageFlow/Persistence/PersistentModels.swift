@@ -211,4 +211,7 @@ struct PersistentDatabase: Codable {
   var reviewedAssets: [ProjectReviewRecord]? = []
   var duplicateDecisions: [DuplicateDecisionRecord]? = []
   var fileHashCache: [FileHashCacheRecord]? = []
+  /// Optional so database files written before the Research & Culture update
+  /// remain decodable without a destructive migration.
+  var researchReferences: [ResearchReferenceRecord]? = []
 }

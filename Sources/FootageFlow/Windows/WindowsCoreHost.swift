@@ -43,6 +43,13 @@
     var reviewed: Bool? = nil
     var pairKey: String? = nil
     var duplicateDecision: DuplicateDecision? = nil
+    var searchScope: SearchScope? = nil
+    var researchRecord: ResearchRecord? = nil
+    var researchRecords: [ResearchRecord]? = nil
+    var researchReferenceID: String? = nil
+    var researchNote: String? = nil
+    var researchTags: [String]? = nil
+    var exportSection: ProjectExportSection? = nil
   }
 
   private struct WindowsCoreResponse: Encodable {
@@ -68,6 +75,8 @@
     var duplicateGroups: [DuplicateGroup]? = nil
     var contactSheetPlan: ContactSheetPlan? = nil
     var dataBase64: String? = nil
+    var researchBatches: [WindowsResearchBatch]? = nil
+    var researchRecords: [ResearchRecord]? = nil
   }
 
   private struct WindowsProviderDescriptor: Encodable {
@@ -95,6 +104,16 @@
     var continuation: ProviderContinuation? = nil
     var totalResults: Int? = nil
     var errorCode: String? = nil
+  }
+
+  private struct WindowsResearchBatch: Encodable {
+    let provider: ResearchProviderID
+    let displayName: String
+    let records: [ResearchRecord]
+    var continuation: ProviderContinuation? = nil
+    var totalResults: Int? = nil
+    var errorCode: String? = nil
+    var errorMessage: String? = nil
   }
 
   @main
@@ -159,6 +178,31 @@
         return await checkUpdate(request)
       case "search":
         return await search(request)
+      case "researchSearch":
+        return await researchSearch(request)
+      case "researchMediaAsset":
+        guard let record = request.researchRecord,
+          let asset = ResearchMediaAdapter.asset(for: record)
+        else {
+          return WindowsCoreResponse(
+            id: request.id, success: false, errorCode: "mediaUnavailable",
+            errorMessage: "This research record does not include a source-confirmed public image.")
+        }
+        return WindowsCoreResponse(id: request.id, success: true, assets: [asset])
+      case "refreshResearchReference":
+        return await refreshResearchReference(request)
+      case "rankResearch":
+        guard let query = nonempty(request.query), let records = request.researchRecords else {
+          return missingQuery(request.id)
+        }
+        let mode = SearchRelevanceMode(rawValue: request.relevanceMode ?? "") ?? .balanced
+        let language = request.language.flatMap(AppLanguage.init(rawValue:)) ?? .english
+        return WindowsCoreResponse(
+          id: request.id, success: true,
+          researchRecords: ResearchRelevanceEngine.rank(
+            records, query: query, mode: mode, supportingQueries: request.keywords ?? [],
+            inputLanguage: MultilingualQueryEngine.detectLanguage(in: query, fallback: language),
+            interfaceLanguage: language))
       case "rankAssets":
         guard let query = nonempty(request.query), let assets = request.assets else {
           return WindowsCoreResponse(
@@ -217,7 +261,8 @@
       case "databaseSnapshot", "addProject", "deleteProject", "updateProject",
         "toggleFavorite", "addFavorite", "addHistory", "deleteHistory", "clearHistory",
         "addDownload",
-        "deleteDownload":
+        "deleteDownload", "addResearchReference", "updateResearchReference",
+        "deleteResearchReference":
         return database(request)
       case "suggestFileName":
         guard let asset = request.asset else {
@@ -314,6 +359,29 @@
       case "deleteDownload":
         guard let id = uuid(request.recordID) else { return invalidRecordID(request.id) }
         store.deleteDownloadRecord(id: id)
+      case "addResearchReference":
+        guard let projectID = uuid(request.projectID), let record = request.researchRecord else {
+          return invalidRecordID(request.id)
+        }
+        let added = store.addResearchReference(
+          ResearchReferenceRecord(
+            projectID: projectID, record: record, myNote: request.researchNote ?? "",
+            tags: request.researchTags ?? []))
+        if !added {
+          return WindowsCoreResponse(
+            id: request.id, success: false, errorCode: "alreadyInResearchNotes",
+            errorMessage: tr("research.alreadyInNotes"))
+        }
+      case "updateResearchReference":
+        guard let referenceID = uuid(request.researchReferenceID),
+          var reference = store.researchReferences.first(where: { $0.id == referenceID })
+        else { return invalidRecordID(request.id) }
+        if let note = request.researchNote { reference.myNote = note }
+        if let tags = request.researchTags { reference.tags = tags }
+        store.updateResearchReference(reference)
+      case "deleteResearchReference":
+        guard let id = uuid(request.researchReferenceID) else { return invalidRecordID(request.id) }
+        store.deleteResearchReference(id: id)
       default:
         return WindowsCoreResponse(
           id: request.id, success: false, errorCode: "unsupportedAction",
@@ -352,6 +420,78 @@
         return values.sorted { providerOrder($0.provider) < providerOrder($1.provider) }
       }
       return WindowsCoreResponse(id: request.id, success: true, providerBatches: batches)
+    }
+
+    private static func researchSearch(_ request: WindowsCoreRequest) async -> WindowsCoreResponse {
+      guard let query = nonempty(request.query) else { return missingQuery(request.id) }
+      let interfaceLanguage = request.language.flatMap(AppLanguage.init(rawValue:)) ?? .english
+      let plan = ResearchQueryPlanner.queries(for: query, interfaceLanguage: interfaceLanguage)
+      let primary = plan.first?.text ?? query
+      let english = plan.first(where: { $0.language == .english })?.text ?? primary
+      let requestedIDs = request.providerIDs?.compactMap(ResearchProviderID.init(rawValue:))
+      let ids = (requestedIDs?.isEmpty == false ? requestedIDs! : ResearchProviderID.allCases)
+      let batches = await withTaskGroup(of: WindowsResearchBatch.self) { group in
+        for id in ids {
+          let provider = ResearchProviderFactory.make(id)
+          let providerQuery = (id == .wikipedia || id == .wikidata) ? primary : english
+          group.addTask {
+            do {
+              let page = try await provider.search(
+                ResearchSearchRequest(query: providerQuery, interfaceLanguage: interfaceLanguage),
+                continuation: request.continuation)
+              if id == .wikipedia || id == .wikidata, page.records.count < 4,
+                english != providerQuery, request.continuation == nil
+              {
+                let fallback = try await provider.search(
+                  ResearchSearchRequest(query: english, interfaceLanguage: .english),
+                  continuation: nil)
+                return WindowsResearchBatch(
+                  provider: id, displayName: id.displayName,
+                  records: ResearchRecordDeduplicator.apply(page.records + fallback.records),
+                  continuation: page.continuation ?? fallback.continuation,
+                  totalResults: page.totalResults ?? fallback.totalResults)
+              }
+              return WindowsResearchBatch(
+                provider: id, displayName: id.displayName, records: page.records,
+                continuation: page.continuation, totalResults: page.totalResults)
+            } catch {
+              return WindowsResearchBatch(
+                provider: id, displayName: id.displayName, records: [], errorCode: errorCode(error),
+                errorMessage: userMessage(error))
+            }
+          }
+        }
+        var values: [WindowsResearchBatch] = []
+        for await value in group { values.append(value) }
+        return values.sorted {
+          (ResearchProviderID.allCases.firstIndex(of: $0.provider) ?? Int.max)
+            < (ResearchProviderID.allCases.firstIndex(of: $1.provider) ?? Int.max)
+        }
+      }
+      return WindowsCoreResponse(id: request.id, success: true, researchBatches: batches)
+    }
+
+    private static func refreshResearchReference(_ request: WindowsCoreRequest) async
+      -> WindowsCoreResponse
+    {
+      guard let referenceID = uuid(request.researchReferenceID) else {
+        return invalidRecordID(request.id)
+      }
+      let store = PersistentStore()
+      guard let reference = store.researchReferences.first(where: { $0.id == referenceID }) else {
+        return invalidRecordID(request.id)
+      }
+      let language = request.language.flatMap(AppLanguage.init(rawValue:)) ?? .english
+      do {
+        let refreshed = try await ResearchMetadataRefresher.refresh(
+          reference, interfaceLanguage: language)
+        store.updateResearchReference(refreshed)
+        return WindowsCoreResponse(id: request.id, success: true, database: store.database)
+      } catch {
+        return WindowsCoreResponse(
+          id: request.id, success: false, errorCode: errorCode(error),
+          errorMessage: userMessage(error))
+      }
     }
 
     private static func providerTest(_ request: WindowsCoreRequest) async -> WindowsCoreResponse {
@@ -595,7 +735,9 @@
         let data = try AttributionExporter.data(
           format: format, project: snapshot.project, items: snapshot.items,
           options: AttributionExportOptions(
-            includeLocalFilePaths: request.includeLocalFilePaths ?? false))
+            includeLocalFilePaths: request.includeLocalFilePaths ?? false),
+          researchReferences: snapshot.store.researchReferences.filter { $0.projectID == id },
+          section: request.exportSection ?? .combined)
         return WindowsCoreResponse(
           id: request.id, success: true, dataBase64: data.base64EncodedString())
       } catch {

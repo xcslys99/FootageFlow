@@ -125,6 +125,14 @@
           <StackPanel>
             <TextBlock Text="{Binding NavSearch}" Style="{StaticResource SectionTitle}" />
             <TextBlock Text="{Binding SearchTagline}" Foreground="{StaticResource SubtleTextBrush}" Margin="0,0,0,12" />
+            <WrapPanel>
+              <TextBlock Text="{Binding SearchScopeTitle}" VerticalAlignment="Center" Margin="0,0,8,0" />
+              <ComboBox SelectedValue="{Binding SearchScope}" SelectedValuePath="Tag" Width="220">
+                <ComboBoxItem Content="{Binding DataContext.SearchScopeMediaText, RelativeSource={RelativeSource AncestorType=Window}}" Tag="media" />
+                <ComboBoxItem Content="{Binding DataContext.SearchScopeResearchText, RelativeSource={RelativeSource AncestorType=Window}}" Tag="research" />
+                <ComboBoxItem Content="{Binding DataContext.SearchScopeAllText, RelativeSource={RelativeSource AncestorType=Window}}" Tag="all" />
+              </ComboBox>
+            </WrapPanel>
           </StackPanel>
           <StackPanel Grid.Row="1">
             <Grid>
@@ -182,6 +190,15 @@
                 <DataTemplate><StackPanel Orientation="Horizontal" Margin="0,0,16,0"><CheckBox Content="{Binding DisplayName}" IsChecked="{Binding Enabled}" ToolTip="{Binding Mode}" /><TextBlock Text="{Binding Status}" Foreground="{StaticResource SubtleTextBrush}" FontSize="11" VerticalAlignment="Center" Margin="5,0,0,0" /></StackPanel></DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>
+            <WrapPanel Margin="0,8,0,0" Visibility="{Binding HasResearchSearchScope, Converter={StaticResource BoolVisibility}}">
+              <TextBlock Text="{Binding ResearchSourcesTitle}" VerticalAlignment="Center" Margin="0,0,10,0" />
+              <ItemsControl ItemsSource="{Binding ResearchProviders}">
+                <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate><CheckBox Content="{Binding DisplayName}" IsChecked="{Binding Enabled}" Margin="0,0,14,0" /></DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </WrapPanel>
           </StackPanel>
           <StackPanel Grid.Row="3" Margin="0,4,0,8">
             <WrapPanel>
@@ -209,9 +226,37 @@
           </StackPanel>
           <ScrollViewer Grid.Row="4" VerticalScrollBarVisibility="Auto">
             <StackPanel>
-              <ItemsControl ItemsSource="{Binding ResultsView}" ItemTemplate="{StaticResource AssetCard}">
+              <TextBlock Text="{Binding SearchScopeMediaText}" FontWeight="SemiBold" Margin="0,0,0,8"
+                         Visibility="{Binding IsAllSearchScope, Converter={StaticResource BoolVisibility}}" />
+              <ItemsControl ItemsSource="{Binding ResultsView}" ItemTemplate="{StaticResource AssetCard}"
+                            Visibility="{Binding HasMediaSearchScope, Converter={StaticResource BoolVisibility}}">
                 <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
               </ItemsControl>
+              <StackPanel Visibility="{Binding HasResearchSearchScope, Converter={StaticResource BoolVisibility}}" Margin="0,16,0,0">
+                <TextBlock Text="{Binding SearchScopeResearchText}" FontWeight="SemiBold" Margin="0,0,0,8" />
+                <ItemsControl ItemsSource="{Binding ResearchResults}">
+                  <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                      <Border Width="340" Background="White" BorderBrush="#E1E5EA" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,12,12">
+                        <StackPanel>
+                          <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextWrapping="Wrap" MaxHeight="45" />
+                          <TextBlock Foreground="{StaticResource SubtleTextBrush}" Margin="0,5,0,0"><Run Text="{Binding Source}" /><Run Text=" · " /><Run Text="{Binding Type}" /><Run Text="  " /><Run Text="{Binding Year}" /></TextBlock>
+                          <TextBlock Text="{Binding Summary}" Foreground="{StaticResource SubtleTextBrush}" TextWrapping="Wrap" MaxHeight="60" Margin="0,6,0,0" />
+                          <TextBlock Text="{Binding Citation}" Foreground="{StaticResource SubtleTextBrush}" TextWrapping="Wrap" MaxHeight="42" FontSize="11" Margin="0,6,0,0" />
+                          <WrapPanel Margin="0,9,0,0">
+                            <Button Content="{Binding DataContext.ResearchAddToNotesText, RelativeSource={RelativeSource AncestorType=Window}}" Command="{Binding DataContext.AddResearchNoteCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" />
+                            <Button Content="{Binding DataContext.ResearchCopyCitationText, RelativeSource={RelativeSource AncestorType=Window}}" Command="{Binding DataContext.CopyResearchCitationCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" />
+                            <Button Content="{Binding DataContext.ResearchFindRelatedText, RelativeSource={RelativeSource AncestorType=Window}}" Command="{Binding DataContext.FindRelatedMediaCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" />
+                            <Button Content="{Binding DataContext.ResearchAddAsMediaText, RelativeSource={RelativeSource AncestorType=Window}}" Command="{Binding DataContext.AddResearchAsMediaCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" Visibility="{Binding CanAddAsMedia, Converter={StaticResource BoolVisibility}}" />
+                            <Button Content="{Binding DataContext.OpenSourceText, RelativeSource={RelativeSource AncestorType=Window}}" Command="{Binding DataContext.OpenResearchSourceCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" />
+                          </WrapPanel>
+                        </StackPanel>
+                      </Border>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
               <Button Content="{Binding LoadMoreText}" Command="{Binding LoadMoreCommand}"
                       Visibility="{Binding CanLoadMore, Converter={StaticResource BoolVisibility}}"
                       Style="{StaticResource PrimaryButton}" HorizontalAlignment="Center" Margin="0,14,0,24" Padding="22,9" />
@@ -336,6 +381,30 @@
                   <Button Content="{Binding ResetDuplicateDecisionsText}" Command="{Binding ResetDuplicateDecisionsCommand}" />
                 </WrapPanel>
                 <TextBlock Text="{Binding ProjectActionStatus}" Foreground="{StaticResource SubtleTextBrush}" TextWrapping="Wrap" />
+                <TextBlock Text="{Binding ResearchNotesText}" FontWeight="SemiBold" Margin="0,12,0,5" />
+                <ItemsControl ItemsSource="{Binding CurrentResearchReferences}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                      <Border Background="#F7F9FC" BorderBrush="#E1E5EA" BorderThickness="1" CornerRadius="7" Padding="9" Margin="0,0,0,7">
+                        <StackPanel>
+                          <TextBlock Text="{Binding Record.Title}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                          <TextBlock Foreground="{StaticResource SubtleTextBrush}"><Run Text="{Binding Record.Source}" /><Run Text=" · " /><Run Text="{Binding Record.Type}" /></TextBlock>
+                          <TextBlock Text="{Binding Record.Citation}" Foreground="{StaticResource SubtleTextBrush}" TextWrapping="Wrap" FontSize="11" Margin="0,4,0,0" />
+                          <TextBox Text="{Binding MyNote, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="52" Margin="0,6,0,0" />
+                          <TextBox Text="{Binding TagsText, UpdateSourceTrigger=PropertyChanged}" ToolTip="{Binding DataContext.ResearchTagsText, RelativeSource={RelativeSource AncestorType=Window}}" Margin="0,5,0,0" />
+                          <WrapPanel Margin="0,6,0,0">
+                            <Button Content="{Binding DataContext.ResearchSaveNoteText, RelativeSource={RelativeSource AncestorType=Window}}" Command="{Binding DataContext.SaveResearchNoteCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" />
+                            <Button Content="{Binding DataContext.ResearchRefreshMetadataText, RelativeSource={RelativeSource AncestorType=Window}}" Command="{Binding DataContext.RefreshResearchMetadataCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" />
+                            <Button Content="{Binding DataContext.ResearchCopyCitationText, RelativeSource={RelativeSource AncestorType=Window}}" Command="{Binding DataContext.CopyResearchCitationCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding Record}" />
+                            <Button Content="{Binding DataContext.ResearchFindRelatedText, RelativeSource={RelativeSource AncestorType=Window}}" Command="{Binding DataContext.FindRelatedMediaCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding Record}" />
+                            <Button Content="{Binding DataContext.OpenSourceText, RelativeSource={RelativeSource AncestorType=Window}}" Command="{Binding DataContext.OpenResearchSourceCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding Record}" />
+                            <Button Content="{Binding DataContext.DeleteText, RelativeSource={RelativeSource AncestorType=Window}}" Command="{Binding DataContext.DeleteResearchNoteCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" />
+                          </WrapPanel>
+                        </StackPanel>
+                      </Border>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
                 <TextBlock Text="{Binding RightsAuditSummaryText}" FontWeight="SemiBold" Margin="0,7,0,4" TextWrapping="Wrap" />
                 <TextBlock Text="{Binding RightsAuditDisclaimerText}" Foreground="{StaticResource SubtleTextBrush}" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,3" />
                 <ComboBox ItemsSource="{Binding RightsAuditFilters}" DisplayMemberPath="Label" SelectedValuePath="Id" SelectedValue="{Binding SelectedRightsAuditFilter}" Width="220" Margin="0,4,0,2" />

@@ -12,6 +12,7 @@ final class PersistentStore {
   var reviewedAssets: [ProjectReviewRecord] { database.reviewedAssets ?? [] }
   var duplicateDecisions: [DuplicateDecisionRecord] { database.duplicateDecisions ?? [] }
   var fileHashCache: [FileHashCacheRecord] { database.fileHashCache ?? [] }
+  var researchReferences: [ResearchReferenceRecord] { database.researchReferences ?? [] }
 
   init(inMemory: Bool = false, fileURL: URL? = nil) {
     if inMemory {
@@ -66,6 +67,7 @@ final class PersistentStore {
     }
     database.reviewedAssets?.removeAll { $0.projectID == id }
     database.duplicateDecisions?.removeAll { $0.projectID == id }
+    database.researchReferences?.removeAll { $0.projectID == id }
     save()
   }
 
@@ -196,6 +198,37 @@ final class PersistentStore {
     save()
   }
 
+  func addResearchReference(_ value: ResearchReferenceRecord) -> Bool {
+    var records = database.researchReferences ?? []
+    guard
+      !records.contains(where: { $0.projectID == value.projectID && $0.stableID == value.stableID })
+    else { return false }
+    records.append(value)
+    database.researchReferences = records
+    touchProject(value.projectID)
+    save()
+    return true
+  }
+
+  func updateResearchReference(_ value: ResearchReferenceRecord) {
+    guard let index = (database.researchReferences ?? []).firstIndex(where: { $0.id == value.id })
+    else {
+      return
+    }
+    var updated = value
+    updated.updatedAt = .now
+    database.researchReferences?[index] = updated
+    touchProject(value.projectID)
+    save()
+  }
+
+  func deleteResearchReference(id: UUID) {
+    guard let value = database.researchReferences?.first(where: { $0.id == id }) else { return }
+    database.researchReferences?.removeAll { $0.id == id }
+    touchProject(value.projectID)
+    save()
+  }
+
   /// Commits a fully-validated import in one atomic database write. The caller
   /// must construct the payload before this method is invoked.
   func importProject(_ payload: ImportedProjectPayload) {
@@ -206,6 +239,7 @@ final class PersistentStore {
     database.downloads += payload.downloads
     database.reviewedAssets = (database.reviewedAssets ?? []) + payload.reviewedAssets
     database.duplicateDecisions = (database.duplicateDecisions ?? []) + payload.duplicateDecisions
+    database.researchReferences = (database.researchReferences ?? []) + payload.researchReferences
     save()
   }
 
