@@ -47,6 +47,13 @@ public sealed class CoreRequest
     public bool? Reviewed { get; init; }
     public string? PairKey { get; init; }
     public string? DuplicateDecision { get; init; }
+    public string? SearchScope { get; init; }
+    public ResearchRecord? ResearchRecord { get; init; }
+    public IReadOnlyList<ResearchRecord>? ResearchRecords { get; init; }
+    public string? ResearchReferenceID { get; init; }
+    public string? ResearchNote { get; init; }
+    public IReadOnlyList<string>? ResearchTags { get; init; }
+    public string? ExportSection { get; init; }
 }
 
 public sealed class CoreResponse
@@ -73,6 +80,8 @@ public sealed class CoreResponse
     public IReadOnlyList<DuplicateGroup>? DuplicateGroups { get; init; }
     public ContactSheetPlan? ContactSheetPlan { get; init; }
     public string? DataBase64 { get; init; }
+    public IReadOnlyList<ResearchProviderBatch>? ResearchBatches { get; init; }
+    public IReadOnlyList<ResearchRecord>? ResearchRecords { get; init; }
 }
 
 public sealed class AppReleaseInfo
@@ -91,6 +100,7 @@ public sealed class PersistentDatabase
     public IReadOnlyList<SavedAssetRecord> Favorites { get; init; } = [];
     public IReadOnlyList<SearchHistoryRecord> History { get; init; } = [];
     public IReadOnlyList<DownloadRecord> Downloads { get; init; } = [];
+    public IReadOnlyList<ResearchReferenceRecord> ResearchReferences { get; init; } = [];
 }
 
 public sealed class ProjectRecord
@@ -159,6 +169,87 @@ public sealed class DownloadRecord
     public double? ClipDurationSeconds { get; init; }
     public string DisplaySource => string.IsNullOrWhiteSpace(SourceName) ? ProviderRaw : SourceName;
     [JsonIgnore] public string WorkflowSummary { get; set; } = "";
+}
+
+public sealed class ResearchProviderBatch
+{
+    public string Provider { get; init; } = "";
+    public string DisplayName { get; init; } = "";
+    public IReadOnlyList<ResearchRecord> Records { get; init; } = [];
+    public ProviderContinuation? Continuation { get; init; }
+    public int? TotalResults { get; init; }
+    public string? ErrorCode { get; init; }
+    public string? ErrorMessage { get; init; }
+}
+
+public sealed class ResearchRecord : ObservableObject
+{
+    public string Id { get; init; } = "";
+    public string Provider { get; init; } = "";
+    public string Type { get; init; } = "";
+    public string Title { get; init; } = "";
+    public string Source { get; init; } = "";
+    public string? SourceNativeID { get; init; }
+    public string CanonicalURL { get; init; } = "";
+    public string? Summary { get; init; }
+    public IReadOnlyList<string> Authors { get; init; } = [];
+    public DateTimeOffset? PublishedDate { get; init; }
+    public string? Year { get; init; }
+    public string? Language { get; init; }
+    public string? Doi { get; init; }
+    public string? WikidataQID { get; init; }
+    public string? License { get; init; }
+    public string? LicenseURL { get; init; }
+    public string? ThumbnailURL { get; init; }
+    public Dictionary<string, string> ProviderMetadata { get; init; } = [];
+    public string SearchKeyword { get; init; } = "";
+    public double RelevanceScore { get; init; }
+    public IReadOnlyList<string> RelatedMediaQueryHints { get; init; } = [];
+    public DateTimeOffset CreatedAt { get; init; }
+    [JsonIgnore] public string DisplayAuthors => string.Join(", ", Authors.Where(value => !string.IsNullOrWhiteSpace(value)));
+    [JsonIgnore] public string Citation => ResearchCitationFormatter.Format(this);
+    [JsonIgnore] public bool CanAddAsMedia =>
+        (Provider is "metropolitanMuseum" or "artInstituteChicago") &&
+        ProviderMetadata.TryGetValue("publicDomain", out var publicDomain) && publicDomain == "true" &&
+        ProviderMetadata.TryGetValue("publicImageURL", out var imageURL) && Uri.TryCreate(imageURL, UriKind.Absolute, out _);
+}
+
+public sealed class ResearchReferenceRecord : ObservableObject
+{
+    private string _myNote = "";
+    private IReadOnlyList<string> _tags = [];
+    public Guid Id { get; init; }
+    public Guid ProjectID { get; init; }
+    public ResearchRecord Record { get; init; } = new();
+    public string MyNote { get => _myNote; set => Set(ref _myNote, value); }
+    public IReadOnlyList<string> Tags { get => _tags; set => Set(ref _tags, value); }
+    [JsonIgnore] public string TagsText
+    {
+        get => string.Join(", ", Tags);
+        set
+        {
+            Tags = value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Where(item => !string.IsNullOrWhiteSpace(item)).ToArray();
+            OnPropertyChanged();
+        }
+    }
+    public DateTimeOffset AddedAt { get; init; }
+    public DateTimeOffset UpdatedAt { get; init; }
+}
+
+public static class ResearchCitationFormatter
+{
+    public static string Format(ResearchRecord record)
+    {
+        var values = new List<string>();
+        if (!string.IsNullOrWhiteSpace(record.DisplayAuthors)) values.Add(record.DisplayAuthors);
+        if (!string.IsNullOrWhiteSpace(record.Year)) values.Add(record.Year!);
+        values.Add(record.Title);
+        if (record.Provider == "crossref" && !string.IsNullOrWhiteSpace(record.Doi))
+            values.Add("https://doi.org/" + record.Doi);
+        else values.Add(record.CanonicalURL);
+        return string.Join(". ", values.Where(value => !string.IsNullOrWhiteSpace(value)));
+    }
 }
 
 public sealed class ProviderDescriptor

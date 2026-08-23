@@ -33,6 +33,7 @@ struct RootView: View {
   @State private var selection: AppSection? = .quickSearch
   @EnvironmentObject private var localization: LocalizationManager
   @EnvironmentObject private var updates: AppUpdateController
+  @EnvironmentObject private var search: SearchViewModel
 
   var body: some View {
     NavigationSplitView {
@@ -46,7 +47,11 @@ struct RootView: View {
       case .quickSearch: QuickSearchView { selection = .settings }
       case .linkDownloader: LinkDownloaderView { selection = .downloads }
       case .scriptSearch: ScriptSearchView()
-      case .projects: ProjectsView()
+      case .projects:
+        ProjectsView { record in
+          search.findRelatedMedia(record)
+          selection = .quickSearch
+        }
       case .favorites: FavoritesView()
       case .downloads: DownloadsView()
       case .feedback: FeedbackView()

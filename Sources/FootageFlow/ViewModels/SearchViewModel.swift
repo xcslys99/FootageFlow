@@ -31,6 +31,7 @@ private struct ProviderQueryOutcome: Sendable {
 @MainActor
 final class SearchViewModel: ObservableObject {
   @Published var query = ""
+  @Published var searchScope: SearchScope = .media
   @Published var keywords: [SearchKeyword] = []
   @Published var mediaType: MediaType = .video
   @Published var orientation: AssetOrientation = .all
@@ -52,28 +53,42 @@ final class SearchViewModel: ObservableObject {
   @Published var sort: SearchSort = .relevance
   @Published var selectedProviders = AppSettings.enabledProviders
   @Published var currentProjectID: UUID?
+  @Published var selectedResearchTypes = Set(ResearchRecordType.allCases)
+  @Published var selectedResearchProviders = Set(ResearchProviderID.allCases)
+  @Published var researchYearFrom: Int?
+  @Published var researchYearTo: Int?
   @Published private(set) var assets: [MediaAsset] = []
+  @Published private(set) var researchRecords: [ResearchRecord] = []
   @Published private(set) var providerErrors: [ProviderID: ProviderError] = [:]
+  @Published private(set) var researchProviderErrors: [ResearchProviderID: ProviderError] = [:]
   @Published private(set) var providerCounts: [ProviderID: Int] = [:]
+  @Published private(set) var researchProviderCounts: [ResearchProviderID: Int] = [:]
   @Published private(set) var providerStates: [ProviderID: ProviderRuntimeState] = [:]
   @Published private(set) var providerModes: [ProviderID: ProviderMode] = [:]
   @Published private(set) var isSearching = false
+  @Published private(set) var isResearchSearching = false
+  @Published private(set) var isLoadingMoreResearch = false
   @Published private(set) var isLoadingMore = false
   @Published private(set) var loadMoreFailedProviders = Set<ProviderID>()
   @Published private(set) var status: SearchStatus = .initial
 
   private var task: Task<Void, Never>?
+  private var researchTask: Task<Void, Never>?
   private var store: DataStore?
   private var candidateAssets: [MediaAsset] = []
   private var relevanceQueries: [String] = []
   private var searchInputLanguage: AppLanguage = .english
   private var searchInterfaceLanguage: AppLanguage = .english
   private var pagination: [ProviderID: [ProviderQueryPageState]] = [:]
+  private var researchPagination: [ResearchProviderID: ProviderContinuation] = [:]
+  private var researchRequests: [ResearchProviderID: ResearchSearchRequest] = [:]
   private var loadMoreInFlight: [ProviderID: ProviderQueryPageState] = [:]
   private var searchGeneration = UUID()
 
   var statusText: String { status.text }
+  var isAnySearching: Bool { isSearching || isResearchSearching }
   var canLoadMore: Bool { !pagination.values.allSatisfy(\.isEmpty) }
+  var canLoadMoreResearch: Bool { !researchPagination.isEmpty }
   var providersWithMoreResults: Set<ProviderID> {
     Set(pagination.compactMap { $0.value.isEmpty ? nil : $0.key })
   }
@@ -97,6 +112,13 @@ final class SearchViewModel: ObservableObject {
     case .duration: value.sort { ($0.duration ?? -1) > ($1.duration ?? -1) }
     }
     return value
+  }
+
+  var filteredResearchRecords: [ResearchRecord] {
+    let filter = ResearchSearchFilter(
+      types: selectedResearchTypes, providers: selectedResearchProviders,
+      yearFrom: researchYearFrom, yearTo: researchYearTo)
+    return researchRecords.filter(filter.matches)
   }
 
   func configure(store: DataStore) { self.store = store }
@@ -164,8 +186,23 @@ final class SearchViewModel: ObservableObject {
       return
     }
     task?.cancel()
+    researchTask?.cancel()
     let generation = UUID()
     searchGeneration = generation
+    if searchScope != .media {
+      startResearchSearch(active: active, generation: generation)
+    } else {
+      researchRecords = []
+      researchProviderErrors = [:]
+      researchProviderCounts = [:]
+      researchPagination = [:]
+      researchRequests = [:]
+    }
+    guard searchScope != .research else {
+      isSearching = false
+      status = .searchingProviders(ResearchProviderID.allCases.count)
+      return
+    }
     isSearching = true
     isLoadingMore = false
     providerErrors = [:]
@@ -284,10 +321,139 @@ final class SearchViewModel: ObservableObject {
 
   func stop() {
     task?.cancel()
+    researchTask?.cancel()
     task = nil
+    researchTask = nil
     isSearching = false
+    isResearchSearching = false
     isLoadingMore = false
+    isLoadingMoreResearch = false
     status = .stopped
+  }
+
+  /// Reuses the existing media search view model and relevance pipeline. The
+  /// user can inspect or edit the short hint set before any provider request.
+  func findRelatedMedia(_ record: ResearchRecord) {
+    let hints = record.relatedMediaQueryHints.filter { !$0.isEmpty }
+    query = hints.first ?? record.title
+    keywords = hints.enumerated().map { index, hint in
+      SearchKeyword(
+        text: hint, language: record.language, origin: index == 0 ? .input : .userAdded,
+        priority: index)
+    }
+    searchScope = .media
+    search(forceRefresh: true)
+  }
+
+  /// Adds only a source-confirmed public-domain image to the existing media
+  /// result pipeline. Other research records remain references/discovery only.
+  func addResearchRecordAsMedia(_ record: ResearchRecord) {
+    guard let asset = ResearchMediaAdapter.asset(for: record) else { return }
+    searchScope = .media
+    mediaType = .image
+    assets = [asset]
+    candidateAssets = [asset]
+    status = .found(1)
+  }
+
+  private func startResearchSearch(active: [String], generation: UUID) {
+    isResearchSearching = true
+    researchRecords = []
+    researchProviderErrors = [:]
+    researchProviderCounts = [:]
+    researchPagination = [:]
+    researchRequests = [:]
+    let plan = ResearchQueryPlanner.queries(for: query, interfaceLanguage: searchInterfaceLanguage)
+    let primary = plan.first?.text ?? active.first ?? query
+    let english = plan.first(where: { $0.language == .english })?.text ?? primary
+    let interfaceLanguage = searchInterfaceLanguage
+    let relevance = relevanceMode
+    let inputLanguage = searchInputLanguage
+    let selectedProviderIDs = selectedResearchProviders
+    researchTask = Task { [weak self] in
+      guard let self else { return }
+      await withTaskGroup(of: ResearchProviderResult.self) { group in
+        for providerID in ResearchProviderID.allCases where selectedProviderIDs.contains(providerID)
+        {
+          let provider = ResearchProviderFactory.make(providerID)
+          let providerQuery =
+            (providerID == .wikipedia || providerID == .wikidata) ? primary : english
+          group.addTask {
+            do {
+              let initialRequest = ResearchSearchRequest(
+                query: providerQuery, interfaceLanguage: interfaceLanguage)
+              let page = try await provider.search(initialRequest, continuation: nil)
+              // Wikipedia and Wikidata first honour the person's current UI
+              // language.  A bounded English fallback only fills a genuinely
+              // sparse result set; it never turns one research search into a
+              // ten-language request fan-out.
+              if providerID == .wikipedia || providerID == .wikidata,
+                page.records.count < 4, english != providerQuery
+              {
+                let fallback = try await provider.search(
+                  ResearchSearchRequest(query: english, interfaceLanguage: .english),
+                  continuation: nil)
+                let merged = ResearchRecordDeduplicator.apply(page.records + fallback.records)
+                return ResearchProviderResult(
+                  provider: providerID, records: merged, error: nil,
+                  continuation: page.continuation ?? fallback.continuation,
+                  totalResults: page.totalResults ?? fallback.totalResults)
+              }
+              return ResearchProviderResult(
+                provider: providerID, records: page.records, error: nil,
+                continuation: page.continuation, totalResults: page.totalResults)
+            } catch {
+              let providerError = error as? ProviderError ?? .message(error.localizedDescription)
+              // AppLogger currently models media provider ids. Use Wikimedia as
+              // an audit category while retaining the research source in type.
+              await AppLogger.shared.write(
+                provider: .wikimedia, requestType: "research-\(providerID.rawValue)", error: error)
+              return ResearchProviderResult(
+                provider: providerID, records: [], error: providerError,
+                continuation: nil, totalResults: nil)
+            }
+          }
+        }
+        for await result in group {
+          guard !Task.isCancelled, self.searchGeneration == generation else {
+            group.cancelAll()
+            break
+          }
+          if let error = result.error {
+            self.researchProviderErrors[result.provider] = error
+            continue
+          }
+          self.researchProviderErrors[result.provider] = nil
+          self.researchRecords += result.records
+          self.researchRecords = ResearchRecordDeduplicator.apply(self.researchRecords)
+          self.researchRecords = ResearchRelevanceEngine.rank(
+            self.researchRecords, query: self.query, mode: relevance,
+            supportingQueries: active, inputLanguage: inputLanguage,
+            interfaceLanguage: interfaceLanguage)
+          self.researchProviderCounts[result.provider] =
+            self.researchRecords.filter {
+              $0.provider == result.provider
+            }.count
+          if let continuation = result.continuation {
+            self.researchPagination[result.provider] = continuation
+            self.researchRequests[result.provider] = ResearchSearchRequest(
+              query: result.records.first?.searchKeyword
+                ?? ((result.provider == .wikipedia || result.provider == .wikidata)
+                  ? primary : english),
+              interfaceLanguage: interfaceLanguage)
+          } else {
+            self.researchPagination[result.provider] = nil
+          }
+        }
+      }
+      guard self.searchGeneration == generation else { return }
+      self.isResearchSearching = false
+      if self.searchScope == .research {
+        self.status =
+          self.researchRecords.isEmpty ? .noResults : .foundResearch(self.researchRecords.count)
+        self.saveHistory(active: active, resultCount: self.researchRecords.count)
+      }
+    }
   }
 
   func loadMore(only providerID: ProviderID? = nil) {
@@ -344,6 +510,65 @@ final class SearchViewModel: ObservableObject {
       guard self.searchGeneration == generation else { return }
       self.isLoadingMore = false
       self.status = self.assets.isEmpty ? .noResults : .found(self.assets.count)
+    }
+  }
+
+  func loadMoreResearch(only providerID: ResearchProviderID? = nil) {
+    guard !isResearchSearching, !isLoadingMoreResearch else { return }
+    let eligible = researchPagination.keys.filter { providerID == nil || $0 == providerID }
+    guard !eligible.isEmpty else { return }
+    let generation = searchGeneration
+    isLoadingMoreResearch = true
+    let relevance = relevanceMode
+    let interfaceLanguage = searchInterfaceLanguage
+    let inputLanguage = searchInputLanguage
+    let supporting = relevanceQueries
+    researchTask = Task { [weak self] in
+      guard let self else { return }
+      await withTaskGroup(of: ResearchProviderResult.self) { group in
+        for id in eligible {
+          guard let continuation = self.researchPagination[id],
+            let request = self.researchRequests[id]
+          else { continue }
+          group.addTask {
+            do {
+              let page = try await ResearchProviderFactory.make(id).search(
+                request, continuation: continuation)
+              return ResearchProviderResult(
+                provider: id, records: page.records, error: nil,
+                continuation: page.continuation, totalResults: page.totalResults)
+            } catch {
+              return ResearchProviderResult(
+                provider: id, records: [],
+                error: error as? ProviderError ?? .message(error.localizedDescription),
+                continuation: continuation, totalResults: nil)
+            }
+          }
+        }
+        for await result in group {
+          guard !Task.isCancelled, self.searchGeneration == generation else {
+            group.cancelAll()
+            break
+          }
+          if let error = result.error {
+            self.researchProviderErrors[result.provider] = error
+            continue
+          }
+          self.researchProviderErrors[result.provider] = nil
+          self.researchRecords = ResearchRecordDeduplicator.apply(
+            self.researchRecords + result.records)
+          self.researchRecords = ResearchRelevanceEngine.rank(
+            self.researchRecords, query: self.query, mode: relevance, supportingQueries: supporting,
+            inputLanguage: inputLanguage, interfaceLanguage: interfaceLanguage)
+          self.researchProviderCounts[result.provider] =
+            self.researchRecords.filter { $0.provider == result.provider }.count
+          self.researchPagination[result.provider] = result.continuation
+        }
+      }
+      guard self.searchGeneration == generation else { return }
+      self.isLoadingMoreResearch = false
+      self.status =
+        self.researchRecords.isEmpty ? .noResults : .foundResearch(self.researchRecords.count)
     }
   }
 
@@ -453,11 +678,11 @@ final class SearchViewModel: ObservableObject {
       availability: availability, message: nil, mode: provider.info.mode)
   }
 
-  private func saveHistory(active: [String]) {
+  private func saveHistory(active: [String], resultCount: Int? = nil) {
     guard let store else { return }
     let record = SearchHistoryRecord(
       originalQuery: query, keywords: active, providers: selectedProviders,
-      projectID: currentProjectID, resultCount: assets.count,
+      projectID: currentProjectID, resultCount: resultCount ?? assets.count,
       keywordDetails: keywords.filter(\.isEnabled))
     store.addHistory(record)
   }

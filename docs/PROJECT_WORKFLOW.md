@@ -1,6 +1,6 @@
 # Project workflow, export, and attribution
 
-FootageFlow v0.8.0 adds project-level handoff tools without creating a second download or project system. Projects continue to use the same favorites, downloaded-media records, source sidecars, search history, and Provider metadata that power search and Download Manager.
+FootageFlow v0.8.0 added project-level handoff tools without creating a second download or project system. v0.9.0 extends that same project data with local Research References and plain-text Research Notes. Projects continue to use the same favorites, downloaded-media records, source sidecars, search history, and Provider metadata that power search and Download Manager.
 
 ## Attribution report
 

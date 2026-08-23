@@ -230,6 +230,7 @@ enum SearchStatus: Sendable {
   case stopped
   case noResults
   case found(Int)
+  case foundResearch(Int)
   case searchingOthers
   case progressiveFound(Int)
 
@@ -241,6 +242,7 @@ enum SearchStatus: Sendable {
     case .stopped: tr("search.stopped")
     case .noResults: tr("search.noResults")
     case .found(let count): tr("search.found", count)
+    case .foundResearch(let count): tr("research.found", count)
     case .searchingOthers: tr("search.searchingOthers")
     case .progressiveFound(let count): tr("search.progressiveFound", count)
     }

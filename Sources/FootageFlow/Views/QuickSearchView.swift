@@ -23,10 +23,10 @@ struct QuickSearchView: View {
     VStack(spacing: 0) {
       searchHeader
       Divider()
-      if viewModel.isSearching { ProgressView().progressViewStyle(.linear) }
+      if viewModel.isAnySearching { ProgressView().progressViewStyle(.linear) }
       statusArea
-      selectionBar
-      if !viewModel.isSearching && !viewModel.query.isEmpty && viewModel.filteredAssets.isEmpty {
+      if viewModel.searchScope != .research { selectionBar }
+      if !viewModel.isAnySearching && !viewModel.query.isEmpty && isEmptyResult {
         ContentUnavailableView(
           tr("search.emptyTitle"), systemImage: "film.stack",
           description: Text(tr("search.emptyDescription"))
@@ -34,21 +34,56 @@ struct QuickSearchView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
       } else {
         ScrollView {
-          LazyVGrid(columns: columns, alignment: .leading, spacing: 14) {
-            ForEach(viewModel.filteredAssets) { asset in
-              MediaAssetCard(
-                asset: asset, projectID: viewModel.currentProjectID, segmentIndex: nil,
-                isSelected: selection.contains(asset),
-                onToggleSelection: { selection.toggle($0) }
-              ) { PreviewWindowManager.shared.show($0) }
+          VStack(alignment: .leading, spacing: 14) {
+            if viewModel.searchScope != .research {
+              if viewModel.searchScope == .all {
+                Text(tr("search.scope.media")).font(.headline).frame(
+                  maxWidth: .infinity, alignment: .leading)
+              }
+              LazyVGrid(columns: columns, alignment: .leading, spacing: 14) {
+                ForEach(viewModel.filteredAssets) { asset in
+                  MediaAssetCard(
+                    asset: asset, projectID: viewModel.currentProjectID, segmentIndex: nil,
+                    isSelected: selection.contains(asset),
+                    onToggleSelection: { selection.toggle($0) }
+                  ) { PreviewWindowManager.shared.show($0) }
+                }
+              }
+            }
+            if viewModel.searchScope != .media {
+              if viewModel.searchScope == .all {
+                Text(tr("search.scope.research")).font(.headline).frame(
+                  maxWidth: .infinity, alignment: .leading
+                ).padding(.top, 20)
+              }
+              LazyVGrid(columns: columns, alignment: .leading, spacing: 14) {
+                ForEach(viewModel.filteredResearchRecords) { record in
+                  ResearchRecordCard(
+                    record: record, projectID: viewModel.currentProjectID,
+                    onFindRelatedMedia: { viewModel.findRelatedMedia($0) },
+                    onAddAsMedia: { viewModel.addResearchRecordAsMedia($0) })
+                }
+              }
             }
           }
           .padding(16)
-          if viewModel.isLoadingMore {
+          if viewModel.searchScope != .research && viewModel.isLoadingMore {
             ProgressView(tr("search.loadingMore")).padding(.bottom, 20)
-          } else if viewModel.canLoadMore {
+          } else if viewModel.searchScope != .research && viewModel.canLoadMore {
             Button {
               viewModel.loadMore()
+            } label: {
+              Label(tr("search.loadMore"), systemImage: "arrow.down.circle")
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+            .padding(.bottom, 20)
+          }
+          if viewModel.searchScope != .media && viewModel.isLoadingMoreResearch {
+            ProgressView(tr("search.loadingMore")).padding(.bottom, 20)
+          } else if viewModel.searchScope != .media && viewModel.canLoadMoreResearch {
+            Button {
+              viewModel.loadMoreResearch()
             } label: {
               Label(tr("search.loadMore"), systemImage: "arrow.down.circle")
             }
@@ -71,7 +106,7 @@ struct QuickSearchView: View {
           viewModel.search(forceRefresh: true)
         } label: {
           Label(tr("search.refresh"), systemImage: "arrow.clockwise")
-        }.disabled(viewModel.isSearching || viewModel.keywords.isEmpty)
+        }.disabled(viewModel.isAnySearching || viewModel.keywords.isEmpty)
       }
     }
     .sheet(isPresented: $showHistory) { SearchHistoryView(onUse: useHistory) }
@@ -113,12 +148,17 @@ struct QuickSearchView: View {
   private var searchHeader: some View {
     VStack(alignment: .leading, spacing: 12) {
       Text(tr("search.tagline")).font(.callout).foregroundStyle(.secondary)
+      Picker(tr("search.scope"), selection: $viewModel.searchScope) {
+        ForEach(SearchScope.allCases) { Text($0.label).tag($0) }
+      }
+      .id(localization.language)
+      .pickerStyle(.segmented).frame(maxWidth: 360)
       HStack(spacing: 10) {
         Image(systemName: "magnifyingglass").font(.title2).foregroundStyle(.secondary)
         TextField(tr("search.placeholder"), text: $viewModel.query)
           .textFieldStyle(.plain).font(.title3)
           .onSubmit { beginSearch() }
-        if viewModel.isSearching {
+        if viewModel.isAnySearching {
           Button(tr("common.stop")) { viewModel.stop() }.buttonStyle(.bordered)
         } else {
           Button(tr("search.button")) { beginSearch() }.buttonStyle(.borderedProminent)
@@ -184,21 +224,29 @@ struct QuickSearchView: View {
           }
         }
       }
-      HStack {
-        Toggle(isOn: $viewModel.downloadableOnly) {
-          Label(tr("filter.downloadableOnly"), systemImage: "arrow.down.circle.fill")
-            .fontWeight(.semibold)
+      if viewModel.searchScope != .research {
+        HStack {
+          Toggle(isOn: $viewModel.downloadableOnly) {
+            Label(tr("filter.downloadableOnly"), systemImage: "arrow.down.circle.fill")
+              .fontWeight(.semibold)
+          }
+          .toggleStyle(.checkbox)
+          Button {
+            withAnimation { showAdvancedFilters.toggle() }
+          } label: {
+            Label(tr("filter.advanced"), systemImage: "line.3.horizontal.decrease.circle")
+          }.buttonStyle(.link)
+          Spacer()
         }
-        .toggleStyle(.checkbox)
-        Button {
-          withAnimation { showAdvancedFilters.toggle() }
-        } label: {
-          Label(tr("filter.advanced"), systemImage: "line.3.horizontal.decrease.circle")
-        }.buttonStyle(.link)
-        Spacer()
       }
-      filters
-      providerStatusRow
+      if viewModel.searchScope != .research {
+        filters
+        providerStatusRow
+      } else {
+        researchFilters
+        researchProviderStatusRow
+      }
+      projectPicker
     }
     .padding(16)
   }
@@ -222,10 +270,6 @@ struct QuickSearchView: View {
           ForEach(SearchRelevanceMode.allCases) { Text($0.label).tag($0) }
         }.id(localization.language).frame(width: 155)
         Spacer()
-        Picker(tr("common.project"), selection: $viewModel.currentProjectID) {
-          Text(tr("common.uncategorized")).tag(Optional<UUID>.none)
-          ForEach(store.projects) { Text($0.name).tag(Optional($0.id)) }
-        }.id(localization.language).frame(width: 210)
       }
       if showAdvancedFilters {
         HStack {
@@ -268,6 +312,72 @@ struct QuickSearchView: View {
     }
   }
 
+  /// Research records need the same explicit project choice as media assets. Keeping
+  /// this outside media-only filters means “Add to Research Notes” is available in
+  /// Research and All modes without changing the existing download workflow.
+  private var projectPicker: some View {
+    HStack {
+      Picker(tr("common.project"), selection: $viewModel.currentProjectID) {
+        Text(tr("common.uncategorized")).tag(Optional<UUID>.none)
+        ForEach(store.projects) { Text($0.name).tag(Optional($0.id)) }
+      }
+      .id(localization.language)
+      .frame(width: 240)
+      Spacer()
+    }
+  }
+
+  private var researchFilters: some View {
+    VStack(alignment: .leading, spacing: 8) {
+      HStack {
+        TextField(tr("filter.yearFrom"), text: researchYearFromBinding).frame(width: 110)
+        Text("–").foregroundStyle(.secondary)
+        TextField(tr("filter.yearTo"), text: researchYearToBinding).frame(width: 110)
+        Spacer()
+      }
+      ScrollView(.horizontal, showsIndicators: false) {
+        HStack(spacing: 12) {
+          Text(tr("research.type")).foregroundStyle(.secondary)
+          ForEach(ResearchRecordType.allCases) { type in
+            Toggle(
+              type.label,
+              isOn: Binding(
+                get: { viewModel.selectedResearchTypes.contains(type) },
+                set: { enabled in
+                  if enabled {
+                    viewModel.selectedResearchTypes.insert(type)
+                  } else {
+                    viewModel.selectedResearchTypes.remove(type)
+                  }
+                })
+            )
+            .toggleStyle(.checkbox)
+          }
+        }
+      }
+      ScrollView(.horizontal, showsIndicators: false) {
+        HStack(spacing: 12) {
+          Text(tr("filter.source")).foregroundStyle(.secondary)
+          ForEach(ResearchProviderID.allCases) { provider in
+            Toggle(
+              provider.displayName,
+              isOn: Binding(
+                get: { viewModel.selectedResearchProviders.contains(provider) },
+                set: { enabled in
+                  if enabled {
+                    viewModel.selectedResearchProviders.insert(provider)
+                  } else {
+                    viewModel.selectedResearchProviders.remove(provider)
+                  }
+                })
+            )
+            .toggleStyle(.checkbox)
+          }
+        }
+      }
+    }
+  }
+
   private var providerStatusRow: some View {
     ScrollView(.horizontal, showsIndicators: false) {
       HStack(spacing: 8) {
@@ -295,6 +405,30 @@ struct QuickSearchView: View {
     }
   }
 
+  private var researchProviderStatusRow: some View {
+    ScrollView(.horizontal, showsIndicators: false) {
+      HStack(spacing: 8) {
+        ForEach(
+          ResearchProviderID.allCases.filter { viewModel.selectedResearchProviders.contains($0) }
+        ) { provider in
+          let failed = viewModel.researchProviderErrors[provider] != nil
+          HStack(spacing: 5) {
+            Circle().fill(failed ? Color.red : Color.green).frame(width: 7, height: 7)
+            Text(provider.displayName)
+            if let count = viewModel.researchProviderCounts[provider] {
+              Text("\(count)").foregroundStyle(.secondary)
+            }
+          }
+          .font(.caption).padding(.horizontal, 8).padding(.vertical, 4)
+          .background(.quaternary.opacity(0.55), in: Capsule())
+          .help(
+            viewModel.researchProviderErrors[provider]?.errorDescription ?? tr("provider.available")
+          )
+        }
+      }
+    }
+  }
+
   private func providerColor(_ state: ProviderAvailability) -> Color {
     switch state {
     case .available, .apiConnected, .publicAPI, .noKeyRequired: .green
@@ -307,7 +441,7 @@ struct QuickSearchView: View {
   }
 
   @ViewBuilder private var statusArea: some View {
-    if !viewModel.providerErrors.isEmpty {
+    if !viewModel.providerErrors.isEmpty || !viewModel.researchProviderErrors.isEmpty {
       ScrollView(.horizontal, showsIndicators: false) {
         HStack(spacing: 8) {
           ForEach(
@@ -338,15 +472,44 @@ struct QuickSearchView: View {
             }.padding(.horizontal, 9).padding(.vertical, 5).background(
               .orange.opacity(0.1), in: Capsule())
           }
+          ForEach(
+            viewModel.researchProviderErrors.keys.sorted(by: { $0.rawValue < $1.rawValue }),
+            id: \.self
+          ) { provider in
+            let message =
+              viewModel.researchProviderErrors[provider]?.errorDescription ?? tr("search.failed")
+            HStack(spacing: 6) {
+              Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)
+              Text("\(provider.displayName): \(message)").lineLimit(1)
+              Button(tr("common.retry")) { beginSearch() }.buttonStyle(.link)
+            }.padding(.horizontal, 9).padding(.vertical, 5).background(
+              .orange.opacity(0.1), in: Capsule())
+          }
         }.padding(.horizontal, 16).padding(.top, 8)
       }
     }
     HStack {
       Text(viewModel.statusText).foregroundStyle(.secondary)
       Spacer()
-      Text(tr("common.showingCount", viewModel.filteredAssets.count)).foregroundStyle(.secondary)
+      Text(tr("common.showingCount", displayedResultCount)).foregroundStyle(.secondary)
     }
     .font(.caption).padding(.horizontal, 16).padding(.vertical, 8)
+  }
+
+  private var isEmptyResult: Bool {
+    switch viewModel.searchScope {
+    case .media: viewModel.filteredAssets.isEmpty
+    case .research: viewModel.filteredResearchRecords.isEmpty
+    case .all: viewModel.filteredAssets.isEmpty && viewModel.filteredResearchRecords.isEmpty
+    }
+  }
+
+  private var displayedResultCount: Int {
+    switch viewModel.searchScope {
+    case .media: viewModel.filteredAssets.count
+    case .research: viewModel.filteredResearchRecords.count
+    case .all: viewModel.filteredAssets.count + viewModel.filteredResearchRecords.count
+    }
   }
 
   @ViewBuilder private var selectionBar: some View {
@@ -446,6 +609,18 @@ struct QuickSearchView: View {
     Binding(
       get: { viewModel.yearTo.map(String.init) ?? "" },
       set: { viewModel.yearTo = Int($0.filter(\.isNumber)) })
+  }
+
+  private var researchYearFromBinding: Binding<String> {
+    Binding(
+      get: { viewModel.researchYearFrom.map(String.init) ?? "" },
+      set: { viewModel.researchYearFrom = Int($0.filter(\.isNumber)) })
+  }
+
+  private var researchYearToBinding: Binding<String> {
+    Binding(
+      get: { viewModel.researchYearTo.map(String.init) ?? "" },
+      set: { viewModel.researchYearTo = Int($0.filter(\.isNumber)) })
   }
 
   private func beginSearch() {

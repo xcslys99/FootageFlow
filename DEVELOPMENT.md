@@ -134,7 +134,15 @@ Downloads are restricted to the configured root for app-initiated deletion. A su
 
 ## Localization
 
-English is the fixed first-launch default. `en.lproj` is the fallback for missing translations. v0.8.0 ships `en`, `zh-Hans`, `zh-Hant`, `es`, `pt-BR`, `ja`, `ko`, `de`, `fr`, and `ru`. SwiftPM may normalize language-directory casing in the built resource bundle, so locale lookup also checks normalized identifiers.
+English is the fixed first-launch default. `en.lproj` is the fallback for missing translations. v0.9.0 ships `en`, `zh-Hans`, `zh-Hant`, `es`, `pt-BR`, `ja`, `ko`, `de`, `fr`, and `ru`. SwiftPM may normalize language-directory casing in the built resource bundle, so locale lookup also checks normalized identifiers.
+
+## Research & Culture shared core (v0.9.0)
+
+`ResearchModels.swift` defines `ResearchRecord`, `ResearchReferenceRecord`, citations, local filters, and the bounded `ResearchQueryPlanner`. `ResearchProviders.swift` contains Wikipedia, Wikidata, The Met, Art Institute of Chicago, Crossref, and GDELT adapters. Research records remain references by default. `ResearchMediaAdapter` exposes **Add as Media** only for a Met/AIC record whose provider explicitly reports both Public Domain and a public original-image URL; pages and preview thumbnails never become downloadable media by inference.
+
+`SearchViewModel` remains the single search coordinator. It owns Media / Research / All scope, cancellation, research relevance ranking, provider isolation, and research pagination. On Windows, the WPF client sends the same research requests to `WindowsCoreHost.swift`; provider parsing, citations, persistence, export, backup migration, and ranking are not duplicated in C#.
+
+Research references are stored in `PersistentDatabase.researchReferences`, exported through `AttributionExporter`, and included in portable project schema 2. Schema 1 remains readable. `ResearchMetadataRefresher` preserves the user-owned `myNote`, tags, and added date on a successful refresh and does not mutate saved data on failure.
 
 Run `scripts/check_localizations.sh` after changing UI copy. `localization.fallbackProbe` intentionally exists only in English to exercise fallback behavior.
 
@@ -160,7 +168,7 @@ The package uses the official `swift-testing` dependency so the full platform-ne
 
 ## Packaging
 
-`scripts/build_app.sh` builds a Release executable; bundles checksum-pinned yt-dlp; builds static GPL FFmpeg 8.0.3 with pinned x264, Apple SecureTransport, and no `nonfree` component; copies all applicable license texts; creates the `.app`; and performs Ad Hoc signing. The FFmpeg configuration uses a neutral build prefix and the packaging scan rejects private developer paths. `scripts/binary_privacy_scan.sh` scans the app executable and bundled tools for credential-like strings. `scripts/build_dmg.sh` creates the drag-to-Applications DMG and SHA-256 checksum. No Developer ID certificate or notarization is claimed for v0.8.0.
+`scripts/build_app.sh` builds a Release executable; bundles checksum-pinned yt-dlp; builds static GPL FFmpeg 8.0.3 with pinned x264, Apple SecureTransport, and no `nonfree` component; copies all applicable license texts; creates the `.app`; and performs Ad Hoc signing. The FFmpeg configuration uses a neutral build prefix and the packaging scan rejects private developer paths. `scripts/binary_privacy_scan.sh` scans the app executable and bundled tools for credential-like strings. `scripts/build_dmg.sh` creates the drag-to-Applications DMG and SHA-256 checksum. No Developer ID certificate or notarization is claimed for v0.9.0.
 
 ## Windows architecture
 

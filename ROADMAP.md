@@ -29,6 +29,7 @@ Roadmap items are intentions, not promises. Provider policies, platform rules, a
 - Portable `.footageflowproject` backup and cross-platform import
 - Local-first duplicate detection with user decisions and lazy SHA-256
 - PNG contact-sheet generation
+- Research & Culture workspace: Media / Research / All, references, notes, citations, and related-media discovery
 
 ## Current Priorities
 
@@ -52,16 +53,15 @@ Delivered in v0.8.0:
 
 ### v0.9.0 — Research & Culture Update ([#20](https://github.com/xcslys99/FootageFlow/issues/20))
 
-Planned research areas:
+Delivered in v0.9.0:
 
-- The Metropolitan Museum of Art
-- Art Institute of Chicago
-- Wikipedia and Wikidata
-- Crossref
-- GDELT
-- Media, Research, and All result modes
+- Media / Research / All search modes
+- Wikipedia, Wikidata, The Met, Art Institute of Chicago, Crossref, and GDELT public research discovery
+- Local Research Notes, citation copy, source refresh, and Find Related Media
+- Research References and Combined Project Report export
+- Portable project schema v2 with backward-compatible v1 import
 
-Every source requires a fresh review of its official API, rights metadata, authentication, rate limits, and platform policies before implementation.
+Research providers remain reference/discovery sources. They do not grant media rights, bypass paywalls, download article full text, or turn a visible preview into a reusable asset.
 
 ## Later
 

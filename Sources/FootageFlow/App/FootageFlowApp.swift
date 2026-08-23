@@ -51,6 +51,16 @@ struct FootageFlowApp: App {
       }
       dispatchMain()
     }
+    if CommandLine.arguments.contains("--research-smoke") {
+      let query =
+        CommandLine.arguments.last == "--research-smoke" ? "Apollo 11" : CommandLine.arguments.last!
+      Task.detached {
+        let status = await ResearchSmokeRunner.run(query: query)
+        fflush(stdout)
+        Darwin.exit(status)
+      }
+      dispatchMain()
+    }
     if let index = CommandLine.arguments.firstIndex(of: "--acceptance-test") {
       let path =
         CommandLine.arguments.indices.contains(index + 1)

@@ -6,6 +6,7 @@ import SwiftUI
 #endif
 
 struct ProjectsView: View {
+  var onFindRelatedMedia: (ResearchRecord) -> Void = { _ in }
   @EnvironmentObject private var store: DataStore
   @EnvironmentObject private var localization: LocalizationManager
   @State private var selectedID: UUID?
@@ -55,7 +56,9 @@ struct ProjectsView: View {
         }
       }.frame(minWidth: 250, idealWidth: 300)
       if let project = selected {
-        ProjectDetail(project: project, onDelete: { confirmDelete = true })
+        ProjectDetail(
+          project: project, onDelete: { confirmDelete = true },
+          onFindRelatedMedia: onFindRelatedMedia)
       } else {
         ContentUnavailableView(
           tr("project.selectOrCreate"), systemImage: "folder",
@@ -127,6 +130,7 @@ struct ProjectsView: View {
 private struct ProjectDetail: View {
   let project: ProjectRecord
   let onDelete: () -> Void
+  let onFindRelatedMedia: (ResearchRecord) -> Void
   @EnvironmentObject private var store: DataStore
   @EnvironmentObject private var localization: LocalizationManager
   @State private var audit: RightsAuditReport?
@@ -135,6 +139,7 @@ private struct ProjectDetail: View {
   @State private var isWorking = false
   @State private var pendingReportFormat: AttributionExportFormat?
   @State private var pendingReportIncludesLocalPaths = false
+  @State private var pendingReportSection: ProjectExportSection = .combined
   @State private var showRightsExportWarning = false
   @State private var rightsAuditFilter: RightsAuditFilter = .all
 
@@ -191,6 +196,7 @@ private struct ProjectDetail: View {
       )
       .font(.body).padding(8).background(
         .quaternary.opacity(0.35), in: RoundedRectangle(cornerRadius: 8))
+      ProjectResearchNotesView(projectID: project.id, onFindRelatedMedia: onFindRelatedMedia)
       rightsAuditView
       duplicateView
     }.padding(22)
@@ -202,7 +208,9 @@ private struct ProjectDetail: View {
         Button(tr("project.reviewRights")) { refreshAudit() }
         Button(tr("project.exportAnyway")) {
           guard let format = pendingReportFormat else { return }
-          saveReport(format, includeLocalFilePaths: pendingReportIncludesLocalPaths)
+          saveReport(
+            format, section: pendingReportSection,
+            includeLocalFilePaths: pendingReportIncludesLocalPaths)
         }
         Button(tr("common.cancel"), role: .cancel) {}
       } message: {
@@ -213,10 +221,22 @@ private struct ProjectDetail: View {
   private var projectActions: some View {
     Menu {
       Menu(tr("project.attributionReport")) {
-        reportMenu("Markdown (.md)", .markdown)
-        reportMenu("CSV (.csv)", .csv)
-        reportMenu("JSON (.json)", .json)
-        reportMenu("HTML (.html)", .html)
+        reportMenu("Markdown (.md)", .markdown, section: .mediaSources)
+        reportMenu("CSV (.csv)", .csv, section: .mediaSources)
+        reportMenu("JSON (.json)", .json, section: .mediaSources)
+        reportMenu("HTML (.html)", .html, section: .mediaSources)
+      }
+      Menu(tr("research.exportReferences")) {
+        reportMenu("Markdown (.md)", .markdown, section: .researchReferences)
+        reportMenu("CSV (.csv)", .csv, section: .researchReferences)
+        reportMenu("JSON (.json)", .json, section: .researchReferences)
+        reportMenu("HTML (.html)", .html, section: .researchReferences)
+      }
+      Menu(tr("research.combinedReport")) {
+        reportMenu("Markdown (.md)", .markdown, section: .combined)
+        reportMenu("CSV (.csv)", .csv, section: .combined)
+        reportMenu("JSON (.json)", .json, section: .combined)
+        reportMenu("HTML (.html)", .html, section: .combined)
       }
       Menu(tr("project.generateCredits")) {
         Button(tr("project.generateCredits")) { copyCredits(.concise) }
@@ -371,35 +391,49 @@ private struct ProjectDetail: View {
     duplicates.removeAll { $0.id == group.id }
   }
 
-  @ViewBuilder private func reportMenu(_ title: String, _ format: AttributionExportFormat)
+  @ViewBuilder private func reportMenu(
+    _ title: String, _ format: AttributionExportFormat, section: ProjectExportSection
+  )
     -> some View
   {
     Menu(title) {
-      Button(tr("project.withoutLocalPaths")) { exportReport(format, includeLocalFilePaths: false) }
-      Button(tr("project.includeLocalPaths")) { exportReport(format, includeLocalFilePaths: true) }
+      Button(tr("project.withoutLocalPaths")) {
+        exportReport(format, section: section, includeLocalFilePaths: false)
+      }
+      Button(tr("project.includeLocalPaths")) {
+        exportReport(format, section: section, includeLocalFilePaths: true)
+      }
     }
   }
 
-  private func exportReport(_ format: AttributionExportFormat, includeLocalFilePaths: Bool) {
+  private func exportReport(
+    _ format: AttributionExportFormat, section: ProjectExportSection,
+    includeLocalFilePaths: Bool
+  ) {
     let currentAudit = audit ?? store.rightsAudit(projectID: project.id)
     if currentAudit.summary.rightsUnknown > 0 || currentAudit.summary.originalPageUnavailable > 0 {
       pendingReportFormat = format
       pendingReportIncludesLocalPaths = includeLocalFilePaths
+      pendingReportSection = section
       showRightsExportWarning = true
       return
     }
-    saveReport(format, includeLocalFilePaths: includeLocalFilePaths)
+    saveReport(format, section: section, includeLocalFilePaths: includeLocalFilePaths)
   }
 
-  private func saveReport(_ format: AttributionExportFormat, includeLocalFilePaths: Bool) {
+  private func saveReport(
+    _ format: AttributionExportFormat, section: ProjectExportSection,
+    includeLocalFilePaths: Bool
+  ) {
     #if os(macOS)
       let panel = savePanel(
-        name: "\(FileNameSanitizer.sanitize(project.name))-attribution",
+        name: "\(FileNameSanitizer.sanitize(project.name))-\(section.rawValue)",
         extension: format.fileExtension)
       guard panel.runModal() == .OK, let url = panel.url else { return }
       do {
-        try store.attributionData(
+        try store.projectReportData(
           project: project, format: format,
+          section: section,
           options: AttributionExportOptions(includeLocalFilePaths: includeLocalFilePaths)
         ).write(to: url, options: .atomic)
       } catch { actionMessage = tr("project.actionFailed") }

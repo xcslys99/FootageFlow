@@ -283,6 +283,17 @@ enum AttributionExportFormat: String, Codable, CaseIterable, Identifiable {
   var fileExtension: String { rawValue }
 }
 
+/// One exporter, three report views. The underlying payload remains one
+/// sanitized project report so media attribution and research citations never
+/// drift into separate export systems.
+enum ProjectExportSection: String, Codable, CaseIterable, Identifiable {
+  case mediaSources
+  case researchReferences
+  case combined
+
+  var id: String { rawValue }
+}
+
 struct AttributionExportOptions: Codable, Hashable {
   var includeLocalFilePaths = false
   var includeUTF8BOM = true
@@ -326,13 +337,30 @@ struct AttributionExportAsset: Codable, Hashable {
 }
 
 struct AttributionReportPayload: Codable, Hashable {
-  var schemaVersion = 1
+  var schemaVersion = 2
   var application = "FootageFlow"
   var exportType = "attribution-report"
   var generatedAt: Date
   var applicationVersion: String
   var project: AttributionExportHeader
   var assets: [AttributionExportAsset]
+  var researchReferences: [ResearchExportReference] = []
+}
+
+struct ResearchExportReference: Codable, Hashable {
+  var index: Int
+  var title: String
+  var researchType: String
+  var source: String
+  var authors: String
+  var year: String
+  var canonicalURL: String
+  var doi: String
+  var qid: String
+  var citation: String
+  var userNote: String
+  var tags: String
+  var addedAt: Date
 }
 
 enum ProjectExportSanitizer {
@@ -395,7 +423,8 @@ enum ProjectExportSanitizer {
 enum AttributionExporter {
   static func payload(
     project: ProjectRecord, items: [ProjectAssetItem], now: Date = .now,
-    options: AttributionExportOptions = .init()
+    options: AttributionExportOptions = .init(),
+    researchReferences: [ResearchReferenceRecord] = []
   ) -> AttributionReportPayload {
     let assets = items.enumerated().map { index, item in
       let rights = item.effectiveRightsInfo
@@ -421,16 +450,44 @@ enum AttributionExporter {
       projectName: ProjectExportSanitizer.safeText(project.name), createdAt: project.createdAt,
       updatedAt: project.updatedAt,
       generatedAt: now, applicationVersion: FootageFlowVersion.current, assetCount: assets.count)
+    let references = researchReferences.sorted { $0.addedAt < $1.addedAt }.enumerated().map {
+      index, value in
+      let record = value.record
+      return ResearchExportReference(
+        index: index + 1, title: ProjectExportSanitizer.safeText(record.title),
+        researchType: record.type.rawValue, source: ProjectExportSanitizer.safeText(record.source),
+        authors: ProjectExportSanitizer.safeText(record.displayAuthors),
+        year: ProjectExportSanitizer.safeText(record.year),
+        canonicalURL: ProjectExportSanitizer.safeURL(record.canonicalURL),
+        doi: ProjectExportSanitizer.safeText(record.doi),
+        qid: ProjectExportSanitizer.safeText(record.wikidataQID),
+        citation: ProjectExportSanitizer.redactedContent(record.citationText),
+        userNote: ProjectExportSanitizer.redactedContent(value.myNote),
+        tags: value.tags.map(ProjectExportSanitizer.redactedContent).joined(separator: ", "),
+        addedAt: value.addedAt)
+    }
     return AttributionReportPayload(
       generatedAt: now, applicationVersion: FootageFlowVersion.current, project: header,
-      assets: assets)
+      assets: assets, researchReferences: references)
   }
 
   static func data(
     format: AttributionExportFormat, project: ProjectRecord, items: [ProjectAssetItem],
-    options: AttributionExportOptions = .init(), now: Date = .now
+    options: AttributionExportOptions = .init(), now: Date = .now,
+    researchReferences: [ResearchReferenceRecord] = [],
+    section: ProjectExportSection = .mediaSources
   ) throws -> Data {
-    let report = payload(project: project, items: items, now: now, options: options)
+    var report = payload(
+      project: project, items: items, now: now, options: options,
+      researchReferences: researchReferences)
+    // A selected export must not silently include the other project category.
+    // Combined remains the only view containing both media provenance and
+    // research material.
+    switch section {
+    case .mediaSources: report.researchReferences = []
+    case .researchReferences: report.assets = []
+    case .combined: break
+    }
     switch format {
     case .json:
       let encoder = JSONEncoder()
@@ -438,11 +495,11 @@ enum AttributionExporter {
       encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
       return try encoder.encode(report)
     case .markdown:
-      return Data(markdown(report).utf8)
+      return Data(markdown(report, section: section).utf8)
     case .html:
-      return Data(html(report).utf8)
+      return Data(html(report, section: section).utf8)
     case .csv:
-      let text = csv(report, includeLocalPaths: options.includeLocalFilePaths)
+      let text = csv(report, includeLocalPaths: options.includeLocalFilePaths, section: section)
       let prefix = options.includeUTF8BOM ? "\u{FEFF}" : ""
       return Data((prefix + text).utf8)
     }
@@ -486,36 +543,112 @@ enum AttributionExporter {
     return tr("project.rightsKnown")
   }
 
-  private static func markdown(_ report: AttributionReportPayload) -> String {
+  private static func markdown(_ report: AttributionReportPayload, section: ProjectExportSection)
+    -> String
+  {
     var lines = [
       "# FootageFlow Attribution Report", "",
       "- Project: \(markdownText(report.project.projectName))",
       "- Generated: \(iso(report.generatedAt))",
       "- Assets: \(report.assets.count)",
+      "- Research references: \(report.researchReferences.count)",
     ]
-    for asset in report.assets {
-      lines += [
-        "", "## \(asset.index). \(markdownText(asset.title))", "",
-        "- Creator: \(markdownText(asset.creator))",
-        "- Provider: \(markdownText(asset.provider))",
-        "- Original source: \(markdownURL(asset.originalURL))",
-        "- License: \(markdownText(asset.license))",
-        "- License URL: \(markdownURL(asset.licenseURL))",
-        "- Rights status: \(markdownText(asset.rightsStatus))",
-        "- Attribution: \(markdownText(asset.attribution))",
-        "- Local file: \(markdownText(asset.localFileName))",
-      ]
-      if asset.rightsStatus == tr("project.rightsUnknown")
-        || asset.rightsStatus == tr("project.originalPageUnavailable")
-      {
-        lines.append(
-          "- Warning: Rights / license unknown. Verify the original source before reuse.")
+    if section != .researchReferences {
+      for asset in report.assets {
+        lines += [
+          "", "## \(asset.index). \(markdownText(asset.title))", "",
+          "- Creator: \(markdownText(asset.creator))",
+          "- Provider: \(markdownText(asset.provider))",
+          "- Original source: \(markdownURL(asset.originalURL))",
+          "- License: \(markdownText(asset.license))",
+          "- License URL: \(markdownURL(asset.licenseURL))",
+          "- Rights status: \(markdownText(asset.rightsStatus))",
+          "- Attribution: \(markdownText(asset.attribution))",
+          "- Local file: \(markdownText(asset.localFileName))",
+        ]
+        if asset.rightsStatus == tr("project.rightsUnknown")
+          || asset.rightsStatus == tr("project.originalPageUnavailable")
+        {
+          lines.append(
+            "- Warning: Rights / license unknown. Verify the original source before reuse.")
+        }
+      }
+    }
+    if section != .mediaSources {
+      lines += ["", "## Research References"]
+      for reference in report.researchReferences {
+        lines += [
+          "", "### \(reference.index). \(markdownText(reference.title))", "",
+          "- Research type: \(markdownText(reference.researchType))",
+          "- Source: \(markdownText(reference.source))",
+          "- Authors: \(markdownText(reference.authors))",
+          "- Year: \(markdownText(reference.year))",
+          "- Canonical URL: \(markdownURL(reference.canonicalURL))",
+          "- DOI: \(markdownText(reference.doi))",
+          "- QID: \(markdownText(reference.qid))",
+          "- Citation: \(markdownText(reference.citation))",
+          "- My note: \(markdownText(reference.userNote))",
+          "- Tags: \(markdownText(reference.tags))",
+        ]
+      }
+      if section == .combined, report.researchReferences.contains(where: { !$0.userNote.isEmpty }) {
+        lines += ["", "## Research Notes"]
+        for reference in report.researchReferences where !reference.userNote.isEmpty {
+          lines += [
+            "", "### \(reference.index). \(markdownText(reference.title))",
+            markdownText(reference.userNote),
+          ]
+        }
       }
     }
     return lines.joined(separator: "\n") + "\n"
   }
 
-  private static func csv(_ report: AttributionReportPayload, includeLocalPaths: Bool) -> String {
+  private static func csv(
+    _ report: AttributionReportPayload, includeLocalPaths: Bool, section: ProjectExportSection
+  ) -> String {
+    if section == .researchReferences {
+      let headers = [
+        "Index", "Title", "Research Type", "Source", "Authors", "Year", "Canonical URL", "DOI",
+        "QID", "Citation", "User Note", "Tags", "Added Date",
+      ]
+      let lines = report.researchReferences.map { value in
+        [
+          String(value.index), value.title, value.researchType, value.source, value.authors,
+          value.year,
+          value.canonicalURL, value.doi, value.qid, value.citation, value.userNote, value.tags,
+          iso(value.addedAt),
+        ]
+        .map(csvField).joined(separator: ",")
+      }
+      return ([headers.map(csvField).joined(separator: ",")] + lines).joined(separator: "\r\n")
+        + "\r\n"
+    }
+    if section == .combined {
+      let headers = [
+        "Record Type", "Index", "Title", "Source", "Creator / Authors", "Year", "URL", "DOI / QID",
+        "Rights / Citation", "My Note", "Added / Downloaded Date",
+      ]
+      let media = report.assets.map { asset in
+        [
+          "Media", String(asset.index), asset.title, asset.provider, asset.creator, "",
+          asset.originalURL,
+          "", asset.rightsStatus, "", asset.downloadDate.map(iso) ?? "",
+        ]
+        .map(csvField).joined(separator: ",")
+      }
+      let research = report.researchReferences.map { reference in
+        [
+          "Research", String(reference.index), reference.title, reference.source, reference.authors,
+          reference.year, reference.canonicalURL,
+          [reference.doi, reference.qid].filter { !$0.isEmpty }.joined(separator: " "),
+          reference.citation, reference.userNote, iso(reference.addedAt),
+        ]
+        .map(csvField).joined(separator: ",")
+      }
+      return ([headers.map(csvField).joined(separator: ",")] + media + research).joined(
+        separator: "\r\n") + "\r\n"
+    }
     var headers = [
       "Index", "Title", "Creator", "Provider", "Provider Native ID", "Original URL", "Media URL",
       "Media Type", "License", "License URL", "Rights Status", "Attribution", "Download Date",
@@ -549,7 +682,9 @@ enum AttributionExporter {
     return lines.joined(separator: "\r\n") + "\r\n"
   }
 
-  private static func html(_ report: AttributionReportPayload) -> String {
+  private static func html(_ report: AttributionReportPayload, section: ProjectExportSection)
+    -> String
+  {
     let rows = report.assets.map { asset in
       let warning =
         asset.rightsStatus == tr("project.rightsUnknown")
@@ -571,10 +706,31 @@ enum AttributionExporter {
           </article>
         """
     }.joined(separator: "\n")
+    let references = report.researchReferences.map { reference in
+      """
+      <article class=\"asset\"><h2>\(reference.index). \(htmlText(reference.title))</h2><dl>
+      <dt>Research type</dt><dd>\(htmlText(reference.researchType))</dd><dt>Source</dt><dd>\(htmlText(reference.source))</dd>
+      <dt>Authors</dt><dd>\(htmlText(reference.authors))</dd><dt>Year</dt><dd>\(htmlText(reference.year))</dd>
+      <dt>Canonical URL</dt><dd>\(htmlLink(reference.canonicalURL))</dd><dt>DOI</dt><dd>\(htmlText(reference.doi))</dd>
+      <dt>QID</dt><dd>\(htmlText(reference.qid))</dd><dt>Citation</dt><dd>\(htmlText(reference.citation))</dd>
+      <dt>My note</dt><dd>\(htmlText(reference.userNote))</dd></dl></article>
+      """
+    }.joined(separator: "\n")
+    let mediaContent = section == .researchReferences ? "" : rows
+    let notes =
+      section == .combined
+      ? report.researchReferences.filter { !$0.userNote.isEmpty }.map { reference in
+        "<article class=\"asset\"><h2>\(reference.index). \(htmlText(reference.title))</h2><p>\(htmlText(reference.userNote))</p></article>"
+      }.joined(separator: "\n")
+      : ""
+    let researchContent =
+      section == .mediaSources
+      ? ""
+      : "<h1>Research References</h1>\(references)\(notes.isEmpty ? "" : "<h1>Research Notes</h1>\(notes)")"
     return """
       <!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><title>FootageFlow Attribution Report</title>
       <style>body{font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;max-width:980px;margin:36px auto;padding:0 24px;color:#172033}header,.asset{border:1px solid #dce3ed;border-radius:12px;padding:20px;margin:16px 0}.asset{break-inside:avoid}h1,h2{margin-top:0}dl{display:grid;grid-template-columns:150px 1fr;gap:7px 14px}dt{font-weight:600}.warning{color:#9f2d20;font-weight:600}a{color:#0b63ce;overflow-wrap:anywhere}@media print{body{max-width:none;margin:0}.asset{border-color:#bbb}}</style>
-      </head><body><header><h1>FootageFlow Attribution Report</h1><p><strong>Project:</strong> \(htmlText(report.project.projectName))<br><strong>Generated:</strong> \(htmlText(iso(report.generatedAt)))<br><strong>Assets:</strong> \(report.assets.count)</p></header>\(rows)</body></html>
+      </head><body><header><h1>FootageFlow Project Report</h1><p><strong>Project:</strong> \(htmlText(report.project.projectName))<br><strong>Generated:</strong> \(htmlText(iso(report.generatedAt)))<br><strong>Assets:</strong> \(report.assets.count)<br><strong>Research references:</strong> \(report.researchReferences.count)</p></header>\(mediaContent)\(researchContent)</body></html>
       """
   }
 
@@ -607,7 +763,7 @@ enum AttributionExporter {
   private static func iso(_ date: Date) -> String { ISO8601DateFormatter().string(from: date) }
 }
 
-// MARK: - Portable Project Backup v1
+// MARK: - Portable Project Backup v2
 
 struct PortableProjectInfo: Codable, Hashable {
   var name: String
@@ -647,7 +803,7 @@ struct PortableDownloadRecord: Codable, Hashable {
 }
 
 struct PortableProjectManifest: Codable, Hashable {
-  var schemaVersion = 1
+  var schemaVersion = 2
   var application = "FootageFlow"
   var applicationVersion: String
   var createdAt: Date
@@ -658,6 +814,16 @@ struct PortableProjectManifest: Codable, Hashable {
   var downloads: [PortableDownloadRecord]
   var reviewedStableAssetIDs: [String]
   var duplicateDecisions: [PortableDuplicateDecision]
+  /// Optional makes schema v1 backups decodable without mutation.
+  var researchReferences: [PortableResearchReference]? = []
+}
+
+struct PortableResearchReference: Codable, Hashable {
+  var record: ResearchRecord
+  var myNote: String
+  var tags: [String]
+  var addedAt: Date
+  var updatedAt: Date
 }
 
 struct PortableDuplicateDecision: Codable, Hashable {
@@ -674,6 +840,7 @@ struct ImportedProjectPayload {
   var downloads: [DownloadRecord]
   var reviewedAssets: [ProjectReviewRecord]
   var duplicateDecisions: [DuplicateDecisionRecord]
+  var researchReferences: [ResearchReferenceRecord]
 }
 
 enum PortableProjectError: LocalizedError {
@@ -753,6 +920,12 @@ enum PortableProjectCodec {
       duplicateDecisions: database.duplicateDecisions?.filter { $0.projectID == project.id }.map {
         PortableDuplicateDecision(
           pairKey: $0.pairKey, decision: $0.decision, updatedAt: $0.updatedAt)
+      } ?? [],
+      researchReferences: database.researchReferences?.filter { $0.projectID == project.id }.map {
+        PortableResearchReference(
+          record: sanitized($0.record), myNote: ProjectExportSanitizer.redactedContent($0.myNote),
+          tags: $0.tags.map(ProjectExportSanitizer.redactedContent), addedAt: $0.addedAt,
+          updatedAt: $0.updatedAt)
       } ?? [])
   }
 
@@ -774,7 +947,7 @@ enum PortableProjectCodec {
   }
 
   static func validate(_ manifest: PortableProjectManifest) throws {
-    guard manifest.application == "FootageFlow", manifest.schemaVersion == 1 else {
+    guard manifest.application == "FootageFlow", (1...2).contains(manifest.schemaVersion) else {
       throw PortableProjectError.unsupportedSchema
     }
     guard !manifest.project.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
@@ -790,6 +963,11 @@ enum PortableProjectCodec {
     else {
       throw PortableProjectError.invalidManifest
     }
+    guard
+      (manifest.researchReferences ?? []).allSatisfy({ reference in
+        URLValidator.isSafeRemote(reference.record.canonicalURL)
+      })
+    else { throw PortableProjectError.invalidManifest }
   }
 
   static func importedPayload(
@@ -846,6 +1024,11 @@ enum PortableProjectCodec {
         DuplicateDecisionRecord(
           projectID: project.id, pairKey: $0.pairKey, decision: $0.decision,
           updatedAt: $0.updatedAt)
+      },
+      researchReferences: (manifest.researchReferences ?? []).map {
+        ResearchReferenceRecord(
+          projectID: project.id, record: $0.record, myNote: $0.myNote, tags: $0.tags,
+          addedAt: $0.addedAt, updatedAt: $0.updatedAt)
       })
   }
 
@@ -876,6 +1059,21 @@ enum PortableProjectCodec {
     }
     if let url = value.downloadURL, let string = LinkURLSecurity.redactedString(url) {
       value.downloadURL = URL(string: string)
+    }
+    return value
+  }
+
+  private static func sanitized(_ record: ResearchRecord) -> ResearchRecord {
+    var value = record
+    value.title = ProjectExportSanitizer.redactedContent(value.title)
+    value.summary = value.summary.map(ProjectExportSanitizer.redactedContent)
+    value.authors = value.authors.map(ProjectExportSanitizer.redactedContent)
+    value.license = value.license.map(ProjectExportSanitizer.redactedContent)
+    value.providerMetadata = ProjectExportSanitizer.sanitizedMetadata(value.providerMetadata)
+    value.relatedMediaQueryHints = value.relatedMediaQueryHints.map(
+      ProjectExportSanitizer.redactedContent)
+    if let safe = LinkURLSecurity.redactedString(value.canonicalURL), let url = URL(string: safe) {
+      value.canonicalURL = url
     }
     return value
   }

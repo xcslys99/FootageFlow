@@ -6,6 +6,8 @@
 
 A free and open-source desktop app for macOS and Windows that helps video creators search footage across multiple sources and download supported media from pasted links.
 
+**Research topics, save references, and keep sources with your project.**
+
 [![Latest Release](https://img.shields.io/github/v/release/xcslys99/FootageFlow?display_name=tag&sort=semver)](https://github.com/xcslys99/FootageFlow/releases/latest)
 [![CI](https://github.com/xcslys99/FootageFlow/actions/workflows/ci.yml/badge.svg)](https://github.com/xcslys99/FootageFlow/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
@@ -53,6 +55,12 @@ FootageFlow is designed for documentary, history, country profile, finance, scie
 6. Open **Project Actions** to generate credits, export a source/attribution report, audit rights, make a portable backup, scan duplicates, or create a contact sheet.
 7. Keep the generated source sidecars with the project and verify current rights before publishing.
 
+### Research & Culture workspace
+
+Use **Media / Research / All** to keep footage discovery and source research clear. Research mode searches Wikipedia, Wikidata, The Met, Art Institute of Chicago, Crossref, and GDELT through their public interfaces. Save a record to **Research Notes**, write a local note and tags, copy its metadata-based citation, refresh it later, or use **Find Related Media** to return to the existing 17-source media workflow.
+
+Research records are references, not automatically cleared media. Crossref never downloads paper full text, GDELT is discovery-only, and Wikipedia previews require a separate Wikimedia Commons rights check before reuse. **Add as Media** appears only for Met/AIC records whose provider explicitly reports Public Domain and a public original-image URL; it is not inferred from a preview or page. See [Research & Culture workflow](docs/RESEARCH_WORKFLOW.md).
+
 If you already know the media URL, Link Downloader uses the same project, download, history, and sidecar system. Optional foreground-only clipboard detection can recognize copied public media links locally; it is disabled by default and never uploads clipboard contents.
 
 ## Screenshots
@@ -75,6 +83,18 @@ These screenshots are from FootageFlow on macOS. The Windows edition follows the
 
 ![FootageFlow local duplicate review with non-destructive project actions](docs/images/project-duplicate-detection-v080.png)
 
+![FootageFlow Research mode with separated cultural and reference records](docs/images/research-mode-v090.png)
+
+![FootageFlow Crossref research records with DOI metadata and source citations](docs/images/research-crossref-v090.png)
+
+![FootageFlow combined All mode keeps media and research in separate groups](docs/images/research-all-v090.png)
+
+![FootageFlow Find Related Media returns to the existing downloadable media workflow](docs/images/research-related-media-v090.png)
+
+![FootageFlow only offers Add as Media on source-confirmed public-domain museum records](docs/images/research-public-domain-media-v090.png)
+
+![FootageFlow project Research Notes with plain-text notes and citations](docs/images/research-notes-v090.png)
+
 ## Features
 
 - Progressive search across 17 sources with Provider failure isolation
@@ -83,6 +103,8 @@ These screenshots are from FootageFlow on macOS. The Windows edition follows the
 - Source, media type, year, duration, resolution, rights, and downloadability filters
 - Video/image preview, batch selection, projects, favorites, and history
 - Project attribution reports in Markdown, CSV, JSON, and HTML; concise/detailed credits; and rights audit
+- Media / Research / All search modes with Wikipedia, Wikidata, The Met, Art Institute of Chicago, Crossref, and GDELT
+- Local Research Notes, provider-fact citations, related-media queries, research-reference export, and portable project references
 - Portable `.footageflowproject` backup/import with no bundled media, credentials, or absolute paths
 - Local-first duplicate detection and numbered contact-sheet PNG export
 - Full-media and clip downloads with original, M4A, or editing-compatible MP4 output
@@ -152,7 +174,7 @@ Always verify the original source page before reuse. See [Rights and attribution
 
 ## Project handoff
 
-Project Actions can export Markdown/CSV/JSON/HTML attribution reports, generate credits, run a Rights Audit, create a portable cross-platform `.footageflowproject` backup, identify likely duplicates, and generate a contact-sheet PNG. Reports exclude local absolute paths by default; backup files never contain media binaries, API keys, cookies, tokens, or absolute paths. Imported media that is not present on the new computer remains in the project and is clearly marked **Local media file not found**. See [Project workflow, export, and attribution](docs/PROJECT_WORKFLOW.md).
+Project Actions can export Markdown/CSV/JSON/HTML Media Sources, Research References, or a Combined Project Report; generate credits; run a Rights Audit; create a portable cross-platform `.footageflowproject` backup; identify likely duplicates; and generate a contact-sheet PNG. Reports exclude local absolute paths by default; backup files never contain media binaries, API keys, cookies, tokens, or absolute paths. Imported media that is not present on the new computer remains in the project and is clearly marked **Local media file not found**. See [Project workflow, export, and attribution](docs/PROJECT_WORKFLOW.md) and [Research & Culture workflow](docs/RESEARCH_WORKFLOW.md).
 
 FootageFlow has no analytics, advertising, telemetry SDK, or FootageFlow cloud account. Searches are sent only to the enabled Providers required to perform the request. Projects, scripts, favorites, history, and API keys remain on the device; the operating system's secure credential store holds optional keys.
 

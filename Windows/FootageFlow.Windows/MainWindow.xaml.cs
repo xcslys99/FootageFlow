@@ -107,20 +107,30 @@ public partial class MainWindow : Window
     private void ProjectExport_Click(object sender, RoutedEventArgs e)
     {
         var menu = new ContextMenu();
-        foreach (var (label, format) in new[]
+        foreach (var (sectionLabel, section) in new[]
         {
-            (_viewModel.T("project.reportMarkdown"), "md"), (_viewModel.T("project.reportCSV"), "csv"),
-            (_viewModel.T("project.reportJSON"), "json"), (_viewModel.T("project.reportHTML"), "html")
+            (_viewModel.T("project.attributionReport"), "mediaSources"),
+            (_viewModel.T("research.exportReferences"), "researchReferences"),
+            (_viewModel.T("research.combinedReport"), "combined")
         })
         {
-            var item = new MenuItem { Header = label, Tag = format };
-            item.Click += async (_, _) => await SaveProjectReportAsync(format);
-            menu.Items.Add(item);
+            var sectionMenu = new MenuItem { Header = sectionLabel };
+            foreach (var (label, format) in new[]
+            {
+                (_viewModel.T("project.reportMarkdown"), "md"), (_viewModel.T("project.reportCSV"), "csv"),
+                (_viewModel.T("project.reportJSON"), "json"), (_viewModel.T("project.reportHTML"), "html")
+            })
+            {
+                var item = new MenuItem { Header = label, Tag = format };
+                item.Click += async (_, _) => await SaveProjectReportAsync(format, section);
+                sectionMenu.Items.Add(item);
+            }
+            menu.Items.Add(sectionMenu);
         }
         menu.PlacementTarget = sender as Button; menu.IsOpen = true;
     }
 
-    private async Task SaveProjectReportAsync(string format)
+    private async Task SaveProjectReportAsync(string format, string section)
     {
         var project = _viewModel.CurrentProject;
         if (project is null) return;
@@ -149,13 +159,13 @@ public partial class MainWindow : Window
         if (paths == MessageBoxResult.Cancel) return;
         var dialog = new SaveFileDialog
         {
-            FileName = $"{WindowsPathSafety.SanitizeName(project.Name)}-attribution.{format}",
+            FileName = $"{WindowsPathSafety.SanitizeName(project.Name)}-{section}.{format}",
             Filter = $"{format.ToUpperInvariant()} files (*.{format})|*.{format}"
         };
         if (dialog.ShowDialog(this) != true) return;
         try
         {
-            var data = await _viewModel.BuildProjectReportAsync(format, paths == MessageBoxResult.Yes);
+            var data = await _viewModel.BuildProjectReportAsync(format, section, paths == MessageBoxResult.Yes);
             if (data is not null) await File.WriteAllBytesAsync(dialog.FileName, data);
         }
         catch { MessageBox.Show(_viewModel.T("project.exportFailed"), "FootageFlow", MessageBoxButton.OK, MessageBoxImage.Warning); }
