@@ -632,7 +632,7 @@ public sealed class MainViewModel : ObservableObject
     public string HistoryTitle => T("search.history");
     public string SettingsTitle => T("nav.settings");
     public string SourcesTitle => T("settings.sourcesProviders");
-    public string ResearchSourcesTitle => $"{SearchScopeResearchText} {T(\"filter.source\")}";
+    public string ResearchSourcesTitle => $"{SearchScopeResearchText} {T("filter.source")}";
     public string ApiExplanation => T("settings.optionalAPIExplanation");
     public string PrivacyTitle => T("settings.privacy");
     public string PrivacyBody => T("settings.privacyBody");
