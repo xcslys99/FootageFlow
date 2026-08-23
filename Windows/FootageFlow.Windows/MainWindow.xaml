@@ -410,13 +410,13 @@
                   <StackPanel>
                     <TextBlock Text="{Binding ProjectDashboardText}" FontWeight="SemiBold" />
                     <WrapPanel Margin="0,5,0,0">
-                      <TextBlock Margin="0,0,14,3"><Run Text="{Binding DataContext.FavoritesTitle, RelativeSource={RelativeSource AncestorType=Window}}" /><Run Text=": " /><Run Text="{Binding ProjectDashboardFavoriteCount}" /></TextBlock>
-                      <TextBlock Margin="0,0,14,3"><Run Text="{Binding DataContext.DownloadsTitle, RelativeSource={RelativeSource AncestorType=Window}}" /><Run Text=": " /><Run Text="{Binding ProjectDashboardDownloadCount}" /></TextBlock>
-                      <TextBlock Margin="0,0,14,3"><Run Text="{Binding DataContext.ResearchSourcesTitle, RelativeSource={RelativeSource AncestorType=Window}}" /><Run Text=": " /><Run Text="{Binding ProjectDashboardResearchReferenceCount}" /></TextBlock>
-                      <TextBlock Margin="0,0,14,3"><Run Text="{Binding DataContext.ResearchNotesText, RelativeSource={RelativeSource AncestorType=Window}}" /><Run Text=": " /><Run Text="{Binding ProjectDashboardResearchNoteCount}" /></TextBlock>
-                      <TextBlock Margin="0,0,14,3"><Run Text="{Binding DataContext.LicenseUnknownText, RelativeSource={RelativeSource AncestorType=Window}}" /><Run Text=": " /><Run Text="{Binding ProjectDashboardUnknownRightsCount}" /></TextBlock>
-                      <TextBlock Margin="0,0,14,3"><Run Text="{Binding DataContext.LicenseAttributionText, RelativeSource={RelativeSource AncestorType=Window}}" /><Run Text=": " /><Run Text="{Binding ProjectDashboardAttributionRequiredCount}" /></TextBlock>
-                      <TextBlock><Run Text="{Binding DataContext.MissingLocalMediaText, RelativeSource={RelativeSource AncestorType=Window}}" /><Run Text=": " /><Run Text="{Binding ProjectDashboardMissingLocalMediaCount}" /></TextBlock>
+                      <TextBlock Margin="0,0,14,3"><Run Text="{Binding DataContext.FavoritesTitle, Mode=OneWay, RelativeSource={RelativeSource AncestorType=Window}}" /><Run Text=": " /><Run Text="{Binding ProjectDashboardFavoriteCount, Mode=OneWay}" /></TextBlock>
+                      <TextBlock Margin="0,0,14,3"><Run Text="{Binding DataContext.DownloadsTitle, Mode=OneWay, RelativeSource={RelativeSource AncestorType=Window}}" /><Run Text=": " /><Run Text="{Binding ProjectDashboardDownloadCount, Mode=OneWay}" /></TextBlock>
+                      <TextBlock Margin="0,0,14,3"><Run Text="{Binding DataContext.ResearchSourcesTitle, Mode=OneWay, RelativeSource={RelativeSource AncestorType=Window}}" /><Run Text=": " /><Run Text="{Binding ProjectDashboardResearchReferenceCount, Mode=OneWay}" /></TextBlock>
+                      <TextBlock Margin="0,0,14,3"><Run Text="{Binding DataContext.ResearchNotesText, Mode=OneWay, RelativeSource={RelativeSource AncestorType=Window}}" /><Run Text=": " /><Run Text="{Binding ProjectDashboardResearchNoteCount, Mode=OneWay}" /></TextBlock>
+                      <TextBlock Margin="0,0,14,3"><Run Text="{Binding DataContext.LicenseUnknownText, Mode=OneWay, RelativeSource={RelativeSource AncestorType=Window}}" /><Run Text=": " /><Run Text="{Binding ProjectDashboardUnknownRightsCount, Mode=OneWay}" /></TextBlock>
+                      <TextBlock Margin="0,0,14,3"><Run Text="{Binding DataContext.LicenseAttributionText, Mode=OneWay, RelativeSource={RelativeSource AncestorType=Window}}" /><Run Text=": " /><Run Text="{Binding ProjectDashboardAttributionRequiredCount, Mode=OneWay}" /></TextBlock>
+                      <TextBlock><Run Text="{Binding DataContext.MissingLocalMediaText, Mode=OneWay, RelativeSource={RelativeSource AncestorType=Window}}" /><Run Text=": " /><Run Text="{Binding ProjectDashboardMissingLocalMediaCount, Mode=OneWay}" /></TextBlock>
                     </WrapPanel>
                   </StackPanel>
                 </Border>
