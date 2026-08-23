@@ -1,6 +1,6 @@
 # Research & Culture workflow
 
-FootageFlow v0.9.0 adds a local-first research workspace alongside the existing media search. It does not turn research pages, papers, news stories, or museum records into automatically reusable footage.
+FootageFlow v0.9.0 added a local-first research workspace alongside the existing media search. FootageFlow v0.10.0 can also find already-saved research references through its local-only Global Search. Neither capability turns research pages, papers, news stories, or museum records into automatically reusable footage.
 
 ## Search modes
 

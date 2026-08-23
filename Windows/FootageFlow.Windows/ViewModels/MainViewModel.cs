@@ -57,6 +57,12 @@ public sealed class MainViewModel : ObservableObject
     private string _selectedRightsAuditFilter = "all";
     private string _projectActionStatus = "";
     private bool _isProjectWorking;
+    private bool _isCommandPaletteOpen;
+    private bool _isGlobalSearchOpen;
+    private string _commandPaletteQuery = "";
+    private string _workspaceQuery = "";
+    private string _workspaceStatus = "";
+    private CancellationTokenSource? _workspaceSearchCancellation;
     private static readonly SemaphoreSlim SearchNetworkLimit = new(12, 12);
 
     public MainViewModel()
@@ -64,6 +70,9 @@ public sealed class MainViewModel : ObservableObject
         _localization = new LocalizationService(_settings);
         _localization.LanguageChanged += (_, _) => RefreshLanguage();
         Downloads = new DownloadQueueService(_core, _settings, _ytDlp, _localization);
+        WorkspaceSearchResultsView = CollectionViewSource.GetDefaultView(WorkspaceSearchResults);
+        WorkspaceSearchResultsView.GroupDescriptions.Add(
+            new PropertyGroupDescription(nameof(WorkspaceSearchEntry.SectionTitle)));
         Downloads.DownloadCompleted += (_, _) => _ = LoadDatabaseAsync();
         ResultsView = CollectionViewSource.GetDefaultView(Results);
         ResultsView.Filter = value => value is MediaAsset asset && MatchesFilters(asset);
@@ -210,6 +219,23 @@ public sealed class MainViewModel : ObservableObject
         });
         OpenFeedbackCommand = new AsyncRelayCommand(value => OpenFeedbackAsync(value?.ToString()));
         CheckForUpdatesCommand = new AsyncRelayCommand(_ => CheckForUpdatesAsync(manual: true), _ => !IsUpdateChecking);
+        ShowCommandPaletteCommand = new RelayCommand(_ => IsCommandPaletteOpen = true);
+        CloseCommandPaletteCommand = new RelayCommand(_ => IsCommandPaletteOpen = false);
+        ExecuteWorkspaceCommand = new AsyncRelayCommand(value => ExecuteWorkspaceCommandAsync(value?.ToString()));
+        ShowGlobalSearchCommand = new RelayCommand(_ => IsGlobalSearchOpen = true);
+        CloseGlobalSearchCommand = new RelayCommand(_ => IsGlobalSearchOpen = false);
+        SearchWorkspaceCommand = new AsyncRelayCommand(_ => SearchWorkspaceAsync());
+        OpenWorkspaceResultCommand = new AsyncRelayCommand(value => OpenWorkspaceResultAsync(value as WorkspaceSearchEntry));
+        SaveSearchCommand = new AsyncRelayCommand(_ => SaveCurrentSearchAsync(), _ => !string.IsNullOrWhiteSpace(Query));
+        RunSavedSearchCommand = new AsyncRelayCommand(value => RunSavedSearchAsync(value as SavedSearchRecord));
+        RenameSavedSearchCommand = new AsyncRelayCommand(value => RenameSavedSearchAsync(value as SavedSearchRecord));
+        DeleteSavedSearchCommand = new AsyncRelayCommand(value => DeleteSavedSearchAsync(value as SavedSearchRecord));
+        DuplicateSavedSearchCommand = new AsyncRelayCommand(value => DuplicateSavedSearchAsync(value as SavedSearchRecord));
+        TestWorkspaceProviderCommand = new AsyncRelayCommand(value => TestWorkspaceProviderAsync(value?.ToString()));
+        TestAllWorkspaceProvidersCommand = new AsyncRelayCommand(_ => TestAllWorkspaceProvidersAsync());
+        OpenSmartCollectionCommand = new RelayCommand(value =>
+            CurrentPage = (value as WorkspaceSmartCollection)?.Destination ?? "workspace");
+        RefreshWorkspaceCommands();
         RefreshProviderModes();
         SearchStatus = T("search.initialStatus");
         _ = LoadDatabaseAsync();
@@ -217,6 +243,7 @@ public sealed class MainViewModel : ObservableObject
 
     public event Action<MediaAsset?>? PreviewRequested;
     public event Action<AppReleaseInfo>? UpdateAvailable;
+    public event Action? FocusSearchRequested;
     public DownloadQueueService Downloads { get; }
     public ObservableCollection<ProviderOption> Providers { get; }
     public ObservableCollection<ProviderOption> ResearchProviders { get; }
@@ -236,6 +263,13 @@ public sealed class MainViewModel : ObservableObject
     public ObservableCollection<string> ScriptSegments { get; } = [];
     public ObservableCollection<LinkDownloadItem> LinkItems { get; } = [];
     public ObservableCollection<DuplicateGroup> DuplicateGroups { get; } = [];
+    public ObservableCollection<SavedSearchRecord> SavedSearches { get; } = [];
+    public ObservableCollection<ProviderHealthRecord> ProviderHealth { get; } = [];
+    public ObservableCollection<WorkspaceSearchEntry> WorkspaceSearchResults { get; } = [];
+    public ICollectionView WorkspaceSearchResultsView { get; }
+    public ObservableCollection<WorkspaceCommandItem> WorkspaceCommands { get; } = [];
+    public ObservableCollection<WorkspaceCommandItem> WorkspaceShortcutReference { get; } = [];
+    public ObservableCollection<WorkspaceSmartCollection> WorkspaceSmartCollections { get; } = [];
 
     public ICommand NavigateCommand { get; }
     public ICommand SearchCommand { get; }
@@ -300,6 +334,21 @@ public sealed class MainViewModel : ObservableObject
     public ICommand DisableClipboardCommand { get; }
     public ICommand OpenFeedbackCommand { get; }
     public ICommand CheckForUpdatesCommand { get; }
+    public ICommand ShowCommandPaletteCommand { get; }
+    public ICommand CloseCommandPaletteCommand { get; }
+    public ICommand ExecuteWorkspaceCommand { get; }
+    public ICommand ShowGlobalSearchCommand { get; }
+    public ICommand CloseGlobalSearchCommand { get; }
+    public ICommand SearchWorkspaceCommand { get; }
+    public ICommand OpenWorkspaceResultCommand { get; }
+    public ICommand SaveSearchCommand { get; }
+    public ICommand RunSavedSearchCommand { get; }
+    public ICommand RenameSavedSearchCommand { get; }
+    public ICommand DeleteSavedSearchCommand { get; }
+    public ICommand DuplicateSavedSearchCommand { get; }
+    public ICommand TestWorkspaceProviderCommand { get; }
+    public ICommand TestAllWorkspaceProvidersCommand { get; }
+    public ICommand OpenSmartCollectionCommand { get; }
 
     public string CurrentPage
     {
@@ -308,6 +357,7 @@ public sealed class MainViewModel : ObservableObject
         {
             if (!Set(ref _currentPage, value)) return;
             OnPropertyChanged(nameof(IsSearchPage)); OnPropertyChanged(nameof(IsScriptPage));
+            OnPropertyChanged(nameof(IsWorkspacePage));
             OnPropertyChanged(nameof(IsProjectsPage)); OnPropertyChanged(nameof(IsFavoritesPage));
             OnPropertyChanged(nameof(IsDownloadsPage)); OnPropertyChanged(nameof(IsHistoryPage));
             OnPropertyChanged(nameof(IsSettingsPage));
@@ -316,6 +366,7 @@ public sealed class MainViewModel : ObservableObject
         }
     }
     public bool IsSearchPage => CurrentPage == "search";
+    public bool IsWorkspacePage => CurrentPage == "workspace";
     public bool IsScriptPage => CurrentPage == "script";
     public bool IsProjectsPage => CurrentPage == "projects";
     public bool IsFavoritesPage => CurrentPage == "favorites";
@@ -325,6 +376,23 @@ public sealed class MainViewModel : ObservableObject
     public bool IsLinkDownloaderPage => CurrentPage == "linkDownloader";
     public bool IsFeedbackPage => CurrentPage == "feedback";
     public string Query { get => _query; set => Set(ref _query, value); }
+    public bool IsCommandPaletteOpen { get => _isCommandPaletteOpen; set => Set(ref _isCommandPaletteOpen, value); }
+    public bool IsGlobalSearchOpen { get => _isGlobalSearchOpen; set => Set(ref _isGlobalSearchOpen, value); }
+    public string CommandPaletteQuery
+    {
+        get => _commandPaletteQuery;
+        set { if (Set(ref _commandPaletteQuery, value)) RefreshWorkspaceCommands(); }
+    }
+    public string WorkspaceQuery
+    {
+        get => _workspaceQuery;
+        set
+        {
+            if (!Set(ref _workspaceQuery, value)) return;
+            _ = ScheduleWorkspaceSearchAsync();
+        }
+    }
+    public string WorkspaceStatus { get => _workspaceStatus; private set => Set(ref _workspaceStatus, value); }
     public string SearchScope
     {
         get => _searchScope;
@@ -462,6 +530,7 @@ public sealed class MainViewModel : ObservableObject
             HistoryView.Refresh();
             DownloadRecordsView.Refresh();
             OnPropertyChanged(nameof(CurrentResearchReferences));
+            RefreshProjectDashboard();
             RightsAudit = null;
             DuplicateGroups.Clear();
             if (value is not null) _ = RefreshRightsAuditAsync();
@@ -545,7 +614,7 @@ public sealed class MainViewModel : ObservableObject
         get
         {
             var version = typeof(MainViewModel).Assembly.GetName().Version;
-            return version is null ? "0.9.0" : $"{version.Major}.{version.Minor}.{Math.Max(0, version.Build)}";
+            return version is null ? "0.10.0" : $"{version.Major}.{version.Minor}.{Math.Max(0, version.Build)}";
         }
     }
     public bool IsUpdateChecking
@@ -570,6 +639,7 @@ public sealed class MainViewModel : ObservableObject
 
     public string T(string key) => _localization.Text(key);
     public string NavSearch => T("nav.quickSearch");
+    public string NavWorkspace => T("nav.workspace");
     public string NavScript => T("nav.scriptSearch");
     public string NavLinkDownloader => T("nav.linkDownloader");
     public string NavProjects => T("nav.projects");
@@ -631,6 +701,23 @@ public sealed class MainViewModel : ObservableObject
     public string DownloadsTitle => T("download.title");
     public string HistoryTitle => T("search.history");
     public string SettingsTitle => T("nav.settings");
+    public string WorkspaceTitle => T("nav.workspace");
+    public string WorkspaceTagline => T("workspace.tagline");
+    public string WorkspaceGlobalSearchText => T("workspace.globalSearch");
+    public string WorkspaceCommandPaletteText => T("workspace.commandPalette");
+    public string WorkspaceSavedSearchesText => T("workspace.savedSearches");
+    public string WorkspaceSmartCollectionsText => T("workspace.smartCollections");
+    public string WorkspaceProviderHealthText => T("workspace.providerHealth");
+    public string WorkspaceShortcutsText => T("workspace.shortcuts");
+    public string ProjectDashboardText => T("workspace.projectDashboard");
+    public string WorkspaceSearchPlaceholder => T("workspace.globalSearchPlaceholder");
+    public string WorkspaceCommandPlaceholder => T("workspace.commandPalettePlaceholder");
+    public string WorkspaceRunText => T("workspace.run");
+    public string WorkspaceTestText => T("workspace.test");
+    public string WorkspaceTestAllText => T("workspace.testAll");
+    public string WorkspaceSaveSearchText => T("workspace.saveSearch");
+    public string WorkspaceRenameText => T("workspace.rename");
+    public string WorkspaceDuplicateText => T("workspace.duplicate");
     public string SourcesTitle => T("settings.sourcesProviders");
     public string ResearchSourcesTitle => $"{SearchScopeResearchText} {T("filter.source")}";
     public string ApiExplanation => T("settings.optionalAPIExplanation");
@@ -1654,6 +1741,246 @@ public sealed class MainViewModel : ObservableObject
         ApplyDatabase(response.Database);
     }
 
+    private void RefreshWorkspaceCommands()
+    {
+        var query = CommandPaletteQuery.Trim();
+        var values = new[]
+        {
+            new WorkspaceCommandItem { Id = "searchMedia", Title = T("workspace.command.searchMedia.title"), Detail = T("workspace.command.searchMedia.subtitle") },
+            new WorkspaceCommandItem { Id = "searchResearch", Title = T("workspace.command.searchResearch.title"), Detail = T("workspace.command.searchResearch.subtitle") },
+            new WorkspaceCommandItem { Id = "searchAll", Title = T("workspace.command.searchAll.title"), Detail = T("workspace.command.searchAll.subtitle") },
+            new WorkspaceCommandItem { Id = "focusSearch", Title = T("workspace.command.focusSearch.title"), Detail = T("workspace.command.focusSearch.subtitle"), Shortcut = "Ctrl+F" },
+            new WorkspaceCommandItem { Id = "clearSearch", Title = T("workspace.command.clearSearch.title"), Detail = T("workspace.command.clearSearch.subtitle") },
+            new WorkspaceCommandItem { Id = "globalSearch", Title = T("workspace.command.globalSearch.title"), Detail = T("workspace.command.globalSearch.subtitle"), Shortcut = "Ctrl+Shift+G" },
+            new WorkspaceCommandItem { Id = "newProject", Title = T("workspace.command.newProject.title"), Detail = T("workspace.command.newProject.subtitle"), Shortcut = "Ctrl+N" },
+            new WorkspaceCommandItem { Id = "openProjects", Title = T("workspace.command.openProjects.title"), Detail = T("workspace.command.openProjects.subtitle"), Shortcut = "Ctrl+O" },
+            new WorkspaceCommandItem { Id = "openResearchNotes", Title = T("workspace.command.openResearchNotes.title"), Detail = T("workspace.command.openResearchNotes.subtitle"), Shortcut = "Ctrl+Shift+R" },
+            new WorkspaceCommandItem { Id = "openRightsAudit", Title = T("workspace.command.openRightsAudit.title"), Detail = T("workspace.command.openRightsAudit.subtitle") },
+            new WorkspaceCommandItem { Id = "generateCredits", Title = T("workspace.command.generateCredits.title"), Detail = T("workspace.command.generateCredits.subtitle") },
+            new WorkspaceCommandItem { Id = "exportProject", Title = T("workspace.command.exportProject.title"), Detail = T("workspace.command.exportProject.subtitle") },
+            new WorkspaceCommandItem { Id = "findDuplicates", Title = T("workspace.command.findDuplicates.title"), Detail = T("workspace.command.findDuplicates.subtitle") },
+            new WorkspaceCommandItem { Id = "generateContactSheet", Title = T("workspace.command.generateContactSheet.title"), Detail = T("workspace.command.generateContactSheet.subtitle") },
+            new WorkspaceCommandItem { Id = "openFavorites", Title = T("workspace.command.openFavorites.title"), Detail = T("workspace.command.openFavorites.subtitle"), Shortcut = "Ctrl+Shift+F" },
+            new WorkspaceCommandItem { Id = "openDownloads", Title = T("workspace.command.openDownloads.title"), Detail = T("workspace.command.openDownloads.subtitle"), Shortcut = "Ctrl+Shift+D" },
+            new WorkspaceCommandItem { Id = "openHistory", Title = T("workspace.command.openHistory.title"), Detail = T("workspace.command.openHistory.subtitle") },
+            new WorkspaceCommandItem { Id = "openSavedSearches", Title = T("workspace.command.openSavedSearches.title"), Detail = T("workspace.command.openSavedSearches.subtitle") },
+            new WorkspaceCommandItem { Id = "openSmartCollections", Title = T("workspace.command.openSmartCollections.title"), Detail = T("workspace.command.openSmartCollections.subtitle") },
+            new WorkspaceCommandItem { Id = "openProviderHealth", Title = T("workspace.command.openProviderHealth.title"), Detail = T("workspace.command.openProviderHealth.subtitle") },
+            new WorkspaceCommandItem { Id = "openSettings", Title = T("workspace.command.openSettings.title"), Detail = T("workspace.command.openSettings.subtitle"), Shortcut = "Ctrl+," },
+            new WorkspaceCommandItem { Id = "checkForUpdates", Title = T("workspace.command.checkForUpdates.title"), Detail = T("workspace.command.checkForUpdates.subtitle") },
+            new WorkspaceCommandItem { Id = "retryFailedDownloads", Title = T("workspace.command.retryFailedDownloads.title"), Detail = T("workspace.command.retryFailedDownloads.subtitle") }
+        };
+        Replace(WorkspaceShortcutReference, values.Where(value => !string.IsNullOrWhiteSpace(value.Shortcut)));
+        if (!string.IsNullOrWhiteSpace(query))
+            values = values.Where(value => FuzzyMatches($"{value.Title} {value.Detail} {value.Id}", query)).ToArray();
+        Replace(WorkspaceCommands, values);
+    }
+
+    private async Task ExecuteWorkspaceCommandAsync(string? command)
+    {
+        IsCommandPaletteOpen = false;
+        switch (command)
+        {
+            case "searchMedia": SearchScope = "media"; CurrentPage = "search"; FocusSearchRequested?.Invoke(); break;
+            case "searchResearch": SearchScope = "research"; CurrentPage = "search"; FocusSearchRequested?.Invoke(); break;
+            case "searchAll": SearchScope = "all"; CurrentPage = "search"; FocusSearchRequested?.Invoke(); break;
+            case "focusSearch": CurrentPage = "search"; FocusSearchRequested?.Invoke(); break;
+            case "clearSearch": ClearCurrentSearch(); CurrentPage = "search"; FocusSearchRequested?.Invoke(); break;
+            case "globalSearch": IsGlobalSearchOpen = true; break;
+            case "newProject": CurrentPage = "projects"; NewProjectName = ""; break;
+            case "openProjects": case "openResearchNotes": case "openRightsAudit": case "generateCredits":
+            case "exportProject": case "findDuplicates": case "generateContactSheet":
+                CurrentPage = "projects"; break;
+            case "openFavorites": CurrentPage = "favorites"; break;
+            case "openDownloads": CurrentPage = "downloads"; break;
+            case "openHistory": CurrentPage = "history"; break;
+            case "openSavedSearches": CurrentPage = "workspace"; break;
+            case "openSmartCollections": CurrentPage = "workspace"; break;
+            case "openProviderHealth": CurrentPage = "workspace"; break;
+            case "openSettings": CurrentPage = "settings"; break;
+            case "checkForUpdates": await CheckForUpdatesAsync(manual: true); break;
+            case "retryFailedDownloads": Downloads.RetryFailed(); CurrentPage = "downloads"; break;
+        }
+    }
+
+    private static bool FuzzyMatches(string value, string query)
+    {
+        var normalizedValue = value.Replace(" ", "", StringComparison.Ordinal).ToUpperInvariant();
+        var normalizedQuery = query.Replace(" ", "", StringComparison.Ordinal).ToUpperInvariant();
+        var cursor = 0;
+        foreach (var character in normalizedQuery)
+        {
+            cursor = normalizedValue.IndexOf(character, cursor);
+            if (cursor < 0) return false;
+            cursor++;
+        }
+        return true;
+    }
+
+    private void ClearCurrentSearch()
+    {
+        _searchCancellation?.Cancel();
+        Query = "";
+        SearchKeywords.Clear();
+        Results.Clear();
+        ResearchResults.Clear();
+        _candidateResults.Clear();
+        _continuations.Clear();
+        _researchContinuations.Clear();
+        SearchStatus = T("search.initialStatus");
+    }
+
+    private async Task ScheduleWorkspaceSearchAsync()
+    {
+        _workspaceSearchCancellation?.Cancel();
+        var cancellation = new CancellationTokenSource();
+        _workspaceSearchCancellation = cancellation;
+        try
+        {
+            await Task.Delay(180, cancellation.Token);
+            await SearchWorkspaceAsync(cancellation.Token);
+        }
+        catch (OperationCanceledException) { }
+    }
+
+    private async Task SearchWorkspaceAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            WorkspaceStatus = T("search.searchingOthers");
+            var response = await _core.SendAsync(new CoreRequest
+            {
+                Action = "workspaceSearch", Query = WorkspaceQuery, Language = _settings.Current.Language
+            }, timeout: TimeSpan.FromSeconds(5), cancellationToken: cancellationToken);
+            var entries = response.WorkspaceEntries ?? [];
+            foreach (var entry in entries) entry.SectionTitle = T($"workspace.kind.{entry.Kind}");
+            Replace(WorkspaceSearchResults, entries);
+            WorkspaceSearchResultsView.Refresh();
+            WorkspaceStatus = WorkspaceSearchResults.Count == 0 ? T("search.noResults") :
+                _localization.Text("search.found", WorkspaceSearchResults.Count);
+        }
+        catch (OperationCanceledException) { }
+        catch { WorkspaceStatus = T("workspace.searchUnavailable"); }
+    }
+
+    private async Task OpenWorkspaceResultAsync(WorkspaceSearchEntry? entry)
+    {
+        if (entry is null) return;
+        IsGlobalSearchOpen = false;
+        switch (entry.Kind)
+        {
+            case "project": case "researchReference": case "researchNote": CurrentPage = "projects"; break;
+            case "favorite": case "media": CurrentPage = "favorites"; break;
+            case "download": CurrentPage = "downloads"; break;
+            case "localFile": if (!string.IsNullOrWhiteSpace(entry.LocalPath)) ShellService.Reveal(entry.LocalPath); break;
+            case "searchHistory":
+                Query = entry.Title;
+                CurrentPage = "search";
+                await RegenerateKeywordsAsync();
+                break;
+            case "savedSearch":
+                if (Guid.TryParse(entry.Id.Replace("savedSearch:", "", StringComparison.Ordinal), out var savedID))
+                    await RunSavedSearchAsync(SavedSearches.FirstOrDefault(value => value.Id == savedID));
+                break;
+        }
+    }
+
+    private async Task SaveCurrentSearchAsync()
+    {
+        var clean = Query.Trim();
+        if (clean.Length == 0) return;
+        var response = await _core.SendAsync(new CoreRequest
+        {
+            Action = "addSavedSearch", Language = _settings.Current.Language,
+            SavedSearch = new SavedSearchRecord
+            {
+                Id = Guid.NewGuid(), Name = clean, Query = clean, Keywords = SearchKeywords.ToArray(),
+                SearchScope = SearchScope, MediaType = MediaType, Orientation = Orientation,
+                Resolution = Resolution, Duration = Duration, LicenseFilter = LicenseFilter,
+                YearFrom = int.TryParse(YearFrom, out var from) ? from : null,
+                YearTo = int.TryParse(YearTo, out var to) ? to : null,
+                DownloadableOnly = DownloadableOnly, RelevanceMode = RelevanceMode,
+                ProviderIDs = Providers.Where(item => item.Enabled).Select(item => item.Id).ToArray(),
+                CreatedAt = DateTimeOffset.UtcNow, UpdatedAt = DateTimeOffset.UtcNow
+            }
+        });
+        ApplyDatabase(response.Database);
+        CurrentPage = "workspace";
+    }
+
+    private async Task RunSavedSearchAsync(SavedSearchRecord? saved)
+    {
+        if (saved is null) return;
+        Query = saved.Query;
+        SearchScope = saved.SearchScope;
+        MediaType = saved.MediaType; Orientation = saved.Orientation; Resolution = saved.Resolution;
+        Duration = saved.Duration; LicenseFilter = saved.LicenseFilter;
+        YearFrom = saved.YearFrom?.ToString() ?? ""; YearTo = saved.YearTo?.ToString() ?? "";
+        DownloadableOnly = saved.DownloadableOnly; RelevanceMode = saved.RelevanceMode;
+        foreach (var provider in Providers) provider.Enabled = saved.ProviderIDs.Contains(provider.Id);
+        SearchKeywords.Clear();
+        foreach (var keyword in saved.Keywords) SearchKeywords.Add(keyword);
+        _keywordSourceQuery = Query;
+        CurrentPage = "search";
+        await SearchAsync();
+    }
+
+    private async Task RenameSavedSearchAsync(SavedSearchRecord? saved)
+    {
+        if (saved is null) return;
+        var response = await _core.SendAsync(new CoreRequest
+        { Action = "updateSavedSearch", SavedSearch = saved, Language = _settings.Current.Language });
+        ApplyDatabase(response.Database);
+    }
+
+    private async Task DeleteSavedSearchAsync(SavedSearchRecord? saved)
+    {
+        if (saved is null) return;
+        var response = await _core.SendAsync(new CoreRequest
+        { Action = "deleteSavedSearch", SavedSearchID = saved.Id.ToString(), Language = _settings.Current.Language });
+        ApplyDatabase(response.Database);
+    }
+
+    private async Task DuplicateSavedSearchAsync(SavedSearchRecord? saved)
+    {
+        if (saved is null) return;
+        var response = await _core.SendAsync(new CoreRequest
+        { Action = "duplicateSavedSearch", SavedSearchID = saved.Id.ToString(), Language = _settings.Current.Language });
+        ApplyDatabase(response.Database);
+    }
+
+    private async Task TestWorkspaceProviderAsync(string? provider)
+    {
+        if (string.IsNullOrWhiteSpace(provider)) return;
+        var status = await TestProviderAsync(provider);
+        var state = status == T("settings.connectionSuccess") ? "healthy" :
+            status.Contains("rate", StringComparison.OrdinalIgnoreCase) ? "rateLimited" : "degraded";
+        var response = await _core.SendAsync(new CoreRequest
+        {
+            Action = "updateProviderHealth", Language = _settings.Current.Language,
+            ProviderHealthRecord = new ProviderHealthRecord
+            {
+                ProviderID = provider, State = state, Message = status,
+                TestedAt = DateTimeOffset.UtcNow
+            }
+        });
+        ApplyDatabase(response.Database);
+    }
+
+    private async Task TestAllWorkspaceProvidersAsync()
+    {
+        // Two concurrent, user-triggered checks avoid treating this view as an
+        // uptime monitor and keep provider quota usage intentionally modest.
+        using var limiter = new SemaphoreSlim(2, 2);
+        var tasks = Providers.Where(item => item.Enabled).Select(async item =>
+        {
+            await limiter.WaitAsync();
+            try { await TestWorkspaceProviderAsync(item.Id); }
+            finally { limiter.Release(); }
+        }).ToArray();
+        await Task.WhenAll(tasks);
+    }
+
     private async Task AnalyzeScriptAsync()
     {
         var response = await _core.SendAsync(new CoreRequest
@@ -1908,7 +2235,18 @@ public sealed class MainViewModel : ObservableObject
         foreach (var record in database.Downloads) record.WorkflowSummary = DownloadWorkflowSummary(record);
         Replace(DownloadRecords, database.Downloads.OrderByDescending(x => x.DownloadedAt));
         Replace(ResearchReferences, database.ResearchReferences.OrderByDescending(x => x.AddedAt));
+        Replace(SavedSearches, database.SavedSearches.OrderByDescending(x => x.UpdatedAt));
+        Replace(ProviderHealth, database.ProviderHealth);
+        RefreshWorkspaceSmartCollections();
+        RefreshProviderHealthStatuses();
         OnPropertyChanged(nameof(CurrentResearchReferences));
+        OnPropertyChanged(nameof(WorkspaceProjectCount));
+        OnPropertyChanged(nameof(WorkspaceDownloadCount));
+        OnPropertyChanged(nameof(WorkspaceFavoriteCount));
+        OnPropertyChanged(nameof(WorkspaceUnknownRightsCount));
+        OnPropertyChanged(nameof(WorkspaceAttributionRequiredCount));
+        OnPropertyChanged(nameof(WorkspaceMissingLocalMediaCount));
+        RefreshProjectDashboard();
         if (CurrentProject is not null) CurrentProject = Projects.FirstOrDefault(x => x.Id == CurrentProject.Id);
     }
 
@@ -1919,6 +2257,94 @@ public sealed class MainViewModel : ObservableObject
     }
 
     private bool MatchesProject(Guid? projectId) => CurrentProject is null || projectId == CurrentProject.Id;
+
+    public int WorkspaceProjectCount => Projects.Count;
+    public int WorkspaceDownloadCount => DownloadRecords.Count;
+    public int WorkspaceFavoriteCount => Favorites.Count;
+    public int WorkspaceUnknownRightsCount => Favorites.Count(item =>
+        string.Equals(item.LicenseStatusRaw, "UNKNOWN", StringComparison.OrdinalIgnoreCase))
+        + DownloadRecords.Count(item => string.Equals(item.Asset?.LicenseStatus, "UNKNOWN", StringComparison.OrdinalIgnoreCase));
+    public int WorkspaceAttributionRequiredCount => Favorites.Count(item =>
+        string.Equals(item.LicenseStatusRaw, "ATTRIBUTION_REQUIRED", StringComparison.OrdinalIgnoreCase))
+        + DownloadRecords.Count(item => string.Equals(item.Asset?.LicenseStatus, "ATTRIBUTION_REQUIRED", StringComparison.OrdinalIgnoreCase));
+    public int WorkspaceMissingLocalMediaCount => DownloadRecords.Count(item =>
+        !string.IsNullOrWhiteSpace(item.LocalPath) && !File.Exists(item.LocalPath));
+    public int ProjectDashboardFavoriteCount => CurrentProject is null ? 0 :
+        Favorites.Count(item => item.ProjectID == CurrentProject.Id);
+    public int ProjectDashboardDownloadCount => CurrentProject is null ? 0 :
+        DownloadRecords.Count(item => item.ProjectID == CurrentProject.Id);
+    public int ProjectDashboardResearchReferenceCount => CurrentProject is null ? 0 :
+        ResearchReferences.Count(item => item.ProjectID == CurrentProject.Id);
+    public int ProjectDashboardResearchNoteCount => CurrentProject is null ? 0 :
+        ResearchReferences.Count(item => item.ProjectID == CurrentProject.Id && !string.IsNullOrWhiteSpace(item.MyNote));
+    public int ProjectDashboardUnknownRightsCount => CurrentProject is null ? 0 :
+        Favorites.Count(item => item.ProjectID == CurrentProject.Id && string.Equals(item.LicenseStatusRaw, "UNKNOWN", StringComparison.OrdinalIgnoreCase))
+        + DownloadRecords.Count(item => item.ProjectID == CurrentProject.Id && string.Equals(item.Asset?.LicenseStatus, "UNKNOWN", StringComparison.OrdinalIgnoreCase));
+    public int ProjectDashboardAttributionRequiredCount => CurrentProject is null ? 0 :
+        Favorites.Count(item => item.ProjectID == CurrentProject.Id && string.Equals(item.LicenseStatusRaw, "ATTRIBUTION_REQUIRED", StringComparison.OrdinalIgnoreCase))
+        + DownloadRecords.Count(item => item.ProjectID == CurrentProject.Id && string.Equals(item.Asset?.LicenseStatus, "ATTRIBUTION_REQUIRED", StringComparison.OrdinalIgnoreCase));
+    public int ProjectDashboardMissingLocalMediaCount => CurrentProject is null ? 0 :
+        DownloadRecords.Count(item => item.ProjectID == CurrentProject.Id && !string.IsNullOrWhiteSpace(item.LocalPath) && !File.Exists(item.LocalPath));
+
+    private void RefreshProjectDashboard()
+    {
+        OnPropertyChanged(nameof(ProjectDashboardFavoriteCount));
+        OnPropertyChanged(nameof(ProjectDashboardDownloadCount));
+        OnPropertyChanged(nameof(ProjectDashboardResearchReferenceCount));
+        OnPropertyChanged(nameof(ProjectDashboardResearchNoteCount));
+        OnPropertyChanged(nameof(ProjectDashboardUnknownRightsCount));
+        OnPropertyChanged(nameof(ProjectDashboardAttributionRequiredCount));
+        OnPropertyChanged(nameof(ProjectDashboardMissingLocalMediaCount));
+    }
+
+    private void RefreshWorkspaceSmartCollections()
+    {
+        var duplicates = Favorites.Select(item => item.StableID)
+            .Concat(DownloadRecords.Select(item => item.StableAssetID))
+            .GroupBy(value => value, StringComparer.OrdinalIgnoreCase)
+            .Sum(group => Math.Max(0, group.Count() - 1));
+        var values = new[]
+        {
+            new WorkspaceSmartCollection { Id = "downloadedMedia", Title = T("smartCollection.downloadedMedia"), Count = DownloadRecords.Count, Destination = "downloads" },
+            new WorkspaceSmartCollection { Id = "recentDownloads", Title = T("smartCollection.recentDownloads"), Count = DownloadRecords.Count(item => item.DownloadedAt >= DateTimeOffset.UtcNow.AddDays(-30)), Destination = "downloads" },
+            new WorkspaceSmartCollection { Id = "recentFavorites", Title = T("smartCollection.recentFavorites"), Count = Favorites.Count(item => item.SavedAt >= DateTimeOffset.UtcNow.AddDays(-30)), Destination = "favorites" },
+            new WorkspaceSmartCollection { Id = "unknownRights", Title = T("smartCollection.unknownRights"), Count = WorkspaceUnknownRightsCount, Destination = "favorites" },
+            new WorkspaceSmartCollection { Id = "attributionRequired", Title = T("smartCollection.attributionRequired"), Count = WorkspaceAttributionRequiredCount, Destination = "favorites" },
+            new WorkspaceSmartCollection { Id = "researchWithoutNotes", Title = T("smartCollection.researchWithoutNotes"), Count = ResearchReferences.Count(item => string.IsNullOrWhiteSpace(item.MyNote)), Destination = "projects" },
+            new WorkspaceSmartCollection { Id = "recentResearch", Title = T("smartCollection.recentResearch"), Count = ResearchReferences.Count(item => item.UpdatedAt >= DateTimeOffset.UtcNow.AddDays(-30)), Destination = "projects" },
+            new WorkspaceSmartCollection { Id = "missingLocalMedia", Title = T("smartCollection.missingLocalMedia"), Count = WorkspaceMissingLocalMediaCount, Destination = "downloads" },
+            new WorkspaceSmartCollection { Id = "possibleDuplicates", Title = T("smartCollection.possibleDuplicates"), Count = duplicates, Destination = "projects" }
+        };
+        Replace(WorkspaceSmartCollections, values);
+    }
+
+    private void RefreshProviderHealthStatuses()
+    {
+        foreach (var provider in Providers)
+        {
+            var record = ProviderHealth.FirstOrDefault(item => item.ProviderID == provider.Id);
+            if (record is null) continue;
+            provider.Status = ProviderHealthText(record);
+        }
+    }
+
+    private string ProviderHealthText(ProviderHealthRecord record)
+    {
+        var key = record.State switch
+        {
+            "healthy" => "provider.health.healthy", "rateLimited" => "provider.health.rateLimited",
+            "unavailable" => "provider.health.unavailable", "disabled" => "provider.health.disabled",
+            "checking" => "provider.health.checking", "limited" => "provider.health.limited",
+            "apiKeyRequired" => "provider.health.apiKeyRequired",
+            "authenticationRequired" => "provider.health.authenticationRequired",
+            "degraded" => "provider.health.degraded", "unknown" => "provider.health.unknown",
+            _ => "provider.health.ready"
+        };
+        var text = T(key);
+        if (record.ResponseTimeMilliseconds is { } response) text += $" · {response} ms";
+        if (record.TestedAt is { } checkedAt) text += $" · {checkedAt.LocalDateTime:g}";
+        return text;
+    }
 
     private bool MatchesFilters(MediaAsset asset)
     {
@@ -2040,6 +2466,9 @@ public sealed class MainViewModel : ObservableObject
                 value => T($"link.clip.{value}"));
         }
         RefreshProviderModes();
+        RefreshWorkspaceCommands();
+        RefreshWorkspaceSmartCollections();
+        RefreshProviderHealthStatuses();
         Downloads.RefreshLocalizedStatus();
         foreach (var record in DownloadRecords) record.WorkflowSummary = DownloadWorkflowSummary(record);
         DownloadRecordsView.Refresh();

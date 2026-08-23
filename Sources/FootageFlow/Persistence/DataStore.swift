@@ -11,6 +11,8 @@ final class DataStore: ObservableObject {
   @Published private(set) var reviewedAssets: [ProjectReviewRecord] = []
   @Published private(set) var duplicateDecisions: [DuplicateDecisionRecord] = []
   @Published private(set) var researchReferences: [ResearchReferenceRecord] = []
+  @Published private(set) var savedSearches: [SavedSearchRecord] = []
+  @Published private(set) var providerHealth: [ProviderHealthRecord] = []
 
   private let repository: PersistentStore
 
@@ -118,6 +120,41 @@ final class DataStore: ObservableObject {
   func deleteResearchReference(id: UUID) {
     repository.deleteResearchReference(id: id)
     synchronize()
+  }
+
+  @discardableResult
+  func addSavedSearch(_ value: SavedSearchRecord) -> SavedSearchRecord {
+    let result = repository.addSavedSearch(value)
+    synchronize()
+    return result
+  }
+
+  func updateSavedSearch(_ value: SavedSearchRecord) {
+    repository.updateSavedSearch(value)
+    synchronize()
+  }
+
+  func deleteSavedSearch(id: UUID) {
+    repository.deleteSavedSearch(id: id)
+    synchronize()
+  }
+
+  @discardableResult
+  func duplicateSavedSearch(id: UUID) -> SavedSearchRecord? {
+    let value = repository.duplicateSavedSearch(id: id)
+    synchronize()
+    return value
+  }
+
+  func updateProviderHealth(_ value: ProviderHealthRecord) {
+    repository.updateProviderHealth(value)
+    synchronize()
+  }
+
+  func workspaceSnapshot() -> WorkspaceSearchSnapshot {
+    WorkspaceSearchSnapshot(
+      projects: projects, favorites: favorites, downloads: downloads, history: history,
+      savedSearches: savedSearches, researchReferences: researchReferences)
   }
 
   func researchReferences(projectID: UUID) -> [ResearchReferenceRecord] {
@@ -231,5 +268,7 @@ final class DataStore: ObservableObject {
     reviewedAssets = repository.reviewedAssets
     duplicateDecisions = repository.duplicateDecisions
     researchReferences = repository.researchReferences
+    savedSearches = repository.savedSearches.sorted { $0.updatedAt > $1.updatedAt }
+    providerHealth = repository.providerHealth
   }
 }

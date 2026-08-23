@@ -48,6 +48,7 @@ struct MediaAssetCard: View {
                 isSelected ? Color.accentColor : Color.white)
           }
           .buttonStyle(.plain).padding(8).help(tr("selection.select"))
+          .accessibilityLabel(isSelected ? tr("selection.clear") : tr("selection.select"))
         }
       }
       VStack(alignment: .leading, spacing: 5) {
@@ -68,7 +69,9 @@ struct MediaAssetCard: View {
         }
       }.font(.caption).foregroundStyle(.secondary)
       if let downloadState {
-        ProgressView(value: downloadState.progress).help(downloadState.message)
+        ProgressView(value: downloadState.progress)
+          .help(downloadState.message)
+          .accessibilityLabel("\(asset.title): \(downloadState.message)")
         HStack(spacing: 5) {
           Text(downloadState.message)
           if let speed = downloadState.speedText { Text("· \(speed)") }
@@ -82,6 +85,7 @@ struct MediaAssetCard: View {
           Image(
             systemName: store.isFavorite(asset, projectID: projectID) ? "heart.fill" : "heart")
         }.help(tr("media.favorite"))
+          .accessibilityLabel(tr("media.favorite"))
         if asset.downloadable {
           if let downloadState,
             downloadState.status == .downloading || downloadState.status == .waiting
@@ -117,11 +121,15 @@ struct MediaAssetCard: View {
           }
         } label: {
           Image(systemName: "ellipsis.circle")
-        }
+        }.accessibilityLabel(tr("media.moreActions"))
       }.controlSize(.small)
     }
     .padding(10).background(.background, in: RoundedRectangle(cornerRadius: 10))
     .overlay(RoundedRectangle(cornerRadius: 10).stroke(.separator.opacity(0.6), lineWidth: 1))
+    .accessibilityElement(children: .contain)
+    .accessibilityLabel(
+      "\(asset.title). \(asset.sourceDisplayName). \(asset.licenseText). \(asset.downloadable ? tr("media.download") : tr("link.downloadUnavailable"))"
+    )
   }
 
   private var mediaIcon: String {

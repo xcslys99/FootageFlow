@@ -214,4 +214,10 @@ struct PersistentDatabase: Codable {
   /// Optional so database files written before the Research & Culture update
   /// remain decodable without a destructive migration.
   var researchReferences: [ResearchReferenceRecord]? = []
+  /// App-level search recipes were added by the Workspace update. Optional
+  /// decoding keeps every older FootageFlow database readable as-is.
+  var savedSearches: [SavedSearchRecord]? = []
+  /// Provider health contains only the last locally initiated test summary;
+  /// it never contains API keys, request URLs, or provider response bodies.
+  var providerHealth: [ProviderHealthRecord]? = []
 }

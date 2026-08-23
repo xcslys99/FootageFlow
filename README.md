@@ -43,6 +43,17 @@ Paste one or more supported public media URLs and let FootageFlow try to analyze
 
 Availability depends on the source, individual media, permissions, regional restrictions, authentication requirements, and platform changes. FootageFlow is a best-effort link downloader and does not promise 100% success. See [Link Downloader details](docs/LINK_DOWNLOADER.md).
 
+## Workspace and accessibility
+
+v0.10.0 brings the existing creator tools into a faster local workspace:
+
+- **Command Palette** (`⌘K` / `Ctrl+K`) and keyboard-first navigation
+- **Local Global Search** across projects, saved media, downloads, history, saved searches, and research notes
+- **Saved Searches**, dynamic **Smart Collections**, project dashboard counts, and manual **Provider Status** checks
+- VoiceOver improvements on macOS and Windows Narrator/UI Automation improvements
+
+Workspace search stays on this device and does not scan arbitrary folders or upload project content. See [Workspace](docs/WORKSPACE.md), [Keyboard shortcuts](docs/KEYBOARD_SHORTCUTS.md), and [Accessibility](docs/ACCESSIBILITY.md).
+
 ## Creator workflow
 
 FootageFlow is designed for documentary, history, country profile, finance, science, and social-video research. A typical project can stay inside one application:
@@ -196,6 +207,9 @@ See [Troubleshooting](docs/TROUBLESHOOTING.md) for macOS Gatekeeper, Windows Sma
 - [Software updates](docs/SOFTWARE_UPDATES.md)
 - [Rights and attribution](docs/RIGHTS_AND_ATTRIBUTION.md)
 - [Project workflow, export, and attribution](docs/PROJECT_WORKFLOW.md)
+- [Workspace](docs/WORKSPACE.md)
+- [Keyboard shortcuts](docs/KEYBOARD_SHORTCUTS.md)
+- [Accessibility](docs/ACCESSIBILITY.md)
 - [Troubleshooting](docs/TROUBLESHOOTING.md)
 - [Development guide](DEVELOPMENT.md)
 - [Contributing](CONTRIBUTING.md)

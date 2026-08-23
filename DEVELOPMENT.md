@@ -134,7 +134,13 @@ Downloads are restricted to the configured root for app-initiated deletion. A su
 
 ## Localization
 
-English is the fixed first-launch default. `en.lproj` is the fallback for missing translations. v0.9.0 ships `en`, `zh-Hans`, `zh-Hant`, `es`, `pt-BR`, `ja`, `ko`, `de`, `fr`, and `ru`. SwiftPM may normalize language-directory casing in the built resource bundle, so locale lookup also checks normalized identifiers.
+English is the fixed first-launch default. `en.lproj` is the fallback for missing translations. v0.10.0 ships `en`, `zh-Hans`, `zh-Hant`, `es`, `pt-BR`, `ja`, `ko`, `de`, `fr`, and `ru`. SwiftPM may normalize language-directory casing in the built resource bundle, so locale lookup also checks normalized identifiers.
+
+## Workspace shared core (v0.10.0)
+
+`WorkspaceSearchIndex` is an actor-backed, in-memory index built solely from FootageFlow's persisted project, favorite, download, search-history, Saved Search, and research-reference metadata. It never crawls disks, reads raw logs, or sends workspace queries to a remote service. Credential-looking fragments are scrubbed before project scripts and notes can contribute to index previews.
+
+`WorkspaceCoordinator` keeps command and sheet routing in the platform UI layer, while `WorkspaceModels`, Saved Search persistence, collection rules, Provider Health state, and the Windows Swift Core Host remain shared. The WPF application asks the existing local Core Host for workspace records; it does not duplicate the provider/search business logic in C#.
 
 ## Research & Culture shared core (v0.9.0)
 
@@ -168,7 +174,7 @@ The package uses the official `swift-testing` dependency so the full platform-ne
 
 ## Packaging
 
-`scripts/build_app.sh` builds a Release executable; bundles checksum-pinned yt-dlp; builds static GPL FFmpeg 8.0.3 with pinned x264, Apple SecureTransport, and no `nonfree` component; copies all applicable license texts; creates the `.app`; and performs Ad Hoc signing. The FFmpeg configuration uses a neutral build prefix and the packaging scan rejects private developer paths. `scripts/binary_privacy_scan.sh` scans the app executable and bundled tools for credential-like strings. `scripts/build_dmg.sh` creates the drag-to-Applications DMG and SHA-256 checksum. No Developer ID certificate or notarization is claimed for v0.9.0.
+`scripts/build_app.sh` builds a Release executable; bundles checksum-pinned yt-dlp; builds static GPL FFmpeg 8.0.3 with pinned x264, Apple SecureTransport, and no `nonfree` component; copies all applicable license texts; creates the `.app`; and performs Ad Hoc signing. The FFmpeg configuration uses a neutral build prefix and the packaging scan rejects private developer paths. `scripts/binary_privacy_scan.sh` scans the app executable and bundled tools for credential-like strings. `scripts/build_dmg.sh` creates the drag-to-Applications DMG and SHA-256 checksum. No Developer ID certificate or notarization is claimed for v0.10.0.
 
 ## Windows architecture
 

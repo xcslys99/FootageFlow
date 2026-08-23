@@ -166,6 +166,52 @@ final class SearchViewModel: ObservableObject {
   }
   func removeKeyword(_ id: UUID) { keywords.removeAll { $0.id == id } }
 
+  func savedSearch(named name: String) -> SavedSearchRecord {
+    SavedSearchRecord(
+      name: name, query: query, keywords: keywords, searchScope: searchScope, mediaType: mediaType,
+      orientation: orientation, resolution: resolution, duration: duration,
+      licenseFilter: licenseFilter,
+      yearFrom: yearFrom, yearTo: yearTo, downloadableOnly: downloadableOnly,
+      relevanceMode: relevanceMode, providerIDs: selectedProviders.map(\.rawValue).sorted())
+  }
+
+  func apply(savedSearch: SavedSearchRecord) {
+    query = savedSearch.query
+    keywords = savedSearch.keywords
+    searchScope = savedSearch.searchScope
+    mediaType = savedSearch.mediaType
+    orientation = savedSearch.orientation
+    resolution = savedSearch.resolution
+    duration = savedSearch.duration
+    licenseFilter = savedSearch.licenseFilter
+    yearFrom = savedSearch.yearFrom
+    yearTo = savedSearch.yearTo
+    downloadableOnly = savedSearch.downloadableOnly
+    relevanceMode = savedSearch.relevanceMode
+    selectedProviders =
+      savedSearch.providerSet.isEmpty ? Set(ProviderID.searchCases) : savedSearch.providerSet
+    if keywords.isEmpty { _ = prepareKeywords() }
+  }
+
+  /// Clears only the transient search state. Project records, favorites,
+  /// history and saved searches remain untouched.
+  func clearSearch() {
+    stop()
+    query = ""
+    keywords = []
+    assets = []
+    researchRecords = []
+    candidateAssets = []
+    providerErrors = [:]
+    researchProviderErrors = [:]
+    providerCounts = [:]
+    researchProviderCounts = [:]
+    pagination = [:]
+    researchPagination = [:]
+    researchRequests = [:]
+    status = .initial
+  }
+
   func search(
     forceRefresh: Bool = false, only providerID: ProviderID? = nil,
     directOverrides: Set<ProviderID> = []

@@ -9,6 +9,7 @@ struct FootageFlowApp: App {
   @StateObject private var downloads = DownloadManager.shared
   @StateObject private var localization = LocalizationManager.shared
   @StateObject private var updates = AppUpdateController()
+  @StateObject private var workspace = WorkspaceCoordinator()
 
   init() {
     AppSettings.migrateLegacySettingsIfNeeded()
@@ -83,6 +84,7 @@ struct FootageFlowApp: App {
         .environmentObject(downloads)
         .environmentObject(localization)
         .environmentObject(updates)
+        .environmentObject(workspace)
         .environment(\.locale, localization.locale)
         .frame(minWidth: 1080, minHeight: 700)
         .onAppear {
@@ -94,6 +96,27 @@ struct FootageFlowApp: App {
     .defaultSize(width: 1320, height: 850)
     .commands {
       CommandGroup(replacing: .newItem) {}
+      CommandMenu(tr("workspace.commandMenu")) {
+        Button(tr("workspace.command.focusSearch")) { workspace.perform(.focusSearch) }
+          .keyboardShortcut("f", modifiers: .command)
+        Button(tr("workspace.command.globalSearch")) { workspace.perform(.globalSearch) }
+          .keyboardShortcut("g", modifiers: [.command, .shift])
+        Button(tr("workspace.command.palette")) { workspace.perform(.commandPalette) }
+          .keyboardShortcut("k", modifiers: .command)
+        Divider()
+        Button(tr("workspace.command.newProject")) { workspace.perform(.newProject) }
+          .keyboardShortcut("n", modifiers: .command)
+        Button(tr("workspace.command.openProjects")) { workspace.perform(.openProjects) }
+          .keyboardShortcut("o", modifiers: .command)
+        Button(tr("workspace.command.openFavorites")) { workspace.perform(.openFavorites) }
+          .keyboardShortcut("f", modifiers: [.command, .shift])
+        Button(tr("workspace.command.openDownloads")) { workspace.perform(.openDownloads) }
+          .keyboardShortcut("d", modifiers: [.command, .shift])
+        Button(tr("workspace.command.openResearchNotes")) { workspace.perform(.openResearchNotes) }
+          .keyboardShortcut("r", modifiers: [.command, .shift])
+        Button(tr("workspace.command.openSettings")) { workspace.perform(.openSettings) }
+          .keyboardShortcut(",", modifiers: .command)
+      }
     }
   }
 }

@@ -50,6 +50,9 @@
     var researchNote: String? = nil
     var researchTags: [String]? = nil
     var exportSection: ProjectExportSection? = nil
+    var savedSearch: SavedSearchRecord? = nil
+    var savedSearchID: String? = nil
+    var providerHealthRecord: ProviderHealthRecord? = nil
   }
 
   private struct WindowsCoreResponse: Encodable {
@@ -77,6 +80,7 @@
     var dataBase64: String? = nil
     var researchBatches: [WindowsResearchBatch]? = nil
     var researchRecords: [ResearchRecord]? = nil
+    var workspaceEntries: [WorkspaceSearchEntry]? = nil
   }
 
   private struct WindowsProviderDescriptor: Encodable {
@@ -258,11 +262,14 @@
         return importProjectBackup(request)
       case "contactSheetPlan":
         return contactSheetPlan(request)
+      case "workspaceSearch":
+        return await workspaceSearch(request)
       case "databaseSnapshot", "addProject", "deleteProject", "updateProject",
         "toggleFavorite", "addFavorite", "addHistory", "deleteHistory", "clearHistory",
         "addDownload",
         "deleteDownload", "addResearchReference", "updateResearchReference",
-        "deleteResearchReference":
+        "deleteResearchReference", "addSavedSearch", "updateSavedSearch", "deleteSavedSearch",
+        "duplicateSavedSearch", "updateProviderHealth":
         return database(request)
       case "suggestFileName":
         guard let asset = request.asset else {
@@ -382,12 +389,40 @@
       case "deleteResearchReference":
         guard let id = uuid(request.researchReferenceID) else { return invalidRecordID(request.id) }
         store.deleteResearchReference(id: id)
+      case "addSavedSearch":
+        guard let value = request.savedSearch else { return invalidRecordID(request.id) }
+        _ = store.addSavedSearch(value)
+      case "updateSavedSearch":
+        guard let value = request.savedSearch else { return invalidRecordID(request.id) }
+        store.updateSavedSearch(value)
+      case "deleteSavedSearch":
+        guard let id = uuid(request.savedSearchID) else { return invalidRecordID(request.id) }
+        store.deleteSavedSearch(id: id)
+      case "duplicateSavedSearch":
+        guard let id = uuid(request.savedSearchID) else { return invalidRecordID(request.id) }
+        _ = store.duplicateSavedSearch(id: id)
+      case "updateProviderHealth":
+        guard let value = request.providerHealthRecord else { return invalidRecordID(request.id) }
+        store.updateProviderHealth(value)
       default:
         return WindowsCoreResponse(
           id: request.id, success: false, errorCode: "unsupportedAction",
           errorMessage: "Unsupported database action.")
       }
       return WindowsCoreResponse(id: request.id, success: true, database: store.database)
+    }
+
+    private static func workspaceSearch(_ request: WindowsCoreRequest) async -> WindowsCoreResponse
+    {
+      let store = PersistentStore()
+      let snapshot = WorkspaceSearchSnapshot(
+        projects: store.projects, favorites: store.favorites, downloads: store.downloads,
+        history: store.history, savedSearches: store.savedSearches,
+        researchReferences: store.researchReferences)
+      await WorkspaceSearchIndex.shared.rebuild(snapshot: snapshot)
+      return WindowsCoreResponse(
+        id: request.id, success: true,
+        workspaceEntries: await WorkspaceSearchIndex.shared.search(request.query ?? ""))
     }
 
     private static func search(_ request: WindowsCoreRequest) async -> WindowsCoreResponse {

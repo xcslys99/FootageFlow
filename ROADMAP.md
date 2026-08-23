@@ -30,16 +30,27 @@ Roadmap items are intentions, not promises. Provider policies, platform rules, a
 - Local-first duplicate detection with user decisions and lazy SHA-256
 - PNG contact-sheet generation
 - Research & Culture workspace: Media / Research / All, references, notes, citations, and related-media discovery
+- Workspace dashboard, local-only Global Search, Saved Searches, Smart Collections, Provider Health, Command Palette, and keyboard/accessibility improvements
 
 ## Current Priorities
 
 ### Accessibility & Keyboard Navigation ([#19](https://github.com/xcslys99/FootageFlow/issues/19))
 
-- Improve VoiceOver and Windows screen-reader labels
-- Add predictable keyboard navigation and visible focus indicators
-- Add shortcuts for search, filters, projects, downloads, and update dialogs
+Delivered in v0.10.0:
+
+- VoiceOver and Windows screen-reader labels for the primary workspace and media actions
+- Predictable keyboard navigation, native visible focus, Command Palette, Global Search, and a discoverable shortcut reference
+- Local Workspace dashboards, Saved Searches, Smart Collections, and manual Provider Health checks
 
 ## Planned Feature Releases
+
+### v0.10.0 — Workspace & Accessibility Update ([#19](https://github.com/xcslys99/FootageFlow/issues/19))
+
+Delivered in v0.10.0:
+
+- Local-only Global Search and a keyboard-first Command Palette
+- Saved Searches, project dashboard summaries, dynamic Smart Collections, and user-triggered Provider Health
+- Shared macOS/Windows workspace data and ten-language UI coverage
 
 ### v0.8.0 — Project Export & Attribution Update
 
