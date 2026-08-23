@@ -43,6 +43,17 @@
 
 可用性取决于来源网站、具体媒体、访问权限、地区限制、登录要求以及平台变化。FootageFlow 是尽力提供的链接下载器，不承诺 100% 成功。详见 [链接下载说明](docs/LINK_DOWNLOADER.md)（详细技术文档目前以英文维护）。
 
+## 工作区与无障碍
+
+v0.10.0 将已有的创作者工具整理为更高效的本机工作区：
+
+- **命令面板**（macOS `⌘K` / Windows `Ctrl+K`）和键盘优先导航
+- 可搜索项目、已保存素材、下载记录、历史、保存搜索和研究笔记的**本地全局搜索**
+- **保存搜索**、动态**智能集合**、项目概览统计，以及手动**素材来源状态**检测
+- 改进 macOS VoiceOver 与 Windows Narrator/UI Automation 支持
+
+工作区搜索只在本机运行，不扫描任意文件夹，也不会上传项目内容。详见 [工作区说明](docs/WORKSPACE.md)、[键盘快捷键](docs/KEYBOARD_SHORTCUTS.md) 和 [无障碍说明](docs/ACCESSIBILITY.md)（详细技术文档目前以英文维护）。
+
 ## 创作者工作流
 
 FootageFlow 面向纪录片、历史、国家、财经、人物、科普和短视频素材研究。一个典型项目可以在同一个应用中完成：
@@ -196,6 +207,9 @@ macOS Gatekeeper、Windows SmartScreen、更新检查、链接下载限制和 Pr
 - [软件更新](docs/SOFTWARE_UPDATES.md)（英文）
 - [Rights 与署名](docs/RIGHTS_AND_ATTRIBUTION.md)（英文）
 - [项目工作流、导出与署名](docs/PROJECT_WORKFLOW.md)（英文）
+- [工作区](docs/WORKSPACE.md)（英文）
+- [键盘快捷键](docs/KEYBOARD_SHORTCUTS.md)（英文）
+- [无障碍](docs/ACCESSIBILITY.md)（英文）
 - [研究与文化资料工作流](docs/RESEARCH_WORKFLOW.md)（英文）
 - [故障排查](docs/TROUBLESHOOTING.md)（英文）
 - [开发指南](DEVELOPMENT.md)（英文）

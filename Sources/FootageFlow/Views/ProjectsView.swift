@@ -168,6 +168,11 @@ private struct ProjectDetail: View {
         }
       }
       projectActions
+      if let dashboard = WorkspaceCollections.dashboards(
+        snapshot: store.workspaceSnapshot(), segments: store.segments
+      ).first(where: { $0.project.id == project.id }) {
+        ProjectDashboardPanel(summary: dashboard)
+      }
       if let actionMessage {
         Text(actionMessage).font(.caption).foregroundStyle(.secondary)
       }
@@ -503,5 +508,47 @@ private struct ProjectDetail: View {
       existingDirectory ?? DownloadPathSafety.projectDirectory(projectName: project.name)
     try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
     DesktopPlatform.shared.open(directory)
+  }
+}
+
+private struct ProjectDashboardPanel: View {
+  let summary: ProjectDashboardSummary
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 8) {
+      Text(tr("workspace.projectDashboard")).font(.headline)
+      Text(
+        tr(
+          "workspace.lastActivity",
+          summary.lastActivity.formatted(date: .abbreviated, time: .shortened))
+      )
+      .font(.caption).foregroundStyle(.secondary)
+      Grid(alignment: .leading, horizontalSpacing: 18, verticalSpacing: 5) {
+        GridRow {
+          metric(tr("nav.favorites"), summary.favoriteCount)
+          metric(tr("nav.downloads"), summary.downloadCount)
+          metric(tr("research.notes"), summary.researchNoteCount)
+        }
+        GridRow {
+          metric(tr("project.rightsUnknown"), summary.rightsUnknownCount)
+          metric(tr("license.attribution"), summary.attributionRequiredCount)
+          metric(tr("project.missingLocalMedia"), summary.missingLocalMediaCount)
+        }
+        GridRow {
+          metric(tr("research.type"), summary.researchReferenceCount)
+          metric(tr("project.findDuplicates"), summary.possibleDuplicateCount)
+          metric(tr("script.segmentCount", summary.segmentCount), summary.segmentCount)
+        }
+      }
+    }
+    .padding(10)
+    .background(.quaternary.opacity(0.3), in: RoundedRectangle(cornerRadius: 8))
+    .accessibilityElement(children: .contain)
+  }
+
+  private func metric(_ label: String, _ value: Int) -> some View {
+    LabeledContent(label, value: "\(value)")
+      .font(.caption)
+      .accessibilityLabel("\(label): \(value)")
   }
 }

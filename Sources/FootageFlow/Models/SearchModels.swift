@@ -301,7 +301,7 @@ enum SearchSort: String, CaseIterable, Identifiable {
   }
 }
 
-enum LicenseFilter: String, CaseIterable, Identifiable, Sendable {
+enum LicenseFilter: String, Codable, CaseIterable, Identifiable, Sendable {
   case all, knownOnly, openlyLicensed, publicDomain
   var id: String { rawValue }
   var label: String {

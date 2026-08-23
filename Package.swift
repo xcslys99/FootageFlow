@@ -21,6 +21,7 @@ import PackageDescription
     "Services/DownloadManager.swift",
     "Services/PreviewWindowManager.swift",
     "Services/SearchCache.swift",
+    "Services/WorkspaceCoordinator.swift",
     "Utilities/AcceptanceRunner.swift",
     "Utilities/CreatorWorkflowSmokeRunner.swift",
     "Utilities/LiveSmokeRunner.swift",

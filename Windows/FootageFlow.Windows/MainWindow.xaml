@@ -6,7 +6,7 @@
         xmlns:controls="clr-namespace:FootageFlow.Windows.Controls"
         Title="FootageFlow" Width="1380" Height="880" MinWidth="1080" MinHeight="700"
         WindowStartupLocation="CenterScreen" Background="#FAFBFC"
-        Icon="Assets/FootageFlow.png">
+        Icon="Assets/FootageFlow.png" PreviewKeyDown="Window_PreviewKeyDown">
   <Window.Resources>
     <SolidColorBrush x:Key="AccentBrush" Color="#1677E8" />
     <SolidColorBrush x:Key="SidebarBrush" Color="#F3F5F8" />
@@ -63,7 +63,7 @@
               RetryText="{Binding DataContext.RetryThumbnailText, RelativeSource={RelativeSource AncestorType=Window}}" />
           </Border>
           <CheckBox IsChecked="{Binding IsSelected}" HorizontalAlignment="Right" VerticalAlignment="Top"
-                    Margin="10" Width="24" Height="24" ToolTip="{Binding DataContext.SelectAllVisibleText, RelativeSource={RelativeSource AncestorType=Window}}" />
+                    Margin="10" Width="24" Height="24" ToolTip="{Binding DataContext.SelectAllVisibleText, RelativeSource={RelativeSource AncestorType=Window}}" AutomationProperties.Name="{Binding Title}" />
           <StackPanel Grid.Row="1" Margin="12">
             <TextBlock Text="{Binding Title}" FontWeight="SemiBold" FontSize="14" TextWrapping="Wrap" MaxHeight="42" />
             <TextBlock Margin="0,7,0,0" Foreground="{StaticResource SubtleTextBrush}">
@@ -74,9 +74,9 @@
               <TextBlock.Text><MultiBinding Converter="{StaticResource LicenseDisplay}"><Binding Path="License" /><Binding Path="LicenseStatus" /><Binding Path="DataContext.LicenseSafeText" RelativeSource="{RelativeSource AncestorType=Window}" /><Binding Path="DataContext.LicenseAttributionText" RelativeSource="{RelativeSource AncestorType=Window}" /><Binding Path="DataContext.LicensePublicDomainText" RelativeSource="{RelativeSource AncestorType=Window}" /><Binding Path="DataContext.LicenseRestrictedText" RelativeSource="{RelativeSource AncestorType=Window}" /><Binding Path="DataContext.LicenseUnknownText" RelativeSource="{RelativeSource AncestorType=Window}" /></MultiBinding></TextBlock.Text>
             </TextBlock>
             <WrapPanel>
-              <Button Content="{Binding DataContext.PreviewText, RelativeSource={RelativeSource AncestorType=Window}}" Command="{Binding DataContext.PreviewCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" />
-              <Button Content="♡" ToolTip="{Binding DataContext.FavoriteText, RelativeSource={RelativeSource AncestorType=Window}}" Command="{Binding DataContext.FavoriteCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" />
-              <Button Content="{Binding DataContext.DownloadText, RelativeSource={RelativeSource AncestorType=Window}}" Command="{Binding DataContext.DownloadCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" IsEnabled="{Binding Downloadable}" />
+              <Button Content="{Binding DataContext.PreviewText, RelativeSource={RelativeSource AncestorType=Window}}" Command="{Binding DataContext.PreviewCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" AutomationProperties.Name="{Binding DataContext.PreviewText, RelativeSource={RelativeSource AncestorType=Window}}" />
+              <Button Content="♡" ToolTip="{Binding DataContext.FavoriteText, RelativeSource={RelativeSource AncestorType=Window}}" Command="{Binding DataContext.FavoriteCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" AutomationProperties.Name="{Binding DataContext.FavoriteText, RelativeSource={RelativeSource AncestorType=Window}}" />
+              <Button Content="{Binding DataContext.DownloadText, RelativeSource={RelativeSource AncestorType=Window}}" Command="{Binding DataContext.DownloadCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" IsEnabled="{Binding Downloadable}" AutomationProperties.Name="{Binding DataContext.DownloadText, RelativeSource={RelativeSource AncestorType=Window}}" />
               <Button Content="MP4" ToolTip="{Binding DataContext.EditingCompatibleOutputText, RelativeSource={RelativeSource AncestorType=Window}}" Command="{Binding DataContext.DownloadEditingCompatibleCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" Visibility="{Binding SupportsEditingOutput, Converter={StaticResource BoolVisibility}}" />
               <Button Content="♫" ToolTip="{Binding DataContext.AudioOnlyOutputText, RelativeSource={RelativeSource AncestorType=Window}}" Command="{Binding DataContext.DownloadAudioOnlyCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" Visibility="{Binding SupportsEditingOutput, Converter={StaticResource BoolVisibility}}" />
               <Button Content="{Binding DataContext.OpenSourceText, RelativeSource={RelativeSource AncestorType=Window}}" Command="{Binding DataContext.OpenSourceCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" />
@@ -93,12 +93,13 @@
     <Grid.RowDefinitions><RowDefinition Height="64" /><RowDefinition Height="*" /></Grid.RowDefinitions>
     <Border Grid.Row="0" Background="White" BorderBrush="#E2E6EB" BorderThickness="0,0,0,1">
       <Grid Margin="18,0">
-        <Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+        <Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
           <Image Source="Assets/FootageFlow.png" Width="38" Height="38" Margin="0,0,10,0" />
           <TextBlock Text="FootageFlow" FontSize="20" FontWeight="SemiBold" VerticalAlignment="Center" />
         </StackPanel>
-        <Button Grid.Column="1" x:Name="LanguageButton" Content="{Binding LanguageButton}" Click="LanguageButton_Click" FontWeight="SemiBold" MinWidth="132" />
+        <Button Grid.Column="1" Content="{Binding WorkspaceGlobalSearchText}" Command="{Binding ShowGlobalSearchCommand}" ToolTip="Ctrl+Shift+G" AutomationProperties.Name="{Binding WorkspaceGlobalSearchText}" />
+        <Button Grid.Column="2" x:Name="LanguageButton" Content="{Binding LanguageButton}" Click="LanguageButton_Click" FontWeight="SemiBold" MinWidth="132" />
       </Grid>
     </Border>
 
@@ -106,6 +107,7 @@
       <Grid.ColumnDefinitions><ColumnDefinition Width="226" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
       <Border Background="{StaticResource SidebarBrush}" BorderBrush="#E2E6EB" BorderThickness="0,0,1,0">
         <StackPanel Margin="0,12">
+          <Button Style="{StaticResource NavButton}" Content="{Binding NavWorkspace}" Command="{Binding NavigateCommand}" CommandParameter="workspace" AutomationProperties.Name="{Binding NavWorkspace}" />
           <Button Style="{StaticResource NavButton}" Content="{Binding NavSearch}" Command="{Binding NavigateCommand}" CommandParameter="search" />
           <Button Style="{StaticResource NavButton}" Content="{Binding NavLinkDownloader}" Command="{Binding NavigateCommand}" CommandParameter="linkDownloader" />
           <Button Style="{StaticResource NavButton}" Content="{Binding NavScript}" Command="{Binding NavigateCommand}" CommandParameter="script" />
@@ -120,6 +122,40 @@
       </Border>
 
       <Grid Grid.Column="1" Margin="24">
+        <Grid Visibility="{Binding IsWorkspacePage, Converter={StaticResource BoolVisibility}}">
+          <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+              <WrapPanel Margin="0,0,0,14">
+                <StackPanel Width="620"><TextBlock Text="{Binding WorkspaceTitle}" Style="{StaticResource SectionTitle}" /><TextBlock Text="{Binding WorkspaceTagline}" Foreground="{StaticResource SubtleTextBrush}" TextWrapping="Wrap" /></StackPanel>
+                <Button Content="{Binding WorkspaceGlobalSearchText}" Command="{Binding ShowGlobalSearchCommand}" ToolTip="Ctrl+Shift+G" AutomationProperties.Name="{Binding WorkspaceGlobalSearchText}" />
+                <Button Content="{Binding WorkspaceCommandPaletteText}" Command="{Binding ShowCommandPaletteCommand}" ToolTip="Ctrl+K" />
+              </WrapPanel>
+              <WrapPanel Margin="0,0,0,18">
+                <Border Background="White" BorderBrush="#E1E5EA" BorderThickness="1" CornerRadius="8" Padding="16" Margin="0,0,12,12" Width="180"><StackPanel><TextBlock Text="{Binding WorkspaceProjectCount}" FontSize="28" FontWeight="Bold" /><TextBlock Text="{Binding NavProjects}" Foreground="{StaticResource SubtleTextBrush}" /></StackPanel></Border>
+                <Border Background="White" BorderBrush="#E1E5EA" BorderThickness="1" CornerRadius="8" Padding="16" Margin="0,0,12,12" Width="180"><StackPanel><TextBlock Text="{Binding WorkspaceFavoriteCount}" FontSize="28" FontWeight="Bold" /><TextBlock Text="{Binding NavFavorites}" Foreground="{StaticResource SubtleTextBrush}" /></StackPanel></Border>
+                <Border Background="White" BorderBrush="#E1E5EA" BorderThickness="1" CornerRadius="8" Padding="16" Margin="0,0,12,12" Width="180"><StackPanel><TextBlock Text="{Binding WorkspaceDownloadCount}" FontSize="28" FontWeight="Bold" /><TextBlock Text="{Binding NavDownloads}" Foreground="{StaticResource SubtleTextBrush}" /></StackPanel></Border>
+                <Border Background="White" BorderBrush="#E1E5EA" BorderThickness="1" CornerRadius="8" Padding="16" Margin="0,0,12,12" Width="200"><StackPanel><TextBlock Text="{Binding WorkspaceUnknownRightsCount}" FontSize="28" FontWeight="Bold" /><TextBlock Text="{Binding WorkspaceProviderHealthText}" Foreground="{StaticResource SubtleTextBrush}" /></StackPanel></Border>
+              </WrapPanel>
+              <TextBlock Text="{Binding WorkspaceSmartCollectionsText}" Style="{StaticResource SectionTitle}" />
+              <ItemsControl ItemsSource="{Binding WorkspaceSmartCollections}" Margin="0,0,0,18">
+                <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate><DataTemplate><Button Width="210" MinHeight="92" Command="{Binding DataContext.OpenSmartCollectionCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" HorizontalContentAlignment="Left" AutomationProperties.Name="{Binding Title}"><StackPanel><TextBlock Text="{Binding Count}" FontSize="25" FontWeight="Bold" /><TextBlock Text="{Binding Title}" TextWrapping="Wrap" /></StackPanel></Button></DataTemplate></ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <TextBlock Text="{Binding WorkspaceSavedSearchesText}" Style="{StaticResource SectionTitle}" />
+              <ItemsControl ItemsSource="{Binding SavedSearches}">
+                <ItemsControl.ItemTemplate><DataTemplate><Border Background="White" BorderBrush="#E1E5EA" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,0,8"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="220" /><ColumnDefinition /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><TextBox Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="{Binding DataContext.WorkspaceSavedSearchesText, RelativeSource={RelativeSource AncestorType=Window}}" /><TextBlock Grid.Column="1" Text="{Binding Query}" VerticalAlignment="Center" Foreground="{StaticResource SubtleTextBrush}" Margin="12,0" TextTrimming="CharacterEllipsis" /><WrapPanel Grid.Column="2"><Button Content="{Binding DataContext.WorkspaceRunText, RelativeSource={RelativeSource AncestorType=Window}}" Command="{Binding DataContext.RunSavedSearchCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" /><Button Content="{Binding DataContext.WorkspaceRenameText, RelativeSource={RelativeSource AncestorType=Window}}" Command="{Binding DataContext.RenameSavedSearchCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" /><Button Content="{Binding DataContext.WorkspaceDuplicateText, RelativeSource={RelativeSource AncestorType=Window}}" Command="{Binding DataContext.DuplicateSavedSearchCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" /><Button Content="×" Command="{Binding DataContext.DeleteSavedSearchCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" /></WrapPanel></Grid></Border></DataTemplate></ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <Grid Margin="0,18,0,8"><Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><TextBlock Text="{Binding WorkspaceProviderHealthText}" Style="{StaticResource SectionTitle}" /><Button Grid.Column="1" Content="{Binding WorkspaceTestAllText}" Command="{Binding TestAllWorkspaceProvidersCommand}" AutomationProperties.Name="{Binding WorkspaceTestAllText}" /></Grid>
+              <ItemsControl ItemsSource="{Binding Providers}">
+                <ItemsControl.ItemTemplate><DataTemplate><Border Background="White" BorderBrush="#E1E5EA" BorderThickness="1" CornerRadius="8" Padding="10" Margin="0,0,0,7"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="220" /><ColumnDefinition /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" VerticalAlignment="Center" /><TextBlock Grid.Column="1" Text="{Binding Status}" Foreground="{StaticResource SubtleTextBrush}" VerticalAlignment="Center" /><Button Grid.Column="2" Content="{Binding DataContext.WorkspaceTestText, RelativeSource={RelativeSource AncestorType=Window}}" Command="{Binding DataContext.TestWorkspaceProviderCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding Id}" /></Grid></Border></DataTemplate></ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <TextBlock Text="{Binding WorkspaceShortcutsText}" Style="{StaticResource SectionTitle}" Margin="0,18,0,8" />
+              <ItemsControl ItemsSource="{Binding WorkspaceShortcutReference}">
+                <ItemsControl.ItemTemplate><DataTemplate><Grid Margin="0,0,0,5"><Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><TextBlock Text="{Binding Title}" /><TextBlock Grid.Column="1" Text="{Binding Shortcut}" FontFamily="Consolas" Foreground="{StaticResource SubtleTextBrush}" /></Grid></DataTemplate></ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
+          </ScrollViewer>
+        </Grid>
         <Grid Visibility="{Binding IsSearchPage, Converter={StaticResource BoolVisibility}}">
           <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions>
           <StackPanel>
@@ -137,7 +173,7 @@
           <StackPanel Grid.Row="1">
             <Grid>
               <Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-              <TextBox Text="{Binding Query, UpdateSourceTrigger=PropertyChanged}" FontSize="17" MinHeight="46" ToolTip="{Binding SearchPlaceholder}" />
+              <TextBox x:Name="SearchQueryTextBox" Text="{Binding Query, UpdateSourceTrigger=PropertyChanged}" FontSize="17" MinHeight="46" ToolTip="{Binding SearchPlaceholder}" AutomationProperties.Name="{Binding SearchPlaceholder}" />
               <Button Grid.Column="1" Style="{StaticResource PrimaryButton}" Content="{Binding SearchButtonText}" Command="{Binding SearchCommand}" MinWidth="132" />
               <Button Grid.Column="2" Content="{Binding StopText}" Command="{Binding StopSearchCommand}" />
               <CheckBox Grid.Column="3" Content="{Binding DownloadableOnlyText}" IsChecked="{Binding DownloadableOnly}" FontWeight="SemiBold" VerticalAlignment="Center" Margin="14,0,0,0" />
@@ -214,6 +250,7 @@
             </ItemsControl>
             <TextBlock Text="{Binding SearchStatus}" Margin="0,7,0,0" Foreground="{StaticResource SubtleTextBrush}" />
             <WrapPanel Margin="0,8,0,0">
+              <Button Content="{Binding WorkspaceSaveSearchText}" Command="{Binding SaveSearchCommand}" />
               <Button Content="{Binding SelectAllVisibleText}" Command="{Binding SelectAllVisibleCommand}" />
               <TextBlock Text="{Binding SelectionStatus}" VerticalAlignment="Center" FontWeight="SemiBold" Margin="9,0" Visibility="{Binding HasSelection, Converter={StaticResource BoolVisibility}}" />
               <Button Content="{Binding DownloadSelectedText}" Command="{Binding DownloadSelectedCommand}" Visibility="{Binding HasSelection, Converter={StaticResource BoolVisibility}}" Style="{StaticResource PrimaryButton}" />
@@ -369,6 +406,20 @@
               <ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel>
                 <TextBlock Text="{Binding ProjectTitle}" FontSize="17" FontWeight="SemiBold" />
                 <TextBox Text="{Binding ProjectEditName, UpdateSourceTrigger=PropertyChanged}" Margin="0,10,0,12" />
+                <Border Background="#F7F9FC" BorderBrush="#E1E5EA" BorderThickness="1" CornerRadius="7" Padding="10" Margin="0,0,0,12" AutomationProperties.Name="{Binding ProjectDashboardText}">
+                  <StackPanel>
+                    <TextBlock Text="{Binding ProjectDashboardText}" FontWeight="SemiBold" />
+                    <WrapPanel Margin="0,5,0,0">
+                      <TextBlock Margin="0,0,14,3"><Run Text="{Binding DataContext.FavoritesTitle, Mode=OneWay, RelativeSource={RelativeSource AncestorType=Window}}" /><Run Text=": " /><Run Text="{Binding ProjectDashboardFavoriteCount, Mode=OneWay}" /></TextBlock>
+                      <TextBlock Margin="0,0,14,3"><Run Text="{Binding DataContext.DownloadsTitle, Mode=OneWay, RelativeSource={RelativeSource AncestorType=Window}}" /><Run Text=": " /><Run Text="{Binding ProjectDashboardDownloadCount, Mode=OneWay}" /></TextBlock>
+                      <TextBlock Margin="0,0,14,3"><Run Text="{Binding DataContext.ResearchSourcesTitle, Mode=OneWay, RelativeSource={RelativeSource AncestorType=Window}}" /><Run Text=": " /><Run Text="{Binding ProjectDashboardResearchReferenceCount, Mode=OneWay}" /></TextBlock>
+                      <TextBlock Margin="0,0,14,3"><Run Text="{Binding DataContext.ResearchNotesText, Mode=OneWay, RelativeSource={RelativeSource AncestorType=Window}}" /><Run Text=": " /><Run Text="{Binding ProjectDashboardResearchNoteCount, Mode=OneWay}" /></TextBlock>
+                      <TextBlock Margin="0,0,14,3"><Run Text="{Binding DataContext.LicenseUnknownText, Mode=OneWay, RelativeSource={RelativeSource AncestorType=Window}}" /><Run Text=": " /><Run Text="{Binding ProjectDashboardUnknownRightsCount, Mode=OneWay}" /></TextBlock>
+                      <TextBlock Margin="0,0,14,3"><Run Text="{Binding DataContext.LicenseAttributionText, Mode=OneWay, RelativeSource={RelativeSource AncestorType=Window}}" /><Run Text=": " /><Run Text="{Binding ProjectDashboardAttributionRequiredCount, Mode=OneWay}" /></TextBlock>
+                      <TextBlock><Run Text="{Binding DataContext.MissingLocalMediaText, Mode=OneWay, RelativeSource={RelativeSource AncestorType=Window}}" /><Run Text=": " /><Run Text="{Binding ProjectDashboardMissingLocalMediaCount, Mode=OneWay}" /></TextBlock>
+                    </WrapPanel>
+                  </StackPanel>
+                </Border>
                 <TextBlock Text="{Binding ProjectActionsTitle}" FontWeight="SemiBold" />
                 <WrapPanel Margin="0,7,0,7">
                   <Button Content="{Binding ExportProjectText}" Click="ProjectExport_Click" />
@@ -487,5 +538,33 @@
         </ScrollViewer>
       </Grid>
     </Grid>
+    <Popup IsOpen="{Binding IsCommandPaletteOpen}" Placement="Center" StaysOpen="True" AllowsTransparency="True" Opened="CommandPalette_Opened">
+      <Border Background="White" BorderBrush="#AAB4C1" BorderThickness="1" CornerRadius="12" Width="650" Height="470" Padding="16" Effect="{x:Null}">
+        <Grid><Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions>
+          <Grid><Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><TextBox x:Name="CommandPaletteTextBox" Text="{Binding CommandPaletteQuery, UpdateSourceTrigger=PropertyChanged}" ToolTip="{Binding WorkspaceCommandPaletteText}" FontSize="17" AutomationProperties.Name="{Binding WorkspaceCommandPaletteText}" PreviewKeyDown="CommandPaletteTextBox_PreviewKeyDown" /><Button Grid.Column="1" Content="×" Command="{Binding CloseCommandPaletteCommand}" /></Grid>
+          <ListBox x:Name="CommandPaletteListBox" Grid.Row="1" ItemsSource="{Binding WorkspaceCommands}" Margin="0,12,0,0" PreviewKeyDown="CommandPaletteListBox_PreviewKeyDown" AutomationProperties.Name="{Binding WorkspaceCommandPaletteText}"><ListBox.ItemTemplate><DataTemplate><Button Command="{Binding DataContext.ExecuteWorkspaceCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding Id}" HorizontalContentAlignment="Stretch"><Grid><Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><StackPanel><TextBlock Text="{Binding Title}" FontWeight="SemiBold" /><TextBlock Text="{Binding Detail}" Foreground="{StaticResource SubtleTextBrush}" FontSize="11" /></StackPanel><TextBlock Grid.Column="1" Text="{Binding Shortcut}" Foreground="{StaticResource SubtleTextBrush}" VerticalAlignment="Center" /></Grid></Button></DataTemplate></ListBox.ItemTemplate></ListBox>
+        </Grid>
+      </Border>
+    </Popup>
+    <Popup IsOpen="{Binding IsGlobalSearchOpen}" Placement="Center" StaysOpen="True" AllowsTransparency="True" Opened="GlobalSearch_Opened">
+      <Border Background="White" BorderBrush="#AAB4C1" BorderThickness="1" CornerRadius="12" Width="760" Height="560" Padding="16">
+        <Grid><Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions>
+          <Grid><Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><TextBox x:Name="GlobalSearchTextBox" Text="{Binding WorkspaceQuery, UpdateSourceTrigger=PropertyChanged}" ToolTip="{Binding WorkspaceSearchPlaceholder}" FontSize="17" AutomationProperties.Name="{Binding WorkspaceGlobalSearchText}" PreviewKeyDown="GlobalSearchTextBox_PreviewKeyDown" /><Button Grid.Column="1" Content="×" Command="{Binding CloseGlobalSearchCommand}" /></Grid>
+          <TextBlock Grid.Row="1" Text="{Binding WorkspaceStatus}" Foreground="{StaticResource SubtleTextBrush}" Margin="2,8" />
+          <ListBox x:Name="GlobalSearchListBox" Grid.Row="2" ItemsSource="{Binding WorkspaceSearchResultsView}" PreviewKeyDown="GlobalSearchListBox_PreviewKeyDown" AutomationProperties.Name="{Binding WorkspaceGlobalSearchText}">
+            <ListBox.GroupStyle>
+              <GroupStyle>
+                <GroupStyle.HeaderTemplate>
+                  <DataTemplate><TextBlock Text="{Binding Name}" FontWeight="SemiBold" Margin="4,10,4,4" /></DataTemplate>
+                </GroupStyle.HeaderTemplate>
+              </GroupStyle>
+            </ListBox.GroupStyle>
+            <ListBox.ItemTemplate>
+              <DataTemplate><Button Command="{Binding DataContext.OpenWorkspaceResultCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" HorizontalContentAlignment="Stretch"><StackPanel><TextBlock Text="{Binding Title}" FontWeight="SemiBold" /><TextBlock Text="{Binding Detail}" Foreground="{StaticResource SubtleTextBrush}" FontSize="11" TextTrimming="CharacterEllipsis" /></StackPanel></Button></DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+        </Grid>
+      </Border>
+    </Popup>
   </Grid>
 </Window>

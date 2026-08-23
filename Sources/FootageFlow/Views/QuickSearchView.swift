@@ -7,6 +7,7 @@ struct QuickSearchView: View {
   @EnvironmentObject private var store: DataStore
   @EnvironmentObject private var downloads: DownloadManager
   @EnvironmentObject private var localization: LocalizationManager
+  @EnvironmentObject private var workspace: WorkspaceCoordinator
   @State private var translationConfiguration: TranslationSession.Configuration?
   @State private var pendingTranslation = ""
   @State private var showHistory = false
@@ -15,6 +16,9 @@ struct QuickSearchView: View {
   @State private var showAllSearchLanguages = false
   @State private var showNewProject = false
   @State private var newProjectName = ""
+  @State private var showSaveSearch = false
+  @State private var savedSearchName = ""
+  @FocusState private var searchFieldFocused: Bool
 
   private let columns = [GridItem(.adaptive(minimum: 250, maximum: 340), spacing: 14)]
 
@@ -98,6 +102,13 @@ struct QuickSearchView: View {
     .toolbar {
       ToolbarItemGroup {
         Button {
+          savedSearchName = viewModel.query
+          showSaveSearch = true
+        } label: {
+          Label(tr("workspace.saveSearch"), systemImage: "bookmark")
+        }
+        .disabled(viewModel.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+        Button {
           showHistory = true
         } label: {
           Label(tr("search.history"), systemImage: "clock.arrow.circlepath")
@@ -110,6 +121,22 @@ struct QuickSearchView: View {
       }
     }
     .sheet(isPresented: $showHistory) { SearchHistoryView(onUse: useHistory) }
+    .sheet(isPresented: $showSaveSearch) {
+      VStack(alignment: .leading, spacing: 16) {
+        Text(tr("workspace.saveSearch")).font(.title2.bold())
+        TextField(tr("workspace.savedSearchName"), text: $savedSearchName)
+          .textFieldStyle(.roundedBorder)
+          .onSubmit { saveCurrentSearch() }
+        HStack {
+          Spacer()
+          Button(tr("common.cancel")) { showSaveSearch = false }
+          Button(tr("common.save")) { saveCurrentSearch() }
+            .buttonStyle(.borderedProminent)
+            .disabled(savedSearchName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+        }
+      }
+      .padding(24).frame(width: 420)
+    }
     .sheet(isPresented: $showNewProject) {
       VStack(alignment: .leading, spacing: 16) {
         Text(tr("project.new")).font(.title2.bold())
@@ -130,6 +157,7 @@ struct QuickSearchView: View {
     .onChange(of: viewModel.assets.map(\.stableID)) { _, _ in
       selection.retainAvailable(viewModel.assets)
     }
+    .onChange(of: workspace.searchFocusRequest) { _, _ in searchFieldFocused = true }
     .translationTask(translationConfiguration) { session in
       guard !pendingTranslation.isEmpty else { return }
       do {
@@ -156,7 +184,8 @@ struct QuickSearchView: View {
       HStack(spacing: 10) {
         Image(systemName: "magnifyingglass").font(.title2).foregroundStyle(.secondary)
         TextField(tr("search.placeholder"), text: $viewModel.query)
-          .textFieldStyle(.plain).font(.title3)
+          .textFieldStyle(.plain).font(.title3).focused($searchFieldFocused)
+          .accessibilityLabel(tr("search.placeholder"))
           .onSubmit { beginSearch() }
         if viewModel.isAnySearching {
           Button(tr("common.stop")) { viewModel.stop() }.buttonStyle(.bordered)
@@ -637,6 +666,11 @@ struct QuickSearchView: View {
     } else {
       viewModel.search()
     }
+  }
+
+  private func saveCurrentSearch() {
+    store.addSavedSearch(viewModel.savedSearch(named: savedSearchName))
+    showSaveSearch = false
   }
 
   private func useHistory(_ history: SearchHistoryRecord) {

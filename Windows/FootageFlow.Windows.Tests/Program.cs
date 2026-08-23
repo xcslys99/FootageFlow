@@ -41,6 +41,10 @@ try
               localization.Text("update.whatsNew") != "update.whatsNew" &&
               localization.Text("update.notNow") != "update.notNow",
               $"Windows {language.Code} update localization");
+        Check(localization.Text("workspace.globalSearch") != "workspace.globalSearch" &&
+              localization.Text("workspace.commandPalette") != "workspace.commandPalette" &&
+              localization.Text("workspace.providerHealth") != "workspace.providerHealth",
+              $"Windows {language.Code} workspace localization fallback");
     }
     localization.SetLanguage("ru");
     settings.Save();
@@ -72,6 +76,21 @@ Check(UpdateReleaseUrlValidator.IsTrusted(
 Check(!UpdateReleaseUrlValidator.IsTrusted(
           "https://github.com.evil.example/xcslys99/FootageFlow/releases/tag/v0.7.4"),
       "Windows rejects untrusted update release URLs");
+var savedSearch = new SavedSearchRecord
+{
+    Id = Guid.NewGuid(), Name = "City night", Query = "city night", MediaType = "video",
+    DownloadableOnly = true, ProviderIDs = ["wikimedia"], CreatedAt = DateTimeOffset.UtcNow,
+    UpdatedAt = DateTimeOffset.UtcNow
+};
+var savedSearchRoundTrip = JsonSerializer.Deserialize<SavedSearchRecord>(JsonSerializer.Serialize(savedSearch));
+Check(savedSearchRoundTrip?.Name == "City night" && savedSearchRoundTrip.ProviderIDs.Single() == "wikimedia",
+      "Windows saved search model round trip");
+var workspaceEntry = new WorkspaceSearchEntry
+{
+    Id = "project:1", Kind = "project", Title = "Apollo", Detail = "Moon archive"
+};
+Check(JsonSerializer.Deserialize<WorkspaceSearchEntry>(JsonSerializer.Serialize(workspaceEntry))?.Kind == "project",
+      "Windows local workspace search entry round trip");
 Check(WindowsPathSafety.SanitizeName("CON") == "_CON", "Windows reserved filename");
 Check(!WindowsPathSafety.SanitizeName("bank:run?.mp4").Contains(':'), "Windows invalid filename characters");
 Check(WindowsPathSafety.SanitizeName(new string('a', 200)).Length == 80, "Windows filename length");
@@ -285,6 +304,20 @@ if (OperatingSystem.IsWindows())
         var health = await core.SendAsync(new CoreRequest { Action = "health" });
         Check(health.Success && health.Platform == "windows", "Windows core health");
         Check(health.Providers?.Count == 17, "Windows core exposes seventeen shared providers");
+        var workspaceName = "Workspace Search " + Guid.NewGuid().ToString("N");
+        var workspaceSaved = await core.SendAsync(new CoreRequest
+        {
+            Action = "addSavedSearch", SavedSearch = new SavedSearchRecord
+            {
+                Id = Guid.NewGuid(), Name = workspaceName, Query = "workspace fixture", MediaType = "video",
+                ProviderIDs = ["wikimedia"], CreatedAt = DateTimeOffset.UtcNow, UpdatedAt = DateTimeOffset.UtcNow
+            }
+        });
+        Check(workspaceSaved.Success && workspaceSaved.Database?.SavedSearches.Any(value => value.Name == workspaceName) == true,
+            "Windows shared saved search persistence");
+        var workspaceSearch = await core.SendAsync(new CoreRequest { Action = "workspaceSearch", Query = workspaceName });
+        Check(workspaceSearch.Success && workspaceSearch.WorkspaceEntries?.Any(value => value.Title == workspaceName) == true,
+            "Windows shared local workspace search");
         var keywords = await core.SendAsync(new CoreRequest { Action = "keywords", Query = "2001年阿根廷银行挤兑" });
         Check((keywords.Keywords?.Count ?? 0) >= 3, "Shared keyword engine");
         var relevanceCandidates = new[]

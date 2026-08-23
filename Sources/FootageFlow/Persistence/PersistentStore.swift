@@ -13,6 +13,8 @@ final class PersistentStore {
   var duplicateDecisions: [DuplicateDecisionRecord] { database.duplicateDecisions ?? [] }
   var fileHashCache: [FileHashCacheRecord] { database.fileHashCache ?? [] }
   var researchReferences: [ResearchReferenceRecord] { database.researchReferences ?? [] }
+  var savedSearches: [SavedSearchRecord] { database.savedSearches ?? [] }
+  var providerHealth: [ProviderHealthRecord] { database.providerHealth ?? [] }
 
   init(inMemory: Bool = false, fileURL: URL? = nil) {
     if inMemory {
@@ -229,6 +231,56 @@ final class PersistentStore {
     save()
   }
 
+  @discardableResult
+  func addSavedSearch(_ value: SavedSearchRecord) -> SavedSearchRecord {
+    var record = value
+    let requested =
+      record.name.isEmpty ? (record.query.isEmpty ? "Saved Search" : record.query) : record.name
+    record.name = uniqueSavedSearchName(requested, excluding: record.id)
+    database.savedSearches = (database.savedSearches ?? []) + [record]
+    save()
+    return record
+  }
+
+  func updateSavedSearch(_ value: SavedSearchRecord) {
+    guard let index = (database.savedSearches ?? []).firstIndex(where: { $0.id == value.id }) else {
+      return
+    }
+    var record = value
+    record.name = uniqueSavedSearchName(record.name, excluding: record.id)
+    record.updatedAt = .now
+    database.savedSearches?[index] = record
+    save()
+  }
+
+  func deleteSavedSearch(id: UUID) {
+    database.savedSearches?.removeAll { $0.id == id }
+    save()
+  }
+
+  @discardableResult
+  func duplicateSavedSearch(id: UUID) -> SavedSearchRecord? {
+    guard let original = (database.savedSearches ?? []).first(where: { $0.id == id }) else {
+      return nil
+    }
+    var duplicate = original
+    duplicate.id = UUID()
+    duplicate.name = uniqueSavedSearchName(original.name, excluding: duplicate.id)
+    duplicate.createdAt = .now
+    duplicate.updatedAt = .now
+    database.savedSearches = (database.savedSearches ?? []) + [duplicate]
+    save()
+    return duplicate
+  }
+
+  func updateProviderHealth(_ value: ProviderHealthRecord) {
+    var records = database.providerHealth ?? []
+    records.removeAll { $0.providerID == value.providerID }
+    records.append(value)
+    database.providerHealth = records
+    save()
+  }
+
   /// Commits a fully-validated import in one atomic database write. The caller
   /// must construct the payload before this method is invoked.
   func importProject(_ payload: ImportedProjectPayload) {
@@ -250,6 +302,21 @@ final class PersistentStore {
       let index = database.projects.firstIndex(where: { $0.id == projectID })
     else { return }
     database.projects[index].updatedAt = .now
+  }
+
+  private func uniqueSavedSearchName(_ requested: String, excluding id: UUID?) -> String {
+    let base = requested.trimmingCharacters(in: .whitespacesAndNewlines)
+    let safeBase = base.isEmpty ? "Saved Search" : base
+    let existing = Set(
+      (database.savedSearches ?? [])
+        .filter { $0.id != id }
+        .map {
+          $0.name.localizedCaseInsensitiveCompare(safeBase) == .orderedSame ? safeBase : $0.name
+        })
+    guard existing.contains(safeBase) else { return safeBase }
+    var number = 2
+    while existing.contains("\(safeBase) (\(number))") { number += 1 }
+    return "\(safeBase) (\(number))"
   }
 
   private static func load(from fileURL: URL?) -> PersistentDatabase? {

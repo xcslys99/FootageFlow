@@ -6,6 +6,7 @@ using FootageFlow.Windows.Services;
 using FootageFlow.Windows.ViewModels;
 using Microsoft.Win32;
 using System.Windows.Threading;
+using System.Windows.Input;
 
 namespace FootageFlow.Windows;
 
@@ -23,6 +24,11 @@ public partial class MainWindow : Window
             if (asset is not null) new PreviewWindow(asset, _viewModel.T) { Owner = this }.Show();
         };
         _viewModel.UpdateAvailable += ShowUpdateDialog;
+        _viewModel.FocusSearchRequested += () =>
+        {
+            SearchQueryTextBox.Focus();
+            SearchQueryTextBox.SelectAll();
+        };
         _clipboardTimer.Tick += (_, _) =>
         {
             if (!IsActive || !_viewModel.IsLinkDownloaderPage || !_viewModel.ClipboardDetectionEnabled) return;
@@ -35,6 +41,110 @@ public partial class MainWindow : Window
             await _viewModel.CheckForUpdatesOnLaunchAsync();
         };
         Closed += (_, _) => _clipboardTimer.Stop();
+    }
+
+    private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Escape)
+        {
+            if (_viewModel.IsCommandPaletteOpen) _viewModel.CloseCommandPaletteCommand.Execute(null);
+            if (_viewModel.IsGlobalSearchOpen) _viewModel.CloseGlobalSearchCommand.Execute(null);
+            e.Handled = true;
+            return;
+        }
+        var modifiers = Keyboard.Modifiers;
+        if ((modifiers & ModifierKeys.Control) == 0) return;
+        if (e.Key == Key.K)
+        {
+            _viewModel.ShowCommandPaletteCommand.Execute(null);
+            e.Handled = true;
+        }
+        else if (e.Key == Key.G && (modifiers & ModifierKeys.Shift) != 0)
+        {
+            _viewModel.ShowGlobalSearchCommand.Execute(null);
+            e.Handled = true;
+        }
+        else if (e.Key == Key.F && (modifiers & ModifierKeys.Shift) != 0)
+        {
+            _viewModel.ExecuteWorkspaceCommand.Execute("openFavorites");
+            e.Handled = true;
+        }
+        else if (e.Key == Key.F)
+        {
+            _viewModel.ExecuteWorkspaceCommand.Execute("focusSearch");
+            e.Handled = true;
+        }
+        else if (e.Key == Key.N)
+        {
+            _viewModel.ExecuteWorkspaceCommand.Execute("newProject");
+            e.Handled = true;
+        }
+        else if (e.Key == Key.O)
+        {
+            _viewModel.ExecuteWorkspaceCommand.Execute("openProjects");
+            e.Handled = true;
+        }
+        else if (e.Key == Key.D && (modifiers & ModifierKeys.Shift) != 0)
+        {
+            _viewModel.ExecuteWorkspaceCommand.Execute("openDownloads");
+            e.Handled = true;
+        }
+        else if (e.Key == Key.R && (modifiers & ModifierKeys.Shift) != 0)
+        {
+            _viewModel.ExecuteWorkspaceCommand.Execute("openResearchNotes");
+            e.Handled = true;
+        }
+        else if (e.Key == Key.OemComma)
+        {
+            _viewModel.ExecuteWorkspaceCommand.Execute("openSettings");
+            e.Handled = true;
+        }
+    }
+
+    private void CommandPalette_Opened(object? sender, EventArgs e)
+    {
+        Dispatcher.BeginInvoke(new Action(() => CommandPaletteTextBox.Focus()), DispatcherPriority.Input);
+    }
+
+    private void GlobalSearch_Opened(object? sender, EventArgs e)
+    {
+        Dispatcher.BeginInvoke(new Action(() => GlobalSearchTextBox.Focus()), DispatcherPriority.Input);
+    }
+
+    private void CommandPaletteTextBox_PreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Down) return;
+        if (CommandPaletteListBox.Items.Count > 0)
+        {
+            CommandPaletteListBox.SelectedIndex = 0;
+            CommandPaletteListBox.Focus();
+        }
+        e.Handled = true;
+    }
+
+    private void CommandPaletteListBox_PreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Enter || CommandPaletteListBox.SelectedItem is not WorkspaceCommandItem item) return;
+        _viewModel.ExecuteWorkspaceCommand.Execute(item.Id);
+        e.Handled = true;
+    }
+
+    private void GlobalSearchTextBox_PreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Down) return;
+        if (GlobalSearchListBox.Items.Count > 0)
+        {
+            GlobalSearchListBox.SelectedIndex = 0;
+            GlobalSearchListBox.Focus();
+        }
+        e.Handled = true;
+    }
+
+    private void GlobalSearchListBox_PreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Enter || GlobalSearchListBox.SelectedItem is not WorkspaceSearchEntry item) return;
+        _viewModel.OpenWorkspaceResultCommand.Execute(item);
+        e.Handled = true;
     }
 
     private void ShowUpdateDialog(AppReleaseInfo release)

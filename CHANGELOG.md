@@ -2,6 +2,28 @@
 
 All notable FootageFlow changes are documented here.
 
+## [0.10.0] - 2026-08-23
+
+### Added
+
+- A local Workspace for project dashboards, Saved Searches, Smart Collections, provider health checks, and a shortcut reference
+- Local-only Global Search across projects, saved media, favorites, download history, search history, Saved Searches, research references, and known local media records
+- Command Palette with a compact, keyboard-first entry point for the main FootageFlow workflows
+- Saved Searches that preserve query, scope, filters, relevance mode, and enabled providers without saving search-result snapshots
+- Dynamic Smart Collections for recent downloads/favorites/research, downloaded media, known rights states, missing local files, and possible metadata duplicates
+- Manual, lightweight Provider Health checks; no background provider polling or new network service was introduced
+
+### Accessibility and privacy
+
+- macOS VoiceOver and Windows Narrator labels for workspace controls, media actions, status, and keyboard-first navigation
+- Keyboard shortcuts for Quick Search, Global Search, Command Palette, Projects, Favorites, Downloads, Research, and Settings, plus visible native focus handling
+- Workspace search reads only FootageFlow metadata already stored locally. It does not scan arbitrary disks, send search data to a server, or index API keys, cookies, tokens, or raw logs
+
+### Platforms and validation
+
+- macOS Apple Silicon and Windows 11 x64 use the shared Swift Core for Workspace data, command routing, Saved Searches, and local search records
+- Added persistence, legacy-decode, local-index privacy, collection, command-catalog, localization, Windows Core-host, WPF build, packaging, installer, clean-install, launch, and uninstall coverage
+
 ## [0.9.0] - 2026-08-23
 
 ### Added

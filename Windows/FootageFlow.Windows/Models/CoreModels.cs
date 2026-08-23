@@ -54,6 +54,9 @@ public sealed class CoreRequest
     public string? ResearchNote { get; init; }
     public IReadOnlyList<string>? ResearchTags { get; init; }
     public string? ExportSection { get; init; }
+    public SavedSearchRecord? SavedSearch { get; init; }
+    public string? SavedSearchID { get; init; }
+    public ProviderHealthRecord? ProviderHealthRecord { get; init; }
 }
 
 public sealed class CoreResponse
@@ -82,6 +85,7 @@ public sealed class CoreResponse
     public string? DataBase64 { get; init; }
     public IReadOnlyList<ResearchProviderBatch>? ResearchBatches { get; init; }
     public IReadOnlyList<ResearchRecord>? ResearchRecords { get; init; }
+    public IReadOnlyList<WorkspaceSearchEntry>? WorkspaceEntries { get; init; }
 }
 
 public sealed class AppReleaseInfo
@@ -101,6 +105,8 @@ public sealed class PersistentDatabase
     public IReadOnlyList<SearchHistoryRecord> History { get; init; } = [];
     public IReadOnlyList<DownloadRecord> Downloads { get; init; } = [];
     public IReadOnlyList<ResearchReferenceRecord> ResearchReferences { get; init; } = [];
+    public IReadOnlyList<SavedSearchRecord> SavedSearches { get; init; } = [];
+    public IReadOnlyList<ProviderHealthRecord> ProviderHealth { get; init; } = [];
 }
 
 public sealed class ProjectRecord
@@ -167,8 +173,69 @@ public sealed class DownloadRecord
     public double? ClipStartSeconds { get; init; }
     public double? ClipEndSeconds { get; init; }
     public double? ClipDurationSeconds { get; init; }
+    public MediaAsset? Asset { get; init; }
     public string DisplaySource => string.IsNullOrWhiteSpace(SourceName) ? ProviderRaw : SourceName;
     [JsonIgnore] public string WorkflowSummary { get; set; } = "";
+}
+
+public sealed class SavedSearchRecord : ObservableObject
+{
+    private string _name = "";
+    public Guid Id { get; init; }
+    public string Name { get => _name; set => Set(ref _name, value); }
+    public string Query { get; init; } = "";
+    public IReadOnlyList<SearchKeyword> Keywords { get; init; } = [];
+    public string SearchScope { get; init; } = "media";
+    public string MediaType { get; init; } = "video";
+    public string Orientation { get; init; } = "all";
+    public string Resolution { get; init; } = "all";
+    public string Duration { get; init; } = "all";
+    public string LicenseFilter { get; init; } = "all";
+    public int? YearFrom { get; init; }
+    public int? YearTo { get; init; }
+    public bool DownloadableOnly { get; init; }
+    public string RelevanceMode { get; init; } = "balanced";
+    public IReadOnlyList<string> ProviderIDs { get; init; } = [];
+    public DateTimeOffset CreatedAt { get; init; }
+    public DateTimeOffset UpdatedAt { get; init; }
+}
+
+public sealed class ProviderHealthRecord
+{
+    public string ProviderID { get; init; } = "";
+    public string State { get; init; } = "ready";
+    public string? Message { get; init; }
+    public DateTimeOffset? TestedAt { get; init; }
+    public int? ResponseTimeMilliseconds { get; init; }
+}
+
+public sealed class WorkspaceSearchEntry
+{
+    public string Id { get; init; } = "";
+    public string Kind { get; init; } = "media";
+    public string Title { get; init; } = "";
+    public string Detail { get; init; } = "";
+    public Guid? ProjectID { get; init; }
+    public string? SourceURL { get; init; }
+    public string? LocalPath { get; init; }
+    public DateTimeOffset? Date { get; init; }
+    [JsonIgnore] public string SectionTitle { get; set; } = "";
+}
+
+public sealed class WorkspaceCommandItem
+{
+    public string Id { get; init; } = "";
+    public string Title { get; init; } = "";
+    public string Detail { get; init; } = "";
+    public string Shortcut { get; init; } = "";
+}
+
+public sealed class WorkspaceSmartCollection
+{
+    public string Id { get; init; } = "";
+    public string Title { get; init; } = "";
+    public int Count { get; init; }
+    public string Destination { get; init; } = "workspace";
 }
 
 public sealed class ResearchProviderBatch
