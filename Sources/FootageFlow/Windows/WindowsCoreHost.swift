@@ -737,7 +737,11 @@
           options: AttributionExportOptions(
             includeLocalFilePaths: request.includeLocalFilePaths ?? false),
           researchReferences: snapshot.store.researchReferences.filter { $0.projectID == id },
-          section: request.exportSection ?? .combined)
+          // Keep the long-standing host contract for callers that predate the
+          // research workspace. The Windows UI always sends an explicit
+          // section, while older integrations still receive the media-source
+          // attribution report they requested before v0.9.0.
+          section: request.exportSection ?? .mediaSources)
         return WindowsCoreResponse(
           id: request.id, success: true, dataBase64: data.base64EncodedString())
       } catch {
