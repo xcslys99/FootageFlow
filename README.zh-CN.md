@@ -76,35 +76,15 @@ FootageFlow 面向纪录片、历史、国家、财经、人物、科普和短�
 
 ## 界面截图
 
-以下截图来自 macOS 版 FootageFlow。Windows 版采用相同产品结构，并使用符合 Windows 习惯的原生控件。
+以下为 v0.10.0 当前版本的真实 macOS 英文界面截图。Windows 版采用相同产品结构，并使用符合 Windows 习惯的原生控件。
 
-![FootageFlow 智能搜索扩展与可编辑本地关键词](docs/images/smart-search-expansion.png)
+![FootageFlow v0.10.0 快速搜索：可编辑的智能扩展、素材来源状态、筛选和已加载的多来源结果](docs/images/quick-search-v010.png)
 
-![FootageFlow 链接下载的有效片段范围与剪辑兼容输出](docs/images/link-clip-output.png)
+![FootageFlow v0.10.0 Workspace 智能集合](docs/images/workspace-smart-collections-v010.png)
 
-![FootageFlow Openverse 真实搜索结果与已加载缩略图](docs/images/openverse-results.png)
+![FootageFlow v0.10.0 Workspace 素材来源状态](docs/images/provider-health-v010.png)
 
-![FootageFlow Dailymotion 发现结果](docs/images/dailymotion-results.png)
-
-![FootageFlow 可选且仅限本机的剪贴板检测设置](docs/images/clipboard-settings.png)
-
-![FootageFlow Provider 模式与十种界面语言](docs/images/provider-settings.png)
-
-![FootageFlow 项目版权信息检查与 Provider 实际来源元数据](docs/images/project-rights-audit-v080.png)
-
-![FootageFlow 本地重复素材检查与不删除源文件的项目操作](docs/images/project-duplicate-detection-v080.png)
-
-![FootageFlow 资料模式中的文化与参考资料结果](docs/images/research-mode-v090.png)
-
-![FootageFlow Crossref 资料记录中的 DOI 元数据与来源引用](docs/images/research-crossref-v090.png)
-
-![FootageFlow 全部模式将素材与资料结果分组显示](docs/images/research-all-v090.png)
-
-![FootageFlow 查找相关素材会回到已有的可下载素材工作流](docs/images/research-related-media-v090.png)
-
-![FootageFlow 仅对来源明确 Public Domain 的博物馆记录显示添加为素材](docs/images/research-public-domain-media-v090.png)
-
-![FootageFlow 项目研究笔记、纯文本笔记与引用](docs/images/research-notes-v090.png)
+![FootageFlow v0.10.0 命令面板](docs/images/command-palette-v010.png)
 
 ## 功能摘要
 

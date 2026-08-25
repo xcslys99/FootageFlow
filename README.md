@@ -76,35 +76,15 @@ If you already know the media URL, Link Downloader uses the same project, downlo
 
 ## Screenshots
 
-These screenshots are from FootageFlow on macOS. The Windows edition follows the same product structure with platform-native controls.
+These current v0.10.0 screenshots are captured from the real macOS app in English. The Windows edition follows the same product structure with platform-native controls.
 
-![FootageFlow Smart Search Expansion with editable local queries](docs/images/smart-search-expansion.png)
+![FootageFlow v0.10.0 Quick Search: editable smart expansion, provider status, filters, and loaded multi-source footage results](docs/images/quick-search-v010.png)
 
-![FootageFlow Link Downloader with a validated clip range and editing-compatible output](docs/images/link-clip-output.png)
+![FootageFlow v0.10.0 Workspace Smart Collections](docs/images/workspace-smart-collections-v010.png)
 
-![FootageFlow Openverse results with real loaded thumbnails](docs/images/openverse-results.png)
+![FootageFlow v0.10.0 Workspace Provider Health](docs/images/provider-health-v010.png)
 
-![FootageFlow Dailymotion discovery results](docs/images/dailymotion-results.png)
-
-![FootageFlow optional local-only clipboard detection setting](docs/images/clipboard-settings.png)
-
-![FootageFlow provider modes and ten interface languages](docs/images/provider-settings.png)
-
-![FootageFlow project Rights Audit with provider-supplied source metadata](docs/images/project-rights-audit-v080.png)
-
-![FootageFlow local duplicate review with non-destructive project actions](docs/images/project-duplicate-detection-v080.png)
-
-![FootageFlow Research mode with separated cultural and reference records](docs/images/research-mode-v090.png)
-
-![FootageFlow Crossref research records with DOI metadata and source citations](docs/images/research-crossref-v090.png)
-
-![FootageFlow combined All mode keeps media and research in separate groups](docs/images/research-all-v090.png)
-
-![FootageFlow Find Related Media returns to the existing downloadable media workflow](docs/images/research-related-media-v090.png)
-
-![FootageFlow only offers Add as Media on source-confirmed public-domain museum records](docs/images/research-public-domain-media-v090.png)
-
-![FootageFlow project Research Notes with plain-text notes and citations](docs/images/research-notes-v090.png)
+![FootageFlow v0.10.0 Command Palette](docs/images/command-palette-v010.png)
 
 ## Features
 
