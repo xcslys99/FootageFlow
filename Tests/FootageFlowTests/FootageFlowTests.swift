@@ -403,7 +403,7 @@ import Foundation
       let asset = try XCTUnwrap(page.assets.first)
       XCTAssertEqual(asset.provider, .dareful)
       XCTAssertEqual(asset.title, "Winter City Aerial")
-      XCTAssertEqual(asset.duration, 51.8518, accuracy: 0.0001)
+      XCTAssertEqual(try XCTUnwrap(asset.duration), 51.8518, accuracy: 0.0001)
       XCTAssertEqual(asset.licenseStatus, .attributionRequired)
       XCTAssertTrue(asset.downloadable)
       XCTAssertEqual(asset.effectiveDownloadStrategy, .ytDLP)
