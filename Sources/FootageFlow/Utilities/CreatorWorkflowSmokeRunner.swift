@@ -6,7 +6,8 @@ enum CreatorWorkflowSmokeRunner {
   private static let youtubeURL = URL(string: "https://www.youtube.com/watch?v=jNQXAC9IVRw")!
   private static let dailymotionURL = URL(string: "https://www.dailymotion.com/video/x7rvjrf")!
   private static let publicMediaURL = URL(
-    string: "https://media.w3.org/2010/05/sintel/trailer.mp4")!
+    string:
+      "https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/720/Big_Buck_Bunny_720_10s_1MB.mp4")!
 
   static func run(directory: URL) async -> Int32 {
     var passed = 0
@@ -64,21 +65,21 @@ enum CreatorWorkflowSmokeRunner {
     do {
       let analysis = try await service.analyze(sourceURL: publicMediaURL)
       // Generic direct-file extractors do not always publish duration metadata. This fixed,
-      // public Sintel fixture is longer than 12 seconds, so the smoke may supply its known
-      // duration without weakening the user-facing unknown-duration validation.
-      let fixtureDuration = analysis.duration ?? 52
-      let range = try ClipTimeRange(start: 2, end: 12, mediaDuration: fixtureDuration)
+      // public sample is ten seconds long, so the smoke may supply its known duration
+      // without weakening the user-facing unknown-duration validation.
+      let fixtureDuration = analysis.duration ?? 10
+      let range = try ClipTimeRange(start: 1, end: 8, mediaDuration: fixtureDuration)
       let options = YTDLPDownloadOptions(
         formatSelector: LinkDownloadQuality.p720.formatSelector,
         downloadSubtitles: false, subtitleLanguages: nil,
         outputPreset: .editingCompatibleMP4, clipRange: range,
         mediaDuration: fixtureDuration)
       let output = try await service.download(
-        sourceURL: publicMediaURL, directory: directory, fileStem: "sintel-10-second-clip",
+        sourceURL: publicMediaURL, directory: directory, fileStem: "big-buck-bunny-7-second-clip",
         options: options)
       let probe = try await probeMedia(output, ffprobeURL: ffprobeURL)
       check(output.pathExtension.lowercased() == "mp4", "editing MP4 extension")
-      check(abs((probe.format.duration ?? 0) - 10) <= 0.25, "ten-second clip duration")
+      check(abs((probe.format.duration ?? 0) - 7) <= 0.25, "seven-second clip duration")
       check(
         probe.streams.contains {
           $0.codecType == "video" && $0.codecName == "h264" && $0.pixelFormat == "yuv420p"

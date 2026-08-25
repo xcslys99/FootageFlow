@@ -543,7 +543,7 @@ static async Task RunCreatorWorkflowSmokeAsync(
     {
         ("YouTube", "https://www.youtube.com/watch?v=jNQXAC9IVRw"),
         ("Dailymotion", "https://www.dailymotion.com/video/x7rvjrf"),
-        ("public media", "https://media.w3.org/2010/05/sintel/trailer.mp4")
+        ("public media", "https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/720/Big_Buck_Bunny_720_10s_1MB.mp4")
     };
     foreach (var (name, url) in sources)
     {
@@ -574,18 +574,18 @@ static async Task RunCreatorWorkflowSmokeAsync(
         {
             ["linkFormatSelector"] = "bestvideo[height<=720]+bestaudio/best[height<=720]",
             ["linkOutputPreset"] = "editingCompatibleMP4",
-            ["linkClipStart"] = "2",
-            ["linkClipEnd"] = "12",
-            ["linkClipDuration"] = "10",
+            ["linkClipStart"] = "1",
+            ["linkClipEnd"] = "8",
+            ["linkClipDuration"] = "7",
             ["linkMediaDuration"] = analysis.Duration?.ToString(CultureInfo.InvariantCulture) ?? "",
             ["sourceName"] = analysis.SourceName
         };
         var output = await service.DownloadAsync(
-            source, directory, "sintel-10-second-clip", metadata, null, CancellationToken.None);
+            source, directory, "big-buck-bunny-7-second-clip", metadata, null, CancellationToken.None);
         var probe = await ProbeMediaAsync(Path.Combine(toolRoot, "ffprobe.exe"), output);
         check(Path.GetExtension(output).Equals(".mp4", StringComparison.OrdinalIgnoreCase),
             "Windows creator smoke editing MP4 extension");
-        check(Math.Abs(probe.Duration - 10) <= 0.25, "Windows creator smoke ten-second duration");
+        check(Math.Abs(probe.Duration - 7) <= 0.25, "Windows creator smoke seven-second duration");
         check(probe.HasH264Yuv420p, "Windows creator smoke H.264 yuv420p video");
         check(probe.HasCompatibleAudio, "Windows creator smoke AAC audio when present");
         check(HasFastStart(output), "Windows creator smoke MP4 fast-start atom order");
