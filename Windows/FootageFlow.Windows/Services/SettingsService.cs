@@ -45,6 +45,12 @@ public sealed class SettingsService
             Current.CreatorWorkflowProvidersV6Added = true;
             Save();
         }
+        if (!Current.NoKeyProvidersV7Added)
+        {
+            Current.EnabledProviders.UnionWith(["dareful", "mazwai", "dvids", "britishPathe", "esa"]);
+            Current.NoKeyProvidersV7Added = true;
+            Save();
+        }
         if (string.IsNullOrWhiteSpace(Current.DownloadRoot)) Current.DownloadRoot = AppPaths.DefaultDownloadRoot;
     }
 

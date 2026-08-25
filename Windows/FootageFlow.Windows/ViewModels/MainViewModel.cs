@@ -96,7 +96,10 @@ public sealed class MainViewModel : ObservableObject
             NewProvider("peertube", "PeerTube / SepiaSearch"), NewProvider("videvo", "Videvo"),
             NewProvider("videezy", "Videezy"), NewProvider("mixkit", "Mixkit"),
             NewProvider("coverr", "Coverr"), NewProvider("vimeo", "Vimeo"),
-            NewProvider("openverse", "Openverse"), NewProvider("dailymotion", "Dailymotion")
+            NewProvider("openverse", "Openverse"), NewProvider("dailymotion", "Dailymotion"),
+            NewProvider("dareful", "Dareful"), NewProvider("mazwai", "Mazwai"),
+            NewProvider("dvids", "DVIDS"), NewProvider("britishPathe", "British Pathé"),
+            NewProvider("esa", "ESA Multimedia")
         });
         foreach (var provider in Providers)
             provider.PropertyChanged += (_, args) =>
@@ -614,7 +617,7 @@ public sealed class MainViewModel : ObservableObject
         get
         {
             var version = typeof(MainViewModel).Assembly.GetName().Version;
-            return version is null ? "0.10.0" : $"{version.Major}.{version.Minor}.{Math.Max(0, version.Build)}";
+            return version is null ? "0.11.0" : $"{version.Major}.{version.Minor}.{Math.Max(0, version.Build)}";
         }
     }
     public bool IsUpdateChecking
@@ -940,6 +943,11 @@ public sealed class MainViewModel : ObservableObject
             "coverr" => $"https://coverr.co/stock-video-footage?query={query}",
             "vimeo" => $"https://vimeo.com/search?q={query}",
             "dailymotion" => $"https://www.dailymotion.com/search/{query}/videos",
+            "dareful" => $"https://dareful.com/?s={query}",
+            "mazwai" => "https://mazwai.com/",
+            "dvids" => $"https://www.dvidshub.net/search/?q={query}",
+            "britishPathe" => $"https://www.britishpathe.com/?s={query}",
+            "esa" => $"https://www.esa.int/esearch?q={query}",
             _ => null
         };
         ShellService.OpenUrl(url);
@@ -971,7 +979,7 @@ public sealed class MainViewModel : ObservableObject
                 option.Status = T("settings.connectionSuccess");
                 return option.Status;
             }
-            if (provider is "nationalArchives" or "europeana" or "videvo" or "videezy" or "mixkit" or "coverr" or "vimeo" &&
+            if (provider is "nationalArchives" or "europeana" or "videvo" or "videezy" or "mixkit" or "coverr" or "vimeo" or "mazwai" or "dvids" or "britishPathe" &&
                 string.IsNullOrWhiteSpace(ReadCredential(provider)))
             {
                 option.Status = T("provider.limitedMode");
@@ -1152,12 +1160,12 @@ public sealed class MainViewModel : ObservableObject
         ProviderOption option, IReadOnlyList<SearchKeyword> queries, CancellationToken cancellationToken)
     {
         var limited = option.Id is ("nationalArchives" or "europeana" or "videvo" or "videezy"
-            or "mixkit" or "coverr" or "vimeo") && string.IsNullOrWhiteSpace(ReadCredential(option.Id));
+            or "mixkit" or "coverr" or "vimeo" or "mazwai" or "dvids" or "britishPathe") && string.IsNullOrWhiteSpace(ReadCredential(option.Id));
         var selectedQueries = queries.Take(limited ? 1 : 14).ToArray();
         var assets = new List<MediaAsset>();
         ProviderBatch? primary = null;
         ProviderBatch? successful = null;
-        var directOrTool = option.Id is ("pexels" or "pixabay" or "youtube")
+        var directOrTool = option.Id is ("pexels" or "pixabay" or "youtube" or "dareful" or "esa")
             && string.IsNullOrWhiteSpace(ReadCredential(option.Id));
         var perProviderLimit = directOrTool ? 1 : 2;
         async Task<(int Index, ProviderBatch Batch)> RunQueryAsync(int index)
@@ -2421,15 +2429,16 @@ public sealed class MainViewModel : ObservableObject
                 "pexels" or "pixabay" => T("provider.mode.directSearch"),
                 "youtube" => T("provider.mode.ytDLP"),
                 "nasa" or "libraryOfCongress" or "peertube" or "openverse" or "dailymotion" => T("provider.mode.publicAPI"),
-                "nationalArchives" or "europeana" or "videvo" or "videezy" or "mixkit" or "coverr" or "vimeo" => T("provider.mode.limited"),
+                "dareful" or "esa" => T("provider.mode.directSearch"),
+                "nationalArchives" or "europeana" or "videvo" or "videezy" or "mixkit" or "coverr" or "vimeo" or "mazwai" or "dvids" or "britishPathe" => T("provider.mode.limited"),
                 _ => T("provider.mode.publicInterface")
             };
             provider.Status = hasKey ? T("settings.configured") :
-                provider.Id is "nationalArchives" or "europeana" or "videvo" or "videezy" or "mixkit" or "coverr" or "vimeo" ? T("provider.limitedMode") :
-                provider.Id is "pexels" or "pixabay" or "youtube" ? T("provider.bestEffort") :
+                provider.Id is "nationalArchives" or "europeana" or "videvo" or "videezy" or "mixkit" or "coverr" or "vimeo" or "mazwai" or "dvids" or "britishPathe" ? T("provider.limitedMode") :
+                provider.Id is "pexels" or "pixabay" or "youtube" or "dareful" or "esa" ? T("provider.bestEffort") :
                 provider.Id is "nasa" or "libraryOfCongress" or "peertube" or "openverse" or "dailymotion" ? T("provider.noKeyRequired") :
                 T("provider.available");
-            var values = provider.Id is "nationalArchives" or "europeana" or "videvo" or "videezy" or "mixkit" or "coverr" or "vimeo" && !hasKey
+            var values = provider.Id is "nationalArchives" or "europeana" or "videvo" or "videezy" or "mixkit" or "coverr" or "vimeo" or "mazwai" or "dvids" or "britishPathe" && !hasKey
                 ? new[] { T("provider.openOfficialSearch") }
                 : new[] { T("capability.search"), T("capability.preview"), T("capability.metadata"),
                     T("capability.rights"), T("capability.download") };

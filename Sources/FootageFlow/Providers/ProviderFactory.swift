@@ -32,6 +32,9 @@ enum ProviderFactory {
       return key.isEmpty ? LimitedDiscoveryProvider(id: id) : VimeoProvider(accessToken: key)
     case .openverse: return OpenverseProvider()
     case .dailymotion: return DailymotionProvider()
+    case .dareful: return DarefulProvider(loader: directLoader)
+    case .esa: return ESAProvider(loader: directLoader)
+    case .mazwai, .dvids, .britishPathe: return LimitedDiscoveryProvider(id: id)
     case .linkDownloader: return LimitedDiscoveryProvider(id: id)
     }
   }

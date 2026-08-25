@@ -398,6 +398,8 @@
 "clipboard.privacyDetail" = "O FootageFlow verifica URLs de mídia apenas localmente enquanto esta janela está ativa e o Link Downloader está aberto. O conteúdo da área de transferência não é enviado nem registrado.";
 "settings.openverseDetail" = "API pública de imagens e áudio do Openverse; não requer chave de API. Os direitos são exibidos a partir dos metadados de cada resultado.";
 "settings.dailymotionDetail" = "Pesquisa pública para descoberta; não requer chave de API. Abra a página original para verificar direitos e disponibilidade.";
+"settings.darefulDetail" = "Pesquisa pública direta · CC BY 4.0 com atribuição; os downloads usam o yt-dlp integrado.";
+"settings.esaDetail" = "Pesquisa pública direta · os direitos variam por item; confirme-os na página original antes de reutilizar.";
 "update.settingsTitle" = "Atualizações de software";
 "update.settingsDetail" = "Quando online, o FootageFlow verifica no GitHub a versão estável mais recente a cada inicialização. A opção Agora não vale apenas para esta sessão; atualizações nunca são instaladas automaticamente.";
 "update.currentVersion" = "Versão atual";

@@ -93,6 +93,16 @@ struct SettingsView: View {
             noKeyRow(.openverse, detail: tr("settings.openverseDetail"))
             Divider()
             noKeyRow(.dailymotion, detail: tr("settings.dailymotionDetail"))
+            Divider()
+            noKeyRow(.dareful, detail: tr("settings.darefulDetail"))
+            Divider()
+            noKeyRow(.esa, detail: tr("settings.esaDetail"))
+            Divider()
+            limitedRow(.mazwai)
+            Divider()
+            limitedRow(.dvids)
+            Divider()
+            limitedRow(.britishPathe)
           }.padding(6)
         }
         GroupBox(tr("settings.downloadCache")) {

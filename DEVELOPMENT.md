@@ -13,7 +13,7 @@ User-facing behavior is documented separately in [Provider modes](docs/PROVIDERS
 - Apple Translation where available, with a rule-based fallback
 - Checksum-pinned yt-dlp plus redistributable GPL FFmpeg/FFprobe tooling are bundled for best-effort media analysis, clip extraction, merging, audio extraction, and editing-compatible output
 
-The latest stable FootageFlow release targets Apple Silicon macOS 15+ and Windows 11 x64. SwiftUI, AppKit, AVKit, Apple Translation, and Security.framework remain macOS-only. The Windows WPF layer calls a local Swift Core Host over JSON stdin/stdout so all 17 search providers, ten-language query planning, pagination continuations, normalized models, rights rules, local relevance ranking, clip/output metadata, attribution, sidecars, update-version logic, portable project manifests, duplicate detection, contact-sheet plans, and the Codable project database remain single-source Swift implementations. Credentials never appear in command-line arguments.
+The latest stable FootageFlow release targets Apple Silicon macOS 15+ and Windows 11 x64. SwiftUI, AppKit, AVKit, Apple Translation, and Security.framework remain macOS-only. The Windows WPF layer calls a local Swift Core Host over JSON stdin/stdout so all 22 search providers, ten-language query planning, pagination continuations, normalized models, rights rules, local relevance ranking, clip/output metadata, attribution, sidecars, update-version logic, portable project manifests, duplicate detection, contact-sheet plans, and the Codable project database remain single-source Swift implementations. Credentials never appear in command-line arguments.
 
 ## Multilingual search
 
@@ -43,7 +43,7 @@ Business logic must not import AppKit, SwiftUI, AVKit, Security, or Translation.
 
 `MediaProvider` exposes provider metadata, first-page search, provider-owned continuation search, connection testing, detail lookup, and download resolution. `ProviderContinuation` can carry a page, offset, token, cursor, or next URL without forcing providers to share a network parameter. `ProviderInfo` includes explicit pagination capability alongside search, preview, metadata, license, download, media type, and access methods. Every provider maps its response into `MediaAsset`; unknown fields remain `nil`, and an absent license is always `UNKNOWN`.
 
-`ProviderFactory` makes the automatic per-provider decision. A non-empty Pexels or Pixabay key selects the official API; an empty key selects a direct-search provider. An API failure does not silently downgrade. The user may explicitly try direct search after a rate-limit error. YouTube similarly uses Data API search when configured and the local yt-dlp adapter when not configured. NASA and Library of Congress use public official APIs without a key. National Archives and Europeana use their official APIs only with a user key; without one, `LimitedDiscoveryProvider` returns an official search URL and never scrapes HTML. Provider searches remain independent tasks, so a timeout or block never discards successful results from other sources.
+`ProviderFactory` makes the automatic per-provider decision. A non-empty Pexels or Pixabay key selects the official API; an empty key selects a direct-search provider. An API failure does not silently downgrade. The user may explicitly try direct search after a rate-limit error. YouTube similarly uses Data API search when configured and the local yt-dlp adapter when not configured. NASA and Library of Congress use public official APIs without a key. Dareful and ESA Multimedia use bounded public website searches without a key; Dareful retains its public HLS manifest only for the existing yt-dlp download adapter, while ESA stays discovery-only because rights vary by item. National Archives and Europeana use their official APIs only with a user key; without one, `LimitedDiscoveryProvider` returns an official search URL and never scrapes HTML. Mazwai, DVIDS, and British Pathé are also limited-discovery entries: the app opens their official search pages and never attempts to bypass a challenge, login, WAF, CAPTCHA, or access control. Provider searches remain independent tasks, so a timeout or block never discards successful results from other sources.
 
 Current official interfaces:
 
@@ -174,7 +174,7 @@ The package uses the official `swift-testing` dependency so the full platform-ne
 
 ## Packaging
 
-`scripts/build_app.sh` builds a Release executable; bundles checksum-pinned yt-dlp; builds static GPL FFmpeg 8.0.3 with pinned x264, Apple SecureTransport, and no `nonfree` component; copies all applicable license texts; creates the `.app`; and performs Ad Hoc signing. The FFmpeg configuration uses a neutral build prefix and the packaging scan rejects private developer paths. `scripts/binary_privacy_scan.sh` scans the app executable and bundled tools for credential-like strings. `scripts/build_dmg.sh` creates the drag-to-Applications DMG and SHA-256 checksum. No Developer ID certificate or notarization is claimed for v0.10.0.
+`scripts/build_app.sh` builds a Release executable; bundles checksum-pinned yt-dlp; builds static GPL FFmpeg 8.0.3 with pinned x264, Apple SecureTransport, and no `nonfree` component; copies all applicable license texts; creates the `.app`; and performs Ad Hoc signing. The FFmpeg configuration uses a neutral build prefix and the packaging scan rejects private developer paths. `scripts/binary_privacy_scan.sh` scans the app executable and bundled tools for credential-like strings. `scripts/build_dmg.sh` creates the drag-to-Applications DMG and SHA-256 checksum. No Developer ID certificate or notarization is claimed for v0.11.0.
 
 ## Windows architecture
 
@@ -182,7 +182,7 @@ Windows development remains in this repository and shares the same release histo
 
 The platform split is deliberate:
 
-- Shared Swift: all 17 search provider implementations and modes, pagination, networking/rate policy, `MediaAsset`, `RightsInfo`, capabilities, filters, concept-aware relevance ranking, attribution, feedback URL building, smart keyword rules, clip/output models, clipboard URL safety, update release parsing/version/reminder policy, deduplication, filename suggestions, source sidecars, and project/favorite/history/download metadata.
+- Shared Swift: all 22 search provider implementations and modes, pagination, networking/rate policy, `MediaAsset`, `RightsInfo`, capabilities, filters, concept-aware relevance ranking, attribution, feedback URL building, smart keyword rules, clip/output models, clipboard URL safety, update release parsing/version/reminder policy, deduplication, filename suggestions, source sidecars, and project/favorite/history/download metadata.
 - macOS: SwiftUI/AppKit/AVKit, Keychain, Apple Translation, Finder integration, and URLSession download presentation.
 - Windows: WPF/MediaElement, Credential Manager, Explorer/file dialogs, a bounded `HttpClient` download queue, and yt-dlp process execution. yt-dlp JSON is mapped back into `MediaAsset` by the shared Swift mapper.
 

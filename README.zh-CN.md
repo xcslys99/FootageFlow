@@ -76,19 +76,19 @@ FootageFlow 面向纪录片、历史、国家、财经、人物、科普和短�
 
 ## 界面截图
 
-以下为 v0.10.0 当前版本的真实 macOS 英文界面截图。Windows 版采用相同产品结构，并使用符合 Windows 习惯的原生控件。
+以下为真实 macOS 英文界面截图。Windows 版采用相同产品结构，并使用符合 Windows 习惯的原生控件。
 
-![FootageFlow v0.10.0 快速搜索：可编辑的智能扩展、素材来源状态、筛选和已加载的多来源结果](docs/images/quick-search-v010.png)
+![FootageFlow 快速搜索：可编辑的智能扩展、素材来源状态、筛选和已加载的多来源结果](docs/images/quick-search-v010.png)
 
-![FootageFlow v0.10.0 Workspace 智能集合](docs/images/workspace-smart-collections-v010.png)
+![FootageFlow Workspace 智能集合](docs/images/workspace-smart-collections-v010.png)
 
-![FootageFlow v0.10.0 Workspace 素材来源状态](docs/images/provider-health-v010.png)
+![FootageFlow Workspace 素材来源状态](docs/images/provider-health-v010.png)
 
-![FootageFlow v0.10.0 命令面板](docs/images/command-palette-v010.png)
+![FootageFlow 命令面板](docs/images/command-palette-v010.png)
 
 ## 功能摘要
 
-- 17 个素材来源的渐进式搜索，单个 Provider 失败不影响其他来源
+- 22 个素材来源的渐进式搜索，单个 Provider 失败不影响其他来源
 - 十种界面语言的可见、可编辑复合查询，不需要付费 AI
 - 精准、均衡、宽泛三种本地概念相关性模式
 - 来源、类型、年份、时长、分辨率、Rights 和下载能力筛选
@@ -138,16 +138,17 @@ macOS 默认下载目录为 `~/Movies/FootageFlow/<项目名>/`，Windows 默认
 
 ## 素材来源与 Provider 模式
 
-FootageFlow 通过官方 API、公共接口、受限发现和尽力模式支持 17 个来源。除非某个 Provider 的完整官方搜索本身要求 Key，否则 API Key 都不是首次使用的前置条件。一个 Provider 失败不会清空其他来源的成功结果。
+FootageFlow 通过官方 API、公共接口、受限发现和尽力模式支持 22 个来源。除非某个 Provider 的完整官方搜索本身要求 Key，否则 API Key 都不是首次使用的前置条件。一个 Provider 失败不会清空其他来源的成功结果。
 
-当前来源包括 Pexels、Pixabay、Wikimedia Commons、Internet Archive、YouTube、NASA、Library of Congress、National Archives、Europeana、PeerTube/SepiaSearch、Videvo、Videezy、Mixkit、Coverr、Vimeo、Openverse 和 Dailymotion。
+当前来源包括 Pexels、Pixabay、Wikimedia Commons、Internet Archive、YouTube、NASA、ESA Multimedia、Library of Congress、National Archives、Europeana、PeerTube/SepiaSearch、Dareful、Mazwai、DVIDS、British Pathé、Videvo、Videezy、Mixkit、Coverr、Vimeo、Openverse 和 Dailymotion。
 
 | 接入方式 | 来源 | 实际行为 |
 |---|---|---|
 | 官方公共接口 | Wikimedia Commons、Internet Archive、NASA、Library of Congress、Openverse、Dailymotion、PeerTube/SepiaSearch | 无需用户 Key 即可搜索；具体素材能力仍可能不同 |
 | 可选 API + 无 Key 尽力模式 | Pexels、Pixabay、YouTube | 在支持时可无 Key 搜索；配置 Key 后 Metadata 更稳定或完整 |
+| 无 Key 直接搜索 | Dareful、ESA Multimedia | Dareful 提供可搜索的公开视频，使用 CC BY 4.0 且需要署名；ESA 仅用于发现，具体素材授权不同 |
 | 完整应用内搜索需要用户 Key | National Archives、Europeana、Coverr、Vimeo | 添加本机 Key/Token，或使用“打开官方搜索” |
-| 受限官方发现 | Videvo、Videezy、Mixkit | 打开官方搜索或原始页面，不抓取受限制网页 |
+| 受限官方发现 | Videvo、Videezy、Mixkit、Mazwai、DVIDS、British Pathé | 打开官方搜索或原始页面，不抓取受限制网页，也不绕过访问控制 |
 
 每个 Provider 都声明真实的搜索、预览、Metadata、Rights、分页和下载能力。FootageFlow 不会仅因为能够发现一条结果就添加下载按钮。
 

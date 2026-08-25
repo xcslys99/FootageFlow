@@ -28,7 +28,7 @@ public sealed class DownloadQueueService
         _ytDlp = ytDlp;
         _localization = localization;
         _http = httpClient ?? new HttpClient { Timeout = Timeout.InfiniteTimeSpan };
-        _http.DefaultRequestHeaders.UserAgent.ParseAdd("FootageFlow/0.10.0");
+        _http.DefaultRequestHeaders.UserAgent.ParseAdd("FootageFlow/0.11.0");
     }
 
     public DownloadTaskItem Enqueue(MediaAsset asset, Guid? projectId, string projectName)
@@ -88,8 +88,12 @@ public sealed class DownloadQueueService
                 string saved;
                 if (item.Asset.DownloadStrategy == "ytDLP" || item.Asset.Provider == "youtube")
                 {
+                    var sourceUrl = item.Asset.SourcePageURL;
+                    if (item.Asset.OriginalMetadata.TryGetValue("ytDLPSourceURL", out var candidate) &&
+                        LinkUrlSafety.TryCreate(candidate, out var safeCandidate))
+                        sourceUrl = safeCandidate.AbsoluteUri;
                     saved = await _ytDlp.DownloadAsync(
-                        item.Asset.SourcePageURL, directory, Path.GetFileNameWithoutExtension(preferredName),
+                        sourceUrl, directory, Path.GetFileNameWithoutExtension(preferredName),
                         item.Asset.OriginalMetadata,
                         new Progress<YtDlpProgress>(value =>
                         {

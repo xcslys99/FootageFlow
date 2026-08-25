@@ -7,7 +7,7 @@ Roadmap items are intentions, not promises. Provider policies, platform rules, a
 - macOS Apple Silicon edition
 - Windows 11 x64 edition
 - Shared cross-platform core
-- Multi-provider footage search across 17 supported sources
+- Multi-provider footage search across 22 supported sources
 - Pagination and **Load More**
 - Advanced filters and downloadable-only filtering
 - Local compound-query relevance ranking
@@ -31,6 +31,7 @@ Roadmap items are intentions, not promises. Provider policies, platform rules, a
 - PNG contact-sheet generation
 - Research & Culture workspace: Media / Research / All, references, notes, citations, and related-media discovery
 - Workspace dashboard, local-only Global Search, Saved Searches, Smart Collections, Provider Health, Command Palette, and keyboard/accessibility improvements
+- Dareful public direct search/download, ESA Multimedia discovery, and official-search discovery entries for Mazwai, DVIDS, and British Pathé
 
 ## Current Priorities
 
@@ -45,6 +46,15 @@ v0.10.0 provides the first cross-platform accessibility and keyboard-navigation 
 Issue #19 remains open for continued manual VoiceOver/Narrator verification across the broader creator workflow.
 
 ## Planned Feature Releases
+
+### v0.11.0 — No-key Provider Update
+
+Delivered in v0.11.0:
+
+- Dareful public direct search with CC BY 4.0 attribution and handoff to the existing Download Manager
+- ESA Multimedia public media discovery with per-item rights kept unknown until checked on the original page
+- Mazwai, DVIDS, and British Pathé as limited-discovery providers with official-search actions rather than restricted-page scraping
+- Shared macOS/Windows provider modes, settings migration, capability display, and failure isolation for all five sources
 
 ### v0.10.0 — Workspace & Accessibility Update ([#19](https://github.com/xcslys99/FootageFlow/issues/19))
 

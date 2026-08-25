@@ -12,6 +12,7 @@ enum AppSettings {
   private static let providerCatalogV3Key = "didEnableDiscoveryProvidersV3"
   private static let providerCatalogV5Key = "didEnableSearchExpansionProvidersV5"
   private static let providerCatalogV6Key = "didEnableCreatorWorkflowProvidersV6"
+  private static let providerCatalogV7Key = "didEnableNoKeyProvidersV7"
 
   static func migrateLegacySettingsIfNeeded() {
     // v0.7.4 makes Not Now session-only. Remove any 24-hour deferral left by v0.7.0–v0.7.3.
@@ -47,6 +48,11 @@ enum AppSettings {
         UserDefaults.standard.set(result.map(\.rawValue), forKey: enabledProvidersKey)
         UserDefaults.standard.set(true, forKey: providerCatalogV6Key)
       }
+      if !UserDefaults.standard.bool(forKey: providerCatalogV7Key) {
+        result.formUnion([.dareful, .mazwai, .dvids, .britishPathe, .esa])
+        UserDefaults.standard.set(result.map(\.rawValue), forKey: enabledProvidersKey)
+        UserDefaults.standard.set(true, forKey: providerCatalogV7Key)
+      }
       return result
     }
     set {
@@ -54,6 +60,7 @@ enum AppSettings {
       UserDefaults.standard.set(true, forKey: providerCatalogV3Key)
       UserDefaults.standard.set(true, forKey: providerCatalogV5Key)
       UserDefaults.standard.set(true, forKey: providerCatalogV6Key)
+      UserDefaults.standard.set(true, forKey: providerCatalogV7Key)
     }
   }
 

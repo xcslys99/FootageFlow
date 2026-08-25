@@ -99,7 +99,16 @@ enum SelfTestRunner {
     check(
       ProviderFactory.make(.pixabay, apiKey: "").info.mode == .directSearch,
       "Pixabay direct mode")
-    check(ProviderID.searchCases.count == 17, "Seventeen search provider catalog")
+    check(ProviderID.searchCases.count == 22, "Twenty-two search provider catalog")
+    check(
+      ProviderFactory.make(.dareful, apiKey: "").info.mode == .directSearch,
+      "Dareful direct search")
+    check(
+      ProviderFactory.make(.esa, apiKey: "").info.mode == .directSearch,
+      "ESA direct search")
+    check(
+      ProviderFactory.make(.dvids, apiKey: "").info.mode == .limited,
+      "DVIDS constrained discovery")
     check(
       ProviderFactory.make(.peertube, apiKey: "").info.mode == .publicAPI,
       "PeerTube public API")

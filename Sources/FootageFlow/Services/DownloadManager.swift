@@ -266,7 +266,11 @@ final class DownloadManager: NSObject, ObservableObject, URLSessionDownloadDeleg
 
   @MainActor private func runExternal(_ context: DownloadContext) {
     states[context.asset.stableID] = progress(context: context, status: .downloading)
-    let sourceURL = context.asset.sourcePageURL
+    // A public provider can expose a verified HLS/media manifest while keeping its human-facing
+    // item page as the attribution URL. Never treat this optional value as credentials.
+    let sourceURL =
+      URLValidator.remote(context.asset.originalMetadata["ytDLPSourceURL"])
+      ?? context.asset.sourcePageURL
     let directory = context.destination.deletingLastPathComponent()
     let stem = context.destination.deletingPathExtension().lastPathComponent
     let task = Task { [weak self] in

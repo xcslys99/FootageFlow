@@ -88,6 +88,40 @@ enum LiveSmokeRunner {
         failures.append("Dailymotion discovery")
       }
     } catch { failures.append("Dailymotion: \(error.localizedDescription)") }
+    do {
+      let dareful = try await DarefulProvider().search(
+        SearchRequest(query: "city", mediaType: .video, pageSize: 3))
+      print("SMOKE dareful_city_videos=\(dareful.count)")
+      if let first = dareful.first,
+        first.effectiveDownloadStrategy == .ytDLP,
+        first.originalMetadata["ytDLPSourceURL"] != nil,
+        first.licenseStatus == .attributionRequired
+      {
+        print("SMOKE dareful_first=\(first.title) source=\(first.sourcePageURL.absoluteString)")
+      } else {
+        failures.append("Dareful direct media mapping")
+      }
+    } catch {
+      if isBestEffortAccessFailure(error) {
+        print("SMOKE dareful_direct_unavailable_handled=true")
+      } else {
+        failures.append("Dareful: \(error.localizedDescription)")
+      }
+    }
+    do {
+      let esa = try await ESAProvider().search(
+        SearchRequest(query: "earth", mediaType: .all, pageSize: 3))
+      print("SMOKE esa_earth_media=\(esa.count)")
+      if esa.isEmpty || esa.contains(where: { $0.downloadable || $0.licenseStatus != .unknown }) {
+        failures.append("ESA discovery-only rights")
+      }
+    } catch {
+      if isBestEffortAccessFailure(error) {
+        print("SMOKE esa_direct_unavailable_handled=true")
+      } else {
+        failures.append("ESA: \(error.localizedDescription)")
+      }
+    }
     let pexelsWithoutKey = ProviderFactory.make(.pexels, apiKey: "")
     if pexelsWithoutKey.info.mode == .directSearch && !pexelsWithoutKey.info.requiresAPIKey {
       print("SMOKE pexels_without_key_mode=directSearch")
@@ -108,9 +142,7 @@ enum LiveSmokeRunner {
     async let pixabayDirect = directSearchFailure(PixabayDirectProvider())
     if let failure = await pexelsDirect { failures.append(failure) }
     if let failure = await pixabayDirect { failures.append(failure) }
-    print("LIVE_SMOKE failed=\(failures.count)")
-    for failure in failures { print("FAIL \(failure)") }
-    return failures.isEmpty ? 0 : 1
+    return finish(failures)
   }
 
   private static func directSearchFailure(_ provider: any MediaProvider) async -> String? {
@@ -128,5 +160,20 @@ enum LiveSmokeRunner {
     } catch {
       return "\(provider.info.displayName) direct mode: \(error.localizedDescription)"
     }
+  }
+
+  private static func isBestEffortAccessFailure(_ error: Error) -> Bool {
+    switch error {
+    case ProviderError.temporarilyBlocked, ProviderError.rateLimited:
+      true
+    default:
+      false
+    }
+  }
+
+  private static func finish(_ failures: [String]) -> Int32 {
+    print("LIVE_SMOKE failed=\(failures.count)")
+    for failure in failures { print("FAIL \(failure)") }
+    return failures.isEmpty ? 0 : 1
   }
 }

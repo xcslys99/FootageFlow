@@ -16,7 +16,11 @@ void Check(bool condition, string name)
 
 Check(new AppSettingsModel().Language == "en", "English is the first-launch default");
 Check(new AppSettingsModel().SearchRelevanceMode == "balanced", "Balanced relevance is the default");
-Check(new AppSettingsModel().EnabledProviders.Count == 17, "Seventeen providers enabled by default");
+Check(new AppSettingsModel().EnabledProviders.Count == 22, "Twenty-two providers enabled by default");
+Check(new AppSettingsModel().EnabledProviders.Contains("dareful") &&
+      new AppSettingsModel().EnabledProviders.Contains("esa") &&
+      new AppSettingsModel().EnabledProviders.Contains("britishPathe"),
+      "Windows enables the no-key provider catalog by default");
 Check(LocalizationService.SupportedLanguages.Count == 10, "Ten interface languages are available");
 var settingsDirectory = Path.Combine(Path.GetTempPath(), "FootageFlowSettingsTest", Guid.NewGuid().ToString("N"));
 var settingsPath = Path.Combine(settingsDirectory, "settings.json");
@@ -303,7 +307,11 @@ if (OperatingSystem.IsWindows())
         var core = new CoreHostClient(corePath);
         var health = await core.SendAsync(new CoreRequest { Action = "health" });
         Check(health.Success && health.Platform == "windows", "Windows core health");
-        Check(health.Providers?.Count == 17, "Windows core exposes seventeen shared providers");
+        Check(health.Providers?.Count == 22, "Windows core exposes twenty-two shared providers");
+        Check(health.Providers?.Any(value => value.Id == "dareful" && value.Mode == "directSearch") == true &&
+              health.Providers?.Any(value => value.Id == "esa" && value.Mode == "directSearch") == true &&
+              health.Providers?.Any(value => value.Id == "dvids" && value.Mode == "limited") == true,
+              "Windows receives shared no-key provider modes");
         var workspaceName = "Workspace Search " + Guid.NewGuid().ToString("N");
         var workspaceSaved = await core.SendAsync(new CoreRequest
         {

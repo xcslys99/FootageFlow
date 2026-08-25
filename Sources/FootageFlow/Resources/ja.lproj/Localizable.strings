@@ -398,6 +398,8 @@
 "clipboard.privacyDetail" = "FootageFlow は、このウインドウがアクティブでリンクダウンローダーが開いている間だけ、メディア URL をローカルで確認します。クリップボードの内容はアップロードも記録もされません。";
 "settings.openverseDetail" = "Openverse の公開画像・音声 API。API キーは不要です。権利情報は各結果のメタデータから表示されます。";
 "settings.dailymotionDetail" = "公開ディスカバリー検索。API キーは不要です。権利と利用可否は元のページで確認してください。";
+"settings.darefulDetail" = "公開直接検索 · CC BY 4.0（表示が必要）。ダウンロードには内蔵 yt-dlp を使用します。";
+"settings.esaDetail" = "公開直接検索 · 権利は素材ごとに異なります。再利用前に元ページで確認してください。";
 "update.settingsTitle" = "ソフトウェアアップデート";
 "update.settingsDetail" = "オンライン時、FootageFlow は起動するたびに GitHub で最新の安定版を確認します。「今はしない」は現在のセッションにのみ適用され、自動インストールは行いません。";
 "update.currentVersion" = "現在のバージョン";

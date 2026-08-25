@@ -398,6 +398,8 @@
 "clipboard.privacyDetail" = "FootageFlow는 이 창이 활성화되고 링크 다운로더가 열려 있을 때만 로컬에서 미디어 URL을 확인합니다. 클립보드 내용은 업로드되거나 기록되지 않습니다.";
 "settings.openverseDetail" = "공개 Openverse 이미지 및 오디오 API이며 API 키가 필요하지 않습니다. 권리 정보는 각 결과의 메타데이터에서 표시됩니다.";
 "settings.dailymotionDetail" = "공개 검색 기능이며 API 키가 필요하지 않습니다. 원본 페이지에서 권리와 사용 가능 여부를 확인하세요.";
+"settings.darefulDetail" = "공개 직접 검색 · CC BY 4.0(저작자 표시 필요), 다운로드에는 내장 yt-dlp를 사용합니다.";
+"settings.esaDetail" = "공개 직접 검색 · 권리는 항목마다 다릅니다. 재사용 전 원본 페이지에서 확인하세요.";
 "update.settingsTitle" = "소프트웨어 업데이트";
 "update.settingsDetail" = "온라인 상태에서 FootageFlow는 실행할 때마다 GitHub의 최신 안정 버전을 확인합니다. 나중에 선택은 현재 세션에만 적용되며 자동 설치하지 않습니다.";
 "update.currentVersion" = "현재 버전";

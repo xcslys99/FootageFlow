@@ -5,6 +5,7 @@ enum ProviderID: String, Codable, CaseIterable, Identifiable, Sendable {
   case nasa, libraryOfCongress, nationalArchives, europeana
   case peertube, videvo, videezy, mixkit, coverr, vimeo
   case openverse, dailymotion
+  case dareful, mazwai, dvids, britishPathe, esa
   case linkDownloader
 
   var id: String { rawValue }
@@ -27,6 +28,11 @@ enum ProviderID: String, Codable, CaseIterable, Identifiable, Sendable {
     case .vimeo: "Vimeo"
     case .openverse: "Openverse"
     case .dailymotion: "Dailymotion"
+    case .dareful: "Dareful"
+    case .mazwai: "Mazwai"
+    case .dvids: "DVIDS"
+    case .britishPathe: "British Pathé"
+    case .esa: "ESA Multimedia"
     case .linkDownloader: "Link Downloader"
     }
   }

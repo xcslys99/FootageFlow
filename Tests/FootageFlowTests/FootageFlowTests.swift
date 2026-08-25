@@ -394,6 +394,55 @@ import Foundation
       XCTAssertTrue(DirectSearchHTMLParser.indicatesNoResults("No results were found"))
     }
 
+    func testDarefulDirectSearchMapsItsPublicHLSDownloadAndRights() async throws {
+      let provider = DarefulProvider(
+        loader: StaticDirectLoader(
+          html: try textFixture("dareful-direct", extension: "html")))
+      let page = try await provider.searchPage(
+        SearchRequest(query: "city", mediaType: .video, pageSize: 10), continuation: nil)
+      let asset = try XCTUnwrap(page.assets.first)
+      XCTAssertEqual(asset.provider, .dareful)
+      XCTAssertEqual(asset.title, "Winter City Aerial")
+      XCTAssertEqual(asset.duration, 51.8518, accuracy: 0.0001)
+      XCTAssertEqual(asset.licenseStatus, .attributionRequired)
+      XCTAssertTrue(asset.downloadable)
+      XCTAssertEqual(asset.effectiveDownloadStrategy, .ytDLP)
+      XCTAssertEqual(
+        asset.originalMetadata["ytDLPSourceURL"], "https://stream.mux.com/winter-city.m3u8")
+      XCTAssertEqual(asset.sourcePageURL.host, "dareful.com")
+    }
+
+    func testESADirectSearchKeepsResultsDiscoveryOnly() async throws {
+      let provider = ESAProvider(
+        loader: StaticDirectLoader(
+          html: try textFixture("esa-direct", extension: "html")))
+      let imagePage = try await provider.searchPage(
+        SearchRequest(query: "earth", mediaType: .image, pageSize: 10), continuation: nil)
+      let image = try XCTUnwrap(imagePage.assets.first)
+      XCTAssertEqual(image.provider, .esa)
+      XCTAssertEqual(image.title, "Low Earth orbit")
+      XCTAssertEqual(image.previewURL?.host, "www.esa.int")
+      XCTAssertFalse(image.downloadable)
+      XCTAssertEqual(image.licenseStatus, .unknown)
+      XCTAssertEqual(image.originalMetadata["discoveryOnly"], "true")
+      XCTAssertNotNil(imagePage.continuation)
+
+      let videoPage = try await provider.searchPage(
+        SearchRequest(query: "launch", mediaType: .video, pageSize: 10), continuation: nil)
+      XCTAssertEqual(videoPage.assets.map(\.title), ["Launch"])
+    }
+
+    func testNoKeyProviderCatalogIncludesDirectAndRestrictedSources() {
+      XCTAssertEqual(ProviderID.searchCases.count, 22)
+      XCTAssertEqual(ProviderFactory.make(.dareful, apiKey: "").info.mode, .directSearch)
+      XCTAssertEqual(ProviderFactory.make(.esa, apiKey: "").info.mode, .directSearch)
+      XCTAssertEqual(ProviderFactory.make(.mazwai, apiKey: "").info.mode, .limited)
+      XCTAssertEqual(ProviderFactory.make(.dvids, apiKey: "").info.mode, .limited)
+      XCTAssertEqual(ProviderFactory.make(.britishPathe, apiKey: "").info.mode, .limited)
+      XCTAssertTrue(
+        ProviderPolicy.officialSearchURL(for: .dvids, query: "history")?.host == "www.dvidshub.net")
+    }
+
     func testDirectSearch403IsIsolatedAndFriendly() async {
       let provider = PexelsDirectProvider(loader: BlockedDirectLoader())
       do {
@@ -606,6 +655,11 @@ import Foundation
     func load(_ url: URL, provider: ProviderID) async throws -> String {
       throw ProviderError.temporarilyBlocked(provider)
     }
+  }
+
+  private struct StaticDirectLoader: DirectSearchPageLoading {
+    let html: String
+    func load(_ url: URL, provider: ProviderID) async throws -> String { html }
   }
 
   private struct StubExternalRunner: ExternalToolRunning {

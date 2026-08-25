@@ -2,6 +2,27 @@
 
 All notable FootageFlow changes are documented here.
 
+## [0.11.0] - 2026-08-25
+
+### Added
+
+- Five no-key footage-provider entries shared by macOS and Windows: Dareful, ESA Multimedia, Mazwai, DVIDS, and British Pathé
+- Dareful bounded public direct search with HLS preview/download handoff to the existing bundled yt-dlp queue, CC BY 4.0 attribution, and normal source sidecars
+- ESA Multimedia bounded public media discovery for image/video results, with original-page opening and rights left unknown unless the source explicitly supplies them
+- Official-search discovery actions for Mazwai, DVIDS, and British Pathé, so creators can keep those sources in one provider list even where the current public sites restrict automated result retrieval
+- A legacy-safe settings migration that enables all five new no-key sources for existing installations without changing user API keys
+
+### Safety and rights
+
+- Direct-search adapters do not bypass CAPTCHA, WAF challenges, login, cookies, paywalls, or access controls
+- Mazwai, DVIDS, and British Pathé remain discovery-only in FootageFlow; no direct-download button is inferred from a searchable source
+- ESA rights remain item-specific and unknown until verified on the original page; Dareful results retain their source-supplied CC BY 4.0 attribution requirement
+
+### Platforms and validation
+
+- The shared Swift Core supplies the same five provider IDs, capabilities, settings migration, source-sidecar behavior, and failure isolation to macOS and Windows
+- Added direct-search parser fixtures and capability/mode coverage for Dareful and ESA; updated macOS and Windows provider self-tests to cover all 22 sources
+
 ## [0.10.0] - 2026-08-23
 
 ### Added

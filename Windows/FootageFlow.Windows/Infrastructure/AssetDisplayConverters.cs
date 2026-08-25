@@ -64,6 +64,11 @@ public sealed class ProviderNameConverter : IValueConverter
             "vimeo" => "Vimeo",
             "openverse" => "Openverse",
             "dailymotion" => "Dailymotion",
+            "dareful" => "Dareful",
+            "mazwai" => "Mazwai",
+            "dvids" => "DVIDS",
+            "britishPathe" => "British Pathé",
+            "esa" => "ESA Multimedia",
             "linkDownloader" => "Link Downloader",
             var other => other ?? ""
         };

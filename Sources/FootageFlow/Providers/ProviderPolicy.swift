@@ -45,6 +45,11 @@ enum ProviderPolicy {
       case .coverr: "https://coverr.co/stock-video-footage?query=\(escaped)"
       case .vimeo: "https://vimeo.com/search?q=\(escaped)"
       case .dailymotion: "https://www.dailymotion.com/search/\(escaped)/videos"
+      case .dareful: "https://dareful.com/?s=\(escaped)"
+      case .mazwai: "https://mazwai.com/"
+      case .dvids: "https://www.dvidshub.net/search/?q=\(escaped)"
+      case .britishPathe: "https://www.britishpathe.com/?s=\(escaped)"
+      case .esa: "https://www.esa.int/esearch?q=\(escaped)"
       default: nil
       }
     return URLValidator.remote(value)
@@ -63,7 +68,8 @@ struct LimitedDiscoveryProvider: MediaProvider {
       capabilities: ProviderCapabilities(
         search: .bestEffort, preview: .unavailable, metadata: .unavailable,
         license: .unavailable, download: .unavailable, supportsVideo: true,
-        supportsImage: id == .europeana, supportsAudio: id == .europeana,
+        supportsImage: [.europeana, .dvids, .britishPathe, .esa].contains(id),
+        supportsAudio: id == .europeana,
         accessMethods: [.publicInterface]))
   }
 

@@ -4,7 +4,7 @@ Status: Windows 11 x64 is supported from FootageFlow v0.2.0. v0.10.0 adds the lo
 
 ## Current shared code
 
-All 17 search Provider implementations, API/direct-mode selection, pagination continuations, `HTTPClient`, normalized `MediaAsset`, rights mapping, Provider capabilities and errors, smart keyword rules, clip/output models, clipboard URL parsing, update release parsing/version comparison/Release Notes sanitizing, deduplication, filters, filename suggestions, feedback URLs, source-sidecar generation, path roots, log redaction, and Codable persistence are platform-neutral Swift. v0.8.0 adds the same attribution exporter, rights audit, portable manifest/import validator, duplicate engine, lazy SHA-256 cache, export redaction, and contact-sheet plan; v0.9.0 adds research records, provider parsing, relevance ranking, citation formatting, Research Notes, combined reports, and schema v2 migration; v0.10.0 adds the local Workspace index, Saved Searches, collection rules, Provider Health state, and command routing. macOS and Windows therefore use one business implementation for media and research providers.
+All 22 search Provider implementations, API/direct-mode selection, pagination continuations, `HTTPClient`, normalized `MediaAsset`, rights mapping, Provider capabilities and errors, smart keyword rules, clip/output models, clipboard URL parsing, update release parsing/version comparison/Release Notes sanitizing, deduplication, filters, filename suggestions, feedback URLs, source-sidecar generation, path roots, log redaction, and Codable persistence are platform-neutral Swift. v0.8.0 adds the same attribution exporter, rights audit, portable manifest/import validator, duplicate engine, lazy SHA-256 cache, export redaction, and contact-sheet plan; v0.9.0 adds research records, provider parsing, relevance ranking, citation formatting, Research Notes, combined reports, and schema v2 migration; v0.10.0 adds the local Workspace index, Saved Searches, collection rules, Provider Health state, and command routing; v0.11.0 adds five no-key provider entries. macOS and Windows therefore use one business implementation for media and research providers.
 
 `PersistentStore` owns project, segment, favorite, history, download-record, Saved Search, and Provider Health behavior. The macOS `DataStore` is a small Combine presentation facade over this shared repository. Windows calls the same repository through the local Core Host.
 
@@ -29,7 +29,7 @@ WPF UI and Windows adapters
         v
 Swift FootageFlowCore.exe
         |
-        +-- ProviderFactory and 17 search providers
+        +-- ProviderFactory and 22 search providers
         +-- multilingual queries, pagination, models, rights, filters, clip/output metadata, updates, dedupe
         +-- PersistentStore, feedback URLs and source sidecars
 
@@ -82,11 +82,12 @@ The Windows scheduler enforces the same 12-request global limit, two requests pe
 - v0.7.3 hardens session-only clipboard suggestions, direct-media format fallback, Openverse filtering, link error classification, and real creator-workflow validation.
 - v0.7.4 removes the persisted 24-hour update deferral. Not Now is session-only, so an outdated online installation checks and reminds again after a complete restart without forcing an update.
 - v0.8.0 adds the shared project export/attribution/rights/backup/duplicate/contact-sheet model. v0.9.0 adds the shared research/culture model, Research Notes, citations, exports, and portable schema v2. v0.10.0 adds shared Workspace records; the actor-backed local index only sees FootageFlow metadata and scrubs credential-looking note/script fragments. WPF provides native save/open/reveal/clipboard/PNG-rendering glue only; it does not duplicate the project business rules.
+- v0.11.0 adds Dareful and ESA Multimedia public direct-search adapters plus Mazwai, DVIDS, and British Pathé limited-discovery entries. The five IDs, settings migration, capabilities, rights behavior, and error isolation remain in the shared Swift core; Windows only presents the shared results and official-search actions.
 - Windows 10 x64 is not declared supported because it has not completed the same validation.
 
-## v0.10.0 release validation gate
+## Release validation gate
 
-Before publishing v0.10.0, CI must complete all of the following on a clean Windows runner:
+Before publishing a Windows release, CI must complete all of the following on a clean Windows runner:
 
 - Shared Swift Release build, Core Host health check, and cross-platform tests.
 - Native WPF Release build and Windows platform acceptance checks.

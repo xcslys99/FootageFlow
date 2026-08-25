@@ -68,7 +68,7 @@ FootageFlow is designed for documentary, history, country profile, finance, scie
 
 ### Research & Culture workspace
 
-Use **Media / Research / All** to keep footage discovery and source research clear. Research mode searches Wikipedia, Wikidata, The Met, Art Institute of Chicago, Crossref, and GDELT through their public interfaces. Save a record to **Research Notes**, write a local note and tags, copy its metadata-based citation, refresh it later, or use **Find Related Media** to return to the existing 17-source media workflow.
+Use **Media / Research / All** to keep footage discovery and source research clear. Research mode searches Wikipedia, Wikidata, The Met, Art Institute of Chicago, Crossref, and GDELT through their public interfaces. Save a record to **Research Notes**, write a local note and tags, copy its metadata-based citation, refresh it later, or use **Find Related Media** to return to the existing 22-source media workflow.
 
 Research records are references, not automatically cleared media. Crossref never downloads paper full text, GDELT is discovery-only, and Wikipedia previews require a separate Wikimedia Commons rights check before reuse. **Add as Media** appears only for Met/AIC records whose provider explicitly reports Public Domain and a public original-image URL; it is not inferred from a preview or page. See [Research & Culture workflow](docs/RESEARCH_WORKFLOW.md).
 
@@ -76,19 +76,19 @@ If you already know the media URL, Link Downloader uses the same project, downlo
 
 ## Screenshots
 
-These current v0.10.0 screenshots are captured from the real macOS app in English. The Windows edition follows the same product structure with platform-native controls.
+These real macOS screenshots are captured in English. The Windows edition follows the same product structure with platform-native controls.
 
-![FootageFlow v0.10.0 Quick Search: editable smart expansion, provider status, filters, and loaded multi-source footage results](docs/images/quick-search-v010.png)
+![FootageFlow Quick Search: editable smart expansion, provider status, filters, and loaded multi-source footage results](docs/images/quick-search-v010.png)
 
-![FootageFlow v0.10.0 Workspace Smart Collections](docs/images/workspace-smart-collections-v010.png)
+![FootageFlow Workspace Smart Collections](docs/images/workspace-smart-collections-v010.png)
 
-![FootageFlow v0.10.0 Workspace Provider Health](docs/images/provider-health-v010.png)
+![FootageFlow Workspace Provider Health](docs/images/provider-health-v010.png)
 
-![FootageFlow v0.10.0 Command Palette](docs/images/command-palette-v010.png)
+![FootageFlow Command Palette](docs/images/command-palette-v010.png)
 
 ## Features
 
-- Progressive search across 17 sources with Provider failure isolation
+- Progressive search across 22 sources with Provider failure isolation
 - Visible and editable compound queries in ten interface languages, with no paid AI requirement
 - Concept-aware local reranking with Precise, Balanced, and Broad modes
 - Source, media type, year, duration, resolution, rights, and downloadability filters
@@ -138,16 +138,17 @@ Default downloads go to `~/Movies/FootageFlow/<Project>/` on macOS and `%USERPRO
 
 ## Sources and provider modes
 
-FootageFlow supports 17 sources through a mix of official APIs, public interfaces, limited discovery, and best-effort modes. API keys are optional unless a Provider's official full-search API requires one. One Provider failure never discards successful results from other sources.
+FootageFlow supports 22 sources through a mix of official APIs, public interfaces, limited discovery, and best-effort modes. API keys are optional unless a Provider's official full-search API requires one. One Provider failure never discards successful results from other sources.
 
-The current source set includes Pexels, Pixabay, Wikimedia Commons, Internet Archive, YouTube, NASA, Library of Congress, National Archives, Europeana, PeerTube/SepiaSearch, Videvo, Videezy, Mixkit, Coverr, Vimeo, Openverse, and Dailymotion.
+The current source set includes Pexels, Pixabay, Wikimedia Commons, Internet Archive, YouTube, NASA, ESA Multimedia, Library of Congress, National Archives, Europeana, PeerTube/SepiaSearch, Dareful, Mazwai, DVIDS, British Pathé, Videvo, Videezy, Mixkit, Coverr, Vimeo, Openverse, and Dailymotion.
 
 | Access pattern | Sources | What to expect |
 |---|---|---|
 | Public official interfaces | Wikimedia Commons, Internet Archive, NASA, Library of Congress, Openverse, Dailymotion, PeerTube/SepiaSearch | Search without a user key; item capabilities still vary |
 | Optional API + keyless best-effort | Pexels, Pixabay, YouTube | Search without a key where supported; add a key for more stable or complete metadata |
+| Keyless direct search | Dareful, ESA Multimedia | Dareful provides public searchable video with CC BY 4.0 attribution; ESA items are discovery-only and rights vary by item |
 | User key for full in-app search | National Archives, Europeana, Coverr, Vimeo | Add a local key/token or use the official-search action |
-| Limited official discovery | Videvo, Videezy, Mixkit | Open the official search or original page; no restricted-page scraping |
+| Limited official discovery | Videvo, Videezy, Mixkit, Mazwai, DVIDS, British Pathé | Open the official search or original page; no restricted-page scraping or access-control bypass |
 
 Every Provider declares its real search, preview, metadata, rights, pagination, and download capabilities. FootageFlow does not add a Download action merely because a result can be discovered.
 

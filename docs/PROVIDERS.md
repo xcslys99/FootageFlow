@@ -1,6 +1,6 @@
 # Provider Modes and API Behavior
 
-FootageFlow searches 17 sources through the most stable access method each source reasonably supports. It does not force every source into one API or download model.
+FootageFlow searches 22 sources through the most stable access method each source reasonably supports. It does not force every source into one API or download model.
 
 The product principle is: **search as broadly as possible, download where reasonably supported**.
 
@@ -23,10 +23,15 @@ The product principle is: **search as broadly as possible, download where reason
 | [Internet Archive](https://archive.org/developers/) | Public search and item metadata | Full public interface | Per-item downloadable files | License or rights fields when supplied | Search / Download / Open Original |
 | [YouTube](https://developers.google.com/youtube/v3/getting-started) | Data API with user key | Local yt-dlp search, best-effort | Conditional yt-dlp download | Usually unavailable; verify original | Search / Conditional Download / Open Original |
 | [NASA](https://images.nasa.gov/docs/images.nasa.gov_api_docs.pdf) | Official public Images API | No key required | Official asset when supplied | Item metadata only; never assumed Public Domain | Search / Download / Open Original |
+| [ESA Multimedia](https://www.esa.int/esearch) | Public website search, best-effort | No key required | Discovery only | Rights vary by item; verify original page | Search / Open Original |
 | [Library of Congress](https://www.loc.gov/apis/) | Official public JSON API | No key required | Unrestricted official resource when supplied | Rights advisory and access fields when supplied | Search / Download / Open Original |
 | [National Archives](https://www.archives.gov/research/catalog/help/api) | Catalog API with user key | Limited: open official search | Digital object when supplied | Restriction and rights fields when supplied | Search with key / Open Official Search |
 | [Europeana](https://europeana.atlassian.net/wiki/spaces/EF/pages/2462351393/Accessing+the+APIs) | Search API with user key | Limited: open official search | Direct media when supplied | `edmRights` or rights fields when supplied | Search with key / Open Official Search |
 | [PeerTube / SepiaSearch](https://docs.joinpeertube.org/api-rest-reference.html) | Public SepiaSearch API | No key required | Discovery only | Per-video license metadata when supplied | Search / Open Original |
+| [Dareful](https://dareful.com/) | Public website search, best-effort | No key required | Conditional bundled yt-dlp download from the public media manifest | CC BY 4.0; attribution required | Search / Preview / Download / Open Original |
+| [Mazwai](https://mazwai.com/) | Limited discovery | Open official search | Open Original only | Verify every item | Open Official Search |
+| [DVIDS](https://www.dvidshub.net/) | Limited discovery | Open official search | Open Original only | Public domain only when the original item explicitly says so; verify every item | Open Official Search |
+| [British Pathé](https://www.britishpathe.com/) | Limited discovery | Open official search | Open Original only | Commercial licensing is item-specific; verify original | Open Official Search |
 | [Videvo](https://www.videvo.net/) | Limited discovery | Open official search | Open Original only | Verify every item | Open Official Search |
 | [Videezy](https://www.videezy.com/) | Limited discovery | Open official search | Open Original only | Free items may require attribution; verify original | Open Official Search |
 | [Mixkit](https://mixkit.co/) | Limited discovery | Open official search | Open Original only | Free and restricted terms vary; verify original | Open Official Search |

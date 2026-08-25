@@ -416,6 +416,8 @@
 "clipboard.privacyDetail" = "FootageFlow 只会在窗口处于前台且已打开链接下载页面时，在本机检测媒体链接；不会上传或记录剪贴板内容。";
 "settings.openverseDetail" = "Openverse 公共图片与音频 API，无需 API Key；授权信息来自每条结果的真实元数据。";
 "settings.dailymotionDetail" = "公共发现搜索，无需 API Key；请打开原始页面确认版权与可用性。";
+"settings.darefulDetail" = "公开直接搜索 · CC BY 4.0，需署名；下载使用内置 yt-dlp。";
+"settings.esaDetail" = "公开直接搜索 · 每条素材版权可能不同；使用前请打开原始页面确认。";
 "update.settingsTitle" = "软件更新";
 "update.settingsDetail" = "联网时，FootageFlow 每次启动都会通过 GitHub 检查最新稳定正式版。“暂不更新”只影响当前会话，软件绝不会自动安装更新。";
 "update.currentVersion" = "当前版本";

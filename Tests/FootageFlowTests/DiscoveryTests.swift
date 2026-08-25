@@ -12,9 +12,14 @@ import Foundation
       return try Data(contentsOf: url)
     }
 
+    private func htmlFixture(_ name: String) throws -> String {
+      let url = try #require(Bundle.module.url(forResource: name, withExtension: "html"))
+      return try String(contentsOf: url, encoding: .utf8)
+    }
+
     @Test("all search providers use the intended mode")
     func providerModes() {
-      #expect(ProviderID.searchCases.count == 17)
+      #expect(ProviderID.searchCases.count == 22)
       #expect(ProviderFactory.make(.nasa, apiKey: "").info.mode == .publicAPI)
       #expect(ProviderFactory.make(.libraryOfCongress, apiKey: "").info.mode == .publicAPI)
       #expect(ProviderFactory.make(.nationalArchives, apiKey: "").info.mode == .limited)
@@ -28,6 +33,46 @@ import Foundation
       #expect(ProviderFactory.make(.vimeo, apiKey: "key").info.mode == .officialAPI)
       #expect(ProviderFactory.make(.openverse, apiKey: "").info.mode == .publicAPI)
       #expect(ProviderFactory.make(.dailymotion, apiKey: "").info.mode == .publicAPI)
+      #expect(ProviderFactory.make(.dareful, apiKey: "").info.mode == .directSearch)
+      #expect(ProviderFactory.make(.esa, apiKey: "").info.mode == .directSearch)
+      #expect(ProviderFactory.make(.mazwai, apiKey: "").info.mode == .limited)
+      #expect(ProviderFactory.make(.dvids, apiKey: "").info.mode == .limited)
+      #expect(ProviderFactory.make(.britishPathe, apiKey: "").info.mode == .limited)
+    }
+
+    @Test("Dareful direct search preserves its real HLS source and CC BY attribution")
+    func darefulDirectSearch() async throws {
+      let provider = DarefulProvider(
+        loader: FixtureDirectLoader(html: try htmlFixture("dareful-direct")))
+      let page = try await provider.searchPage(
+        SearchRequest(query: "city", mediaType: .video, pageSize: 10), continuation: nil)
+      let asset = try #require(page.assets.first)
+      #expect(asset.provider == .dareful)
+      #expect(asset.title == "Winter City Aerial")
+      #expect(asset.duration == 51.8518)
+      #expect(asset.downloadable)
+      #expect(asset.effectiveDownloadStrategy == .ytDLP)
+      #expect(asset.originalMetadata["ytDLPSourceURL"] == "https://stream.mux.com/winter-city.m3u8")
+      #expect(asset.licenseStatus == .attributionRequired)
+      #expect(asset.sourcePageURL.host == "dareful.com")
+    }
+
+    @Test("ESA direct search keeps only public media cards and does not infer download rights")
+    func esaDirectSearch() async throws {
+      let provider = ESAProvider(loader: FixtureDirectLoader(html: try htmlFixture("esa-direct")))
+      let imagePage = try await provider.searchPage(
+        SearchRequest(query: "earth", mediaType: .image, pageSize: 10), continuation: nil)
+      let image = try #require(imagePage.assets.first)
+      #expect(image.title == "Low Earth orbit")
+      #expect(image.previewURL?.host == "www.esa.int")
+      #expect(!image.downloadable)
+      #expect(image.licenseStatus == .unknown)
+      #expect(image.originalMetadata["discoveryOnly"] == "true")
+      #expect(imagePage.continuation != nil)
+
+      let videoPage = try await provider.searchPage(
+        SearchRequest(query: "launch", mediaType: .video, pageSize: 10), continuation: nil)
+      #expect(videoPage.assets.map(\.title) == ["Launch"])
     }
 
     @Test("Openverse preserves item rights and direct media metadata")
@@ -562,6 +607,11 @@ import Foundation
         rightsInfo: RightsInfo(
           statement: "CC BY 4.0", known: true, openLicense: true,
           attributionRequired: true), downloadAvailability: .direct)
+    }
+
+    private struct FixtureDirectLoader: DirectSearchPageLoading {
+      let html: String
+      func load(_ url: URL, provider: ProviderID) async throws -> String { html }
     }
   }
 #endif

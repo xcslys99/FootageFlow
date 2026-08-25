@@ -417,6 +417,8 @@
 "clipboard.privacyDetail" = "FootageFlow only checks for media URLs locally while this window is active and the Link Downloader is open. Clipboard contents are not uploaded or logged.";
 "settings.openverseDetail" = "Public Openverse image and audio API; no API key required. Rights are shown from each result's metadata.";
 "settings.dailymotionDetail" = "Public discovery search; no API key required. Open the original page to review rights and availability.";
+"settings.darefulDetail" = "Public direct search · CC BY 4.0 with attribution; downloads use bundled yt-dlp.";
+"settings.esaDetail" = "Public direct search · rights vary by item; confirm them on the original page before reuse.";
 "update.settingsTitle" = "Software Updates";
 "update.settingsDetail" = "FootageFlow checks GitHub for the latest stable release on every app launch when online. Not Now applies only to the current session; updates are never installed automatically.";
 "update.currentVersion" = "Current version";
