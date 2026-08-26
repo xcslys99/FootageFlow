@@ -53,6 +53,12 @@ enum SearchRelevanceEngine {
         "広州", "광저우", "гуанчжоу",
       ]),
     ConceptRule(
+      id: "place.xian", label: "Xi'an",
+      aliases: ["西安", "西安市", "xi an", "xi'an", "xian", "сиань", "シーアン", "시안"]),
+    ConceptRule(
+      id: "place.berlin", label: "Berlin",
+      aliases: ["柏林", "berlin", "berlín", "berlim", "ベルリン", "베를린", "берлин"]),
+    ConceptRule(
       id: "place.japan", label: "Japan",
       aliases: ["日本", "japan", "japanese", "tokyo", "東京", "东京", "japon", "japón", "japao", "japão"]),
     ConceptRule(
@@ -135,11 +141,6 @@ enum SearchRelevanceEngine {
       ]),
   ]
 
-  private static let stopWords: Set<String> = [
-    "a", "an", "and", "at", "by", "for", "from", "in", "of", "on", "or", "the", "to",
-    "with", "footage", "video", "videos", "archive",
-  ]
-
   private static let distractorSignals = [
     "news", "politics", "political", "election", "journalist", "journalism", "military",
     "troops", "naval", "exercise", "song", "songs", "music", "concert",
@@ -158,13 +159,12 @@ enum SearchRelevanceEngine {
     // Translated and expanded queries are retrieval hints only. They must never add a new
     // mandatory concept group that was not present in the user's original text.
     let semanticCorpus = normalizedQuery
+    let matchedRules = rules.filter {
+      $0.aliases.contains(where: { contains($0, in: semanticCorpus) })
+    }
     var groups: [SearchConceptGroup] = []
-    var coveredTokens = Set<String>()
-    for rule in rules where rule.aliases.contains(where: { contains($0, in: semanticCorpus) }) {
+    for rule in matchedRules {
       groups.append(SearchConceptGroup(id: rule.id, label: rule.label, aliases: rule.aliases))
-      for alias in rule.aliases {
-        coveredTokens.formUnion(tokens(alias))
-      }
     }
 
     if groups.isEmpty {
@@ -180,15 +180,22 @@ enum SearchRelevanceEngine {
         ])
     }
 
-    let literalSource = normalizedQuery
-    let queryTokens = tokens(literalSource).filter {
-      $0.count > 1 && !stopWords.contains($0) && !coveredTokens.contains($0)
-        && !(hasCJK($0) && !groups.isEmpty)
+    let recognizedAliases = matchedRules.flatMap(\.aliases)
+    let literalFragments = QueryIntentPreserver.residuals(
+      in: query, removing: recognizedAliases)
+    // A translated query may contribute alternate spellings for an already
+    // mandatory literal (for example 西安 -> Xi'an), but may never remove it
+    // or create a new required subject on its own.
+    let translatedFragments = supportingQueries.flatMap {
+      QueryIntentPreserver.residuals(in: $0, removing: recognizedAliases)
     }
-    for token in queryTokens.prefix(max(0, 4 - groups.count)) {
-      let id = "literal.\(token)"
+    for fragment in literalFragments.prefix(max(0, 4 - groups.count)) {
+      let id = "literal.\(fragment)"
       guard !groups.contains(where: { $0.id == id }) else { continue }
-      groups.append(SearchConceptGroup(id: id, label: token, aliases: literalAliases(token)))
+      groups.append(
+        SearchConceptGroup(
+          id: id, label: fragment,
+          aliases: unique(literalAliases(fragment) + translatedFragments)))
     }
 
     return SearchIntent(originalQuery: query, conceptGroups: groups)
@@ -316,9 +323,8 @@ enum SearchRelevanceEngine {
         coveredCount == total && groupScores.allSatisfy { $0 >= 0.74 }
         && coherentCoverage && contextCompatible && score >= 0.82 + strictAdjustment
     case .balanced:
-      let required = total <= 2 ? total : Int(ceil(Double(total) * 0.67))
       eligible =
-        coveredCount >= required && coherentCoverage && contextCompatible
+        coveredCount == total && coherentCoverage && contextCompatible
         && score >= 0.52 + strictAdjustment
     case .broad:
       eligible = coveredCount >= 1 && score >= 0.18 + strictAdjustment / 2

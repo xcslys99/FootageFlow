@@ -619,7 +619,7 @@ public sealed class MainViewModel : ObservableObject
         get
         {
             var version = typeof(MainViewModel).Assembly.GetName().Version;
-            return version is null ? "0.12.0" : $"{version.Major}.{version.Minor}.{Math.Max(0, version.Build)}";
+            return version is null ? "0.12.1" : $"{version.Major}.{version.Minor}.{Math.Max(0, version.Build)}";
         }
     }
     public bool IsUpdateChecking

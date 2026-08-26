@@ -45,7 +45,23 @@ v0.10.0 provided the first cross-platform accessibility and keyboard-navigation 
 
 Future accessibility reports remain welcome; automated checks do not replace actual VoiceOver/Narrator testing on supported systems.
 
+### Compound Search Relevance Fix (v0.12.1)
+
+v0.12.1 fixes a compound-query regression without changing Provider, download, project, or accessibility workflows:
+
+- Required places and proper nouns are preserved even when they are not yet in the curated lexicon
+- Ten-language canonical requests never reduce a compound topic to a subject-only query
+- Default **Balanced** relevance requires metadata evidence for every required concept; **Broad** remains the explicit weak-related-results mode
+
 ## Planned Feature Releases
+
+### v0.12.1 — Compound Search Relevance Fix
+
+Delivered in v0.12.1:
+
+- Xi'an food and Berlin night-scene multilingual mappings and result gates
+- Deterministic unknown CJK and Latin entity preservation
+- Cross-platform regression coverage for location-plus-topic false positives
 
 ### v0.12.0 — Accessibility & Keyboard Navigation Update ([#19](https://github.com/xcslys99/FootageFlow/issues/19))
 

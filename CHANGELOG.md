@@ -2,6 +2,19 @@
 
 All notable FootageFlow changes are documented here.
 
+## [0.12.1] - 2026-08-26
+
+### Fixed
+
+- Fixed compound-search planning that could drop an unrecognized CJK place or proper noun after recognizing a broad subject; a search such as `西安美食` no longer generates subject-only requests such as `cuisine` or `food`
+- Added complete ten-language Xi'an and Berlin query mappings, including location-aware filtering for Xi'an food and Berlin night-scene searches
+- Balanced relevance mode now requires every required concept to be evidenced by source metadata, preventing a result from passing on a location or subject match alone
+
+### Improved
+
+- Added deterministic unknown-entity preservation for CJK and Latin compound queries, with translation-derived spellings treated only as aliases for the original required entity
+- Added cross-platform regression coverage for Xi'an food, Berlin night scenes, unknown-place compound searches, and broad-subject false positives
+
 ## [0.12.0] - 2026-08-26
 
 ### Improved

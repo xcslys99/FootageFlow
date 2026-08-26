@@ -16,6 +16,41 @@ enum SelfTestRunner {
     check(!FileNameSanitizer.sanitize("阿根廷/银行:挤兑?.mp4").contains("/"), "Filename sanitization")
     check(KeywordEngine.keywords(for: "2001年阿根廷银行挤兑").count >= 3, "Keyword expansion")
     check(KeywordEngine.splitScript("第一句话。第二句话。\n\n第三段。").count >= 2, "Script segmentation")
+    let xianPlan = MultilingualQueryEngine.plan(
+      for: "西安美食", interfaceLanguage: .simplifiedChinese)
+    check(
+      Set(xianPlan.conceptGroupIDs) == ["place.xian", "topic.food"]
+        && xianPlan.keywords.allSatisfy { keyword in
+          let value = keyword.text.lowercased()
+          return value.contains("西安") || value.contains("xi'an") || value.contains("시안")
+            || value.contains("сиань")
+        }, "Compound query preserves Xi'an")
+    let xianIntent = SearchRelevanceEngine.intent(for: "西安美食")
+    let xianFood = MediaAsset(
+      id: "xian-food", provider: .wikimedia, title: "Xi'an street food market",
+      description: nil, thumbnailURL: nil, previewURL: nil, downloadURL: nil,
+      sourcePageURL: URL(string: "https://example.com/xian-food")!, creator: nil, license: nil,
+      licenseURL: nil, licenseStatus: .unknown, width: nil, height: nil, duration: nil,
+      fileType: nil, mediaType: .video, publishedDate: nil, downloadable: false,
+      originalMetadata: [:], searchKeyword: "Xi'an cuisine", relevanceScore: 0.5)
+    let otherCityFood = MediaAsset(
+      id: "other-city-food", provider: .wikimedia, title: "Paris street food market",
+      description: nil, thumbnailURL: nil, previewURL: nil, downloadURL: nil,
+      sourcePageURL: URL(string: "https://example.com/paris-food")!, creator: nil, license: nil,
+      licenseURL: nil, licenseStatus: .unknown, width: nil, height: nil, duration: nil,
+      fileType: nil, mediaType: .video, publishedDate: nil, downloadable: false,
+      originalMetadata: [:], searchKeyword: "Paris cuisine", relevanceScore: 0.5)
+    check(
+      SearchRelevanceEngine.assess(xianFood, intent: xianIntent, mode: .balanced).eligible
+        && !SearchRelevanceEngine.assess(otherCityFood, intent: xianIntent, mode: .balanced)
+          .eligible,
+      "Compound relevance requires every concept")
+    let unknownPlacePlan = MultilingualQueryEngine.plan(
+      for: "泉州美食", interfaceLanguage: .simplifiedChinese)
+    check(
+      unknownPlacePlan.conceptGroupIDs.contains("literal.泉州")
+        && unknownPlacePlan.keywords.allSatisfy { $0.text.contains("泉州") },
+      "Unknown place stays in every query")
     check(
       URLValidator.isSafeRemote(URL(string: "https://example.com/media.mp4")),
       "HTTPS URL validation")

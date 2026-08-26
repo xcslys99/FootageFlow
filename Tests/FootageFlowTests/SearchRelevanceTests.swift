@@ -29,6 +29,108 @@ import Foundation
       #expect(Set(intent.conceptGroups.map(\.id)) == ["place.guangzhou", "topic.food"])
     }
 
+    @Test("Xi'an food keeps the city in every ten-language request and result gate")
+    func xianFoodPlanAndRelevance() {
+      let plan = MultilingualQueryEngine.plan(
+        for: "西安美食", interfaceLanguage: .simplifiedChinese)
+      #expect(Set(plan.conceptGroupIDs) == ["place.xian", "topic.food"])
+      #expect(plan.keywords.count == 10)
+      let byLanguage = Dictionary(
+        uniqueKeysWithValues: plan.keywords.compactMap { keyword in
+          keyword.language.map { ($0, keyword.text) }
+        })
+      #expect(byLanguage[.english] == "Xi'an cuisine")
+      #expect(byLanguage[.spanish] == "gastronomía de Xi'an")
+      #expect(byLanguage[.japanese] == "西安料理")
+      #expect(byLanguage[.russian] == "кухня Сиань")
+      #expect(
+        plan.keywords.allSatisfy { keyword in
+          let value = keyword.text.lowercased()
+          return value.contains("西安") || value.contains("xi'an") || value.contains("시안")
+            || value.contains("сиань")
+        })
+
+      let intent = SearchRelevanceEngine.intent(for: "西安美食")
+      let positives = ["Xi'an Muslim Quarter street food", "西安小吃和面食", "Xi'an noodle market"]
+      let negatives = ["Guangzhou street food", "Paris cuisine at night", "Xi'an city news"]
+      for title in positives {
+        #expect(
+          SearchRelevanceEngine.assess(asset(title), intent: intent, mode: .balanced).eligible,
+          Comment(rawValue: "expected Xi'an food: \(title)"))
+      }
+      for title in negatives {
+        #expect(
+          !SearchRelevanceEngine.assess(asset(title), intent: intent, mode: .balanced).eligible,
+          Comment(rawValue: "expected Xi'an food filter: \(title)"))
+      }
+    }
+
+    @Test("Unknown CJK entities are preserved instead of producing generic subject-only requests")
+    func unknownCJKEntityPreservation() {
+      let plan = MultilingualQueryEngine.plan(
+        for: "泉州美食", interfaceLanguage: .simplifiedChinese)
+      #expect(plan.conceptGroupIDs.contains("literal.泉州"))
+      #expect(plan.keywords.allSatisfy { $0.text.contains("泉州") })
+      #expect(!plan.keywords.contains { $0.text == "cuisine" || $0.text == "美食" })
+
+      let intent = SearchRelevanceEngine.intent(for: "泉州美食")
+      #expect(intent.conceptGroups.contains { $0.id == "literal.泉州" })
+      #expect(
+        SearchRelevanceEngine.assess(
+          asset("泉州街头小吃"), intent: intent, mode: .balanced
+        ).eligible)
+      #expect(
+        !SearchRelevanceEngine.assess(
+          asset("广州街头美食"), intent: intent, mode: .balanced
+        ).eligible)
+
+      let latinPlan = MultilingualQueryEngine.plan(
+        for: "Lyon cuisine", interfaceLanguage: .english)
+      #expect(latinPlan.conceptGroupIDs.contains("literal.lyon"))
+      #expect(
+        latinPlan.keywords.allSatisfy {
+          $0.text.range(of: "Lyon", options: .caseInsensitive) != nil
+        })
+      let latinIntent = SearchRelevanceEngine.intent(for: "Lyon cuisine")
+      #expect(
+        SearchRelevanceEngine.assess(
+          asset("Lyon street food market"), intent: latinIntent, mode: .balanced
+        ).eligible)
+      #expect(
+        !SearchRelevanceEngine.assess(
+          asset("French cuisine in Paris"), intent: latinIntent, mode: .balanced
+        ).eligible)
+    }
+
+    @Test("Berlin night keeps Berlin as a required concept")
+    func berlinNightRelevance() {
+      let plan = MultilingualQueryEngine.plan(
+        for: "柏林夜景", interfaceLanguage: .simplifiedChinese)
+      #expect(Set(plan.conceptGroupIDs) == ["place.berlin", "topic.night"])
+      for keyword in plan.keywords {
+        let value = keyword.text.lowercased()
+        let preservesBerlin =
+          value.contains("柏林") || value.contains("berlin") || value.contains("ベルリン")
+          || value.contains("berlín") || value.contains("berlim") || value.contains("베를린")
+          || value.contains("берлин")
+        #expect(preservesBerlin, Comment(rawValue: keyword.text))
+      }
+
+      let intent = SearchRelevanceEngine.intent(for: "柏林夜景")
+      #expect(
+        SearchRelevanceEngine.assess(
+          asset("Berlin skyline at night"), intent: intent, mode: .balanced
+        ).eligible)
+      #expect(
+        !SearchRelevanceEngine.assess(
+          asset("Paris city skyline at night"), intent: intent, mode: .balanced
+        ).eligible)
+      #expect(
+        !SearchRelevanceEngine.assess(
+          asset("Tokyo night street"), intent: intent, mode: .balanced
+        ).eligible)
+    }
+
     @Test("Guangzhou food keeps cuisine and filters single-concept results")
     func guangzhouFoodRelevance() {
       let positives = [

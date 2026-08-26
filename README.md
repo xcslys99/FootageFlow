@@ -45,7 +45,7 @@ Availability depends on the source, individual media, permissions, regional rest
 
 ## Workspace and accessibility
 
-v0.12.0 completes the keyboard and screen-reader path through the existing creator workspace:
+v0.12.0 completed the keyboard and screen-reader path through the existing creator workspace:
 
 - **Command Palette** (`⌘K` / `Ctrl+K`), Global Search, and keyboard-first navigation
 - **Local Global Search** across projects, saved media, downloads, history, saved searches, and research notes
@@ -55,6 +55,12 @@ v0.12.0 completes the keyboard and screen-reader path through the existing creat
 - The update dialog starts at **Not Now**; **View Update** opens the official GitHub Release page and never downloads or installs an update inside the app
 
 Workspace search stays on this device and does not scan arbitrary folders or upload project content. See [Workspace](docs/WORKSPACE.md), [Keyboard shortcuts](docs/KEYBOARD_SHORTCUTS.md), and [Accessibility](docs/ACCESSIBILITY.md).
+
+## Compound-search relevance
+
+v0.12.1 keeps every required part of a compound request through query planning and local reranking. For example, **Xi'an food** requires both Xi'an and food, while **Berlin night scenes** requires both Berlin and a night-scene signal. FootageFlow never turns an unrecognized place or proper noun into a subject-only request such as `food` or `city night`.
+
+In the default **Balanced** mode, every required concept must be supported by provider metadata before a result is shown. **Broad** remains an explicit opt-in for loosely related discovery results.
 
 ## Creator workflow
 

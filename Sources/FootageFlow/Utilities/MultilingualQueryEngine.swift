@@ -30,6 +30,24 @@ enum MultilingualQueryEngine {
         .korean: "광저우", .german: "Guangzhou", .french: "Guangzhou", .russian: "Гуанчжоу",
       ]),
     Concept(
+      id: "place.xian",
+      aliases: [
+        "西安", "西安市", "xi an", "xi'an", "xian", "сиань", "シーアン", "시안",
+      ],
+      terms: [
+        .english: "Xi'an", .simplifiedChinese: "西安", .traditionalChinese: "西安",
+        .spanish: "Xi'an", .brazilianPortuguese: "Xi'an", .japanese: "西安",
+        .korean: "시안", .german: "Xi'an", .french: "Xi'an", .russian: "Сиань",
+      ]),
+    Concept(
+      id: "place.berlin",
+      aliases: ["柏林", "berlin", "berlín", "berlim", "ベルリン", "베를린", "берлин"],
+      terms: [
+        .english: "Berlin", .simplifiedChinese: "柏林", .traditionalChinese: "柏林",
+        .spanish: "Berlín", .brazilianPortuguese: "Berlim", .japanese: "ベルリン",
+        .korean: "베를린", .german: "Berlin", .french: "Berlin", .russian: "Берлин",
+      ]),
+    Concept(
       id: "place.taiwan",
       aliases: [
         "台湾", "台灣", "taiwan", "taiwanese", "taiwanesa", "taiwanes", "taiwanês",
@@ -254,12 +272,15 @@ enum MultilingualQueryEngine {
     let matched = concepts.filter { concept in
       concept.aliases.contains { contains(alias: $0, in: original) }
     }
+    let requiredLiterals = QueryIntentPreserver.residuals(
+      in: original, removing: matched.flatMap(\.aliases))
     let orderedLanguages = languageOrder(input: inputLanguage, interface: interfaceLanguage)
     var keywords: [SearchKeyword] = []
 
     for (priority, language) in orderedLanguages.enumerated() {
       var localized = localizedQuery(
-        original: original, concepts: matched, language: language)
+        original: original, concepts: matched, requiredLiterals: requiredLiterals,
+        language: language)
       let yearText = years(in: original).joined(separator: " ")
       if !yearText.isEmpty && !localized.contains(yearText) {
         localized = "\(yearText) \(localized)"
@@ -297,7 +318,8 @@ enum MultilingualQueryEngine {
     keywords = Array(deduplicated(keywords).prefix(14))
     return MultilingualQueryPlan(
       originalQuery: original, inputLanguage: inputLanguage, interfaceLanguage: interfaceLanguage,
-      conceptGroupIDs: matched.map(\.id), keywords: keywords)
+      conceptGroupIDs: matched.map(\.id) + requiredLiterals.map { "literal.\($0)" },
+      keywords: keywords)
   }
 
   static func detectLanguage(in text: String, fallback: AppLanguage) -> AppLanguage {
@@ -342,35 +364,44 @@ enum MultilingualQueryEngine {
   }
 
   private static func localizedQuery(
-    original: String, concepts matched: [Concept], language: AppLanguage
+    original: String, concepts matched: [Concept], requiredLiterals: [String], language: AppLanguage
   ) -> String {
     guard !matched.isEmpty else { return original }
     let ids = Set(matched.map(\.id))
+    let base: String
     if let place = matched.first(where: { $0.id.hasPrefix("place.") }),
       let food = matched.first(where: { $0.id == "topic.food" }),
       let placeTerm = place.terms[language], let foodTerm = food.terms[language]
     {
       switch language {
       case .simplifiedChinese, .traditionalChinese, .japanese:
-        return placeTerm + foodTerm
+        base = placeTerm + foodTerm
       case .spanish, .brazilianPortuguese:
-        return "\(foodTerm) de \(placeTerm)"
+        base = "\(foodTerm) de \(placeTerm)"
       case .german:
-        return "\(placeTerm)-\(foodTerm)"
+        base = "\(placeTerm)-\(foodTerm)"
       case .french:
-        return "\(foodTerm) de \(placeTerm)"
+        base = "\(foodTerm) de \(placeTerm)"
       case .russian:
-        return "\(foodTerm) \(placeTerm)"
+        base = "\(foodTerm) \(placeTerm)"
       default:
-        return "\(placeTerm) \(foodTerm)"
+        base = "\(placeTerm) \(foodTerm)"
       }
-    }
-    if ids == Set(["topic.city", "topic.night"]) {
+    } else if ids == Set(["topic.city", "topic.night"]) {
       let city = matched.first { $0.id == "topic.city" }!.terms[language]!
       let night = matched.first { $0.id == "topic.night" }!.terms[language]!
-      return language == .japanese ? night + "の" + city : "\(city) \(night)"
+      base = language == .japanese ? night + "の" + city : "\(city) \(night)"
+    } else {
+      base = matched.compactMap { $0.terms[language] }.joined(separator: separator(for: language))
     }
-    return matched.compactMap { $0.terms[language] }.joined(separator: separator(for: language))
+    return compoundQuery(requiredLiterals: requiredLiterals, base: base, language: language)
+  }
+
+  private static func compoundQuery(
+    requiredLiterals: [String], base: String, language: AppLanguage
+  ) -> String {
+    QueryIntentPreserver.unique(requiredLiterals + [base]).joined(
+      separator: separator(for: language))
   }
 
   private static func visualExpansions(concepts: [Concept], language: AppLanguage) -> [String] {
