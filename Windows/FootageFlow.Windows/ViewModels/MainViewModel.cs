@@ -655,7 +655,8 @@ public sealed class MainViewModel : ObservableObject
     public string NavFeedback => T("nav.feedback");
     public string AccessibilityNavigationText => T("accessibility.navigation");
     public string AccessibilityLinkInputText => T("accessibility.linkInput");
-    public string AccessibilitySearchResultsText => T("accessibility.searchResults", ResultsView.Cast<object>().Count());
+    public string AccessibilitySearchResultsText =>
+        _localization.Text("accessibility.searchResults", ResultsView.Cast<object>().Count());
     public string SearchTagline => T("search.tagline");
     public string SearchPlaceholder => T("search.placeholder");
     public string SearchApiRecommendation => T("search.apiRecommendation");
