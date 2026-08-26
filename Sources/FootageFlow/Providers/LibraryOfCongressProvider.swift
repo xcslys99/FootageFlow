@@ -47,7 +47,12 @@ struct LibraryOfCongressProvider: MediaProvider {
       items.append(URLQueryItem(name: "dates", value: "-\(to)"))
     }
     let url = try URL.endpoint("https://www.loc.gov/\(collection)/", queryItems: items)
-    let (data, _) = try await HTTPClient.shared.data(for: URLRequest(url: url))
+    // LOC can legitimately take slightly longer than the shared 25-second request budget.
+    // Keep this override isolated to LOC; the provider still runs independently and remains
+    // cancellable, so a slow catalog response cannot block other search sources or the UI.
+    var urlRequest = URLRequest(url: url)
+    urlRequest.timeoutInterval = 45
+    let (data, _) = try await HTTPClient.shared.data(for: urlRequest)
     let assets = try Self.assets(from: data, request: request)
     guard let root = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
       throw ProviderError.invalidResponse

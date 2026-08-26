@@ -14,6 +14,7 @@ All notable FootageFlow changes are documented here.
 
 - Added deterministic unknown-entity preservation for CJK and Latin compound queries, with translation-derived spellings treated only as aliases for the original required entity
 - Added cross-platform regression coverage for Xi'an food, Berlin night scenes, unknown-place compound searches, and broad-subject false positives
+- Kept Library of Congress requests isolated and cancellable while allowing its public catalog a slightly longer provider-specific response window
 
 ## [0.12.0] - 2026-08-26
 
