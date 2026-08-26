@@ -2,11 +2,11 @@ param([string]$DestinationDirectory = "")
 $ErrorActionPreference = "Stop"
 $projectRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
 if (-not $DestinationDirectory) {
-    $DestinationDirectory = Join-Path $projectRoot ".build\tools\ffmpeg-8.1.2-windows-x64-gpl"
+    $DestinationDirectory = Join-Path $projectRoot ".build\tools\ffmpeg-n8.1-latest-windows-x64-gpl"
 }
-$releaseTag = "autobuild-2026-08-11-13-11"
-$asset = "ffmpeg-n8.1.2-34-g9b6c8969e0-win64-gpl-8.1.zip"
-$expected = "05eedc113542be39af5d0f78f0b1093bafb89c98cecf25b77e8644670293107f"
+$releaseTag = "latest"
+$asset = "ffmpeg-n8.1-latest-win64-gpl-8.1.zip"
+$expected = "c9ea36a51c8fb39f8a9e9b0c51a532381e66d2625ac6387a9def6b43900495b6"
 $url = "https://github.com/BtbN/FFmpeg-Builds/releases/download/$releaseTag/$asset"
 $ffmpeg = Join-Path $DestinationDirectory "ffmpeg.exe"
 $ffprobe = Join-Path $DestinationDirectory "ffprobe.exe"
