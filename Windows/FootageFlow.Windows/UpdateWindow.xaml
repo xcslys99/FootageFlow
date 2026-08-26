@@ -15,8 +15,7 @@
     </Grid.RowDefinitions>
     <Grid>
       <Grid.ColumnDefinitions><ColumnDefinition Width="58" /><ColumnDefinition /></Grid.ColumnDefinitions>
-      <TextBlock Text="↓" FontSize="38" Foreground="#1677E8" VerticalAlignment="Top"
-                 AutomationProperties.AccessibilityView="Raw" />
+      <TextBlock Text="↓" FontSize="38" Foreground="#1677E8" VerticalAlignment="Top" />
       <StackPanel Grid.Column="1">
         <TextBlock x:Name="HeadingText" FontSize="25" FontWeight="Bold" TextWrapping="Wrap" />
         <TextBlock x:Name="VersionText" Foreground="#667085" Margin="0,5,0,0" />

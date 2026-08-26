@@ -54,9 +54,6 @@ public sealed class RemoteThumbnail : Grid
             HorizontalAlignment = HorizontalAlignment.Center
         };
         AutomationProperties.SetName(_image, "");
-        AutomationProperties.SetAccessibilityView(_image, AccessibilityView.Raw);
-        AutomationProperties.SetAccessibilityView(_progress, AccessibilityView.Raw);
-        AutomationProperties.SetAccessibilityView(_failureLabel, AccessibilityView.Raw);
         AutomationProperties.SetName(_retry, RetryText);
         _retry.Click += (_, _) => { _generation++; _ = ReloadAsync(forceRetry: true); };
         _failure = new StackPanel
