@@ -2,11 +2,11 @@ param([string]$DestinationDirectory = "")
 $ErrorActionPreference = "Stop"
 $projectRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
 if (-not $DestinationDirectory) {
-    $DestinationDirectory = Join-Path $projectRoot ".build\tools\ffmpeg-n8.1-latest-windows-x64-gpl"
+    $DestinationDirectory = Join-Path $projectRoot ".build\tools\ffmpeg-n8.1.2-46-g139afe709a-windows-x64-gpl"
 }
-$releaseTag = "latest"
-$asset = "ffmpeg-n8.1-latest-win64-gpl-8.1.zip"
-$expected = "c9ea36a51c8fb39f8a9e9b0c51a532381e66d2625ac6387a9def6b43900495b6"
+$releaseTag = "autobuild-2026-08-26-13-06"
+$asset = "ffmpeg-n8.1.2-46-g139afe709a-win64-gpl-8.1.zip"
+$expected = "f966bc2e843bcd680dedd6d1a2c0c895bab859a402c6dd107cbe72a796dfebcf"
 $url = "https://github.com/BtbN/FFmpeg-Builds/releases/download/$releaseTag/$asset"
 $ffmpeg = Join-Path $DestinationDirectory "ffmpeg.exe"
 $ffprobe = Join-Path $DestinationDirectory "ffprobe.exe"
@@ -38,6 +38,7 @@ try {
 BtbN FFmpeg GPL build
 Release: $releaseTag
 Asset: $asset
+SHA-256: $expected
 Source and build scripts: https://github.com/BtbN/FFmpeg-Builds
 FFmpeg source: https://ffmpeg.org/
 "@ | Set-Content (Join-Path $DestinationDirectory "README.txt") -Encoding utf8
