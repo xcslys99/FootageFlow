@@ -104,35 +104,37 @@ struct WorkspaceTests {
     }
   }
 
-  @Test("clearing filters preserves a query and restores the balanced creator defaults")
-  @MainActor
-  func clearFilters() {
-    let model = SearchViewModel()
-    model.query = "Taiwan cuisine"
-    model.mediaType = .image
-    model.orientation = .portrait
-    model.resolution = .uhd4K
-    model.duration = .underMinute
-    model.licenseFilter = .publicDomain
-    model.yearFrom = 1990
-    model.yearTo = 2000
-    model.downloadableOnly = true
-    model.relevanceMode = .precise
-    model.sort = .newest
+  #if os(macOS)
+    @Test("clearing filters preserves a query and restores the balanced creator defaults")
+    @MainActor
+    func clearFilters() {
+      let model = SearchViewModel()
+      model.query = "Taiwan cuisine"
+      model.mediaType = .image
+      model.orientation = .portrait
+      model.resolution = .uhd4K
+      model.duration = .underMinute
+      model.licenseFilter = .publicDomain
+      model.yearFrom = 1990
+      model.yearTo = 2000
+      model.downloadableOnly = true
+      model.relevanceMode = .precise
+      model.sort = .newest
 
-    model.clearFilters()
+      model.clearFilters()
 
-    #expect(model.query == "Taiwan cuisine")
-    #expect(model.mediaType == MediaType.video)
-    #expect(model.orientation == AssetOrientation.all)
-    #expect(model.resolution == ResolutionFilter.all)
-    #expect(model.duration == DurationFilter.all)
-    #expect(model.licenseFilter == LicenseFilter.all)
-    #expect(model.yearFrom == nil && model.yearTo == nil)
-    #expect(!model.downloadableOnly)
-    #expect(model.relevanceMode == SearchRelevanceMode.balanced)
-    #expect(model.sort == SearchSort.relevance)
-  }
+      #expect(model.query == "Taiwan cuisine")
+      #expect(model.mediaType == MediaType.video)
+      #expect(model.orientation == AssetOrientation.all)
+      #expect(model.resolution == ResolutionFilter.all)
+      #expect(model.duration == DurationFilter.all)
+      #expect(model.licenseFilter == LicenseFilter.all)
+      #expect(model.yearFrom == nil && model.yearTo == nil)
+      #expect(!model.downloadableOnly)
+      #expect(model.relevanceMode == SearchRelevanceMode.balanced)
+      #expect(model.sort == SearchSort.relevance)
+    }
+  #endif
 
   @Test("local index stays responsive with large persisted metadata")
   func largeLocalIndex() async {

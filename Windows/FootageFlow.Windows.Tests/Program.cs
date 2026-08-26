@@ -568,6 +568,14 @@ static async Task RunCreatorWorkflowSmokeAsync(
         {
             check(true, $"Windows creator smoke YouTube {error.Code} classification");
         }
+        catch (ExternalToolException error) when (name == "Dailymotion" &&
+            error.Code is "videoUnavailable" or "regionalRestriction" or "rateLimited" or
+                "temporarilyBlocked" or "timeout" or "requestFailed")
+        {
+            // Dailymotion is a public best-effort source. Its availability is independent of
+            // FootageFlow, so a classified source limitation is an expected test outcome.
+            check(true, $"Windows creator smoke Dailymotion {error.Code} classification");
+        }
         catch (Exception error)
         {
             check(false, $"Windows creator smoke {name} analysis ({error.GetType().Name})");
