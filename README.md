@@ -84,15 +84,15 @@ If you already know the media URL, Link Downloader uses the same project, downlo
 
 ## Screenshots
 
-These real macOS screenshots are captured in English. The Windows edition follows the same product structure with platform-native controls.
+These real v0.12.1 macOS screenshots are captured in English. The Windows edition follows the same product structure with platform-native controls.
 
-![FootageFlow Quick Search: editable smart expansion, provider status, filters, and loaded multi-source footage results](docs/images/quick-search-v010.png)
+![FootageFlow v0.12.1 Quick Search: a complete Xi'an food compound query, source status, filters, and fully loaded multi-source results](docs/images/quick-search-v0121.png)
 
-![FootageFlow Workspace Smart Collections](docs/images/workspace-smart-collections-v010.png)
+![FootageFlow v0.12.1 Workspace Smart Collections](docs/images/workspace-smart-collections-v0121.png)
 
-![FootageFlow Workspace Provider Health](docs/images/provider-health-v010.png)
+![FootageFlow v0.12.1 Workspace Provider Health across the current source catalog](docs/images/provider-health-v0121.png)
 
-![FootageFlow Command Palette](docs/images/command-palette-v010.png)
+![FootageFlow v0.12.1 Command Palette](docs/images/command-palette-v0121.png)
 
 ## Features
 

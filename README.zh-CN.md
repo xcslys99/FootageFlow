@@ -84,15 +84,15 @@ FootageFlow 面向纪录片、历史、国家、财经、人物、科普和短�
 
 ## 界面截图
 
-以下为真实 macOS 英文界面截图。Windows 版采用相同产品结构，并使用符合 Windows 习惯的原生控件。
+以下为真实 v0.12.1 macOS 英文界面截图。Windows 版采用相同产品结构，并使用符合 Windows 习惯的原生控件。
 
-![FootageFlow 快速搜索：可编辑的智能扩展、素材来源状态、筛选和已加载的多来源结果](docs/images/quick-search-v010.png)
+![FootageFlow v0.12.1 快速搜索：完整保留 Xi'an food 复合查询、显示来源状态和已完整加载的多来源结果](docs/images/quick-search-v0121.png)
 
-![FootageFlow Workspace 智能集合](docs/images/workspace-smart-collections-v010.png)
+![FootageFlow v0.12.1 Workspace 智能集合](docs/images/workspace-smart-collections-v0121.png)
 
-![FootageFlow Workspace 素材来源状态](docs/images/provider-health-v010.png)
+![FootageFlow v0.12.1 Workspace 当前素材来源状态](docs/images/provider-health-v0121.png)
 
-![FootageFlow 命令面板](docs/images/command-palette-v010.png)
+![FootageFlow v0.12.1 命令面板](docs/images/command-palette-v0121.png)
 
 ## 功能摘要
 
