@@ -72,6 +72,8 @@ jobs:
 
       - name: Compile installer and checksums
         shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           $compiler = (& scripts/windows/install-inno.ps1 | Select-Object -Last 1)
           $stage = (Resolve-Path ".build\windows-stage").Path
