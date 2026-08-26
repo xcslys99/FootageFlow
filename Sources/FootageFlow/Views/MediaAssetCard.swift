@@ -71,7 +71,13 @@ struct MediaAssetCard: View {
       if let downloadState {
         ProgressView(value: downloadState.progress)
           .help(downloadState.message)
-          .accessibilityLabel("\(asset.title): \(downloadState.message)")
+          .accessibilityLabel(
+            tr(
+              "accessibility.downloadStatus", asset.title,
+              downloadState.message
+            )
+          )
+          .accessibilityValue("\(Int((downloadState.progress * 100).rounded()))%")
         HStack(spacing: 5) {
           Text(downloadState.message)
           if let speed = downloadState.speedText { Text("· \(speed)") }

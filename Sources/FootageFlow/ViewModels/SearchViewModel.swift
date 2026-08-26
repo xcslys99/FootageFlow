@@ -166,6 +166,26 @@ final class SearchViewModel: ObservableObject {
   }
   func removeKeyword(_ id: UUID) { keywords.removeAll { $0.id == id } }
 
+  /// Restores visible filters without discarding the query, its keyword plan,
+  /// project selection, or loaded results.
+  func clearFilters() {
+    mediaType = .video
+    orientation = .all
+    resolution = .all
+    duration = .all
+    licenseFilter = .all
+    yearFrom = nil
+    yearTo = nil
+    downloadableOnly = false
+    relevanceMode = .balanced
+    sort = .relevance
+    selectedProviders = AppSettings.enabledProviders
+    selectedResearchTypes = Set(ResearchRecordType.allCases)
+    selectedResearchProviders = Set(ResearchProviderID.allCases)
+    researchYearFrom = nil
+    researchYearTo = nil
+  }
+
   func savedSearch(named name: String) -> SavedSearchRecord {
     SavedSearchRecord(
       name: name, query: query, keywords: keywords, searchScope: searchScope, mediaType: mediaType,

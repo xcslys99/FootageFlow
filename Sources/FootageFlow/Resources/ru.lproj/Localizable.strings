@@ -647,3 +647,13 @@
 "workspace.shortcutsDetail" = "Use these shortcuts without changing existing creator workflows.";
 "workspace.smartCollectionDynamic" = "Updates automatically";
 "workspace.smartCollectionsDetail" = "These collections update automatically from your existing FootageFlow metadata.";
+"filter.clear" = "Очистить фильтры";
+"accessibility.navigation" = "Навигация FootageFlow";
+"accessibility.keywordEnabled" = "Использовать поисковый запрос: %@";
+"accessibility.providerEnabled" = "Использовать источник: %@";
+"accessibility.searchResults" = "Показано результатов поиска: %d";
+"accessibility.downloadStatus" = "%@: %@";
+"accessibility.linkInput" = "Ссылки на медиа";
+"accessibility.projectList" = "Проекты";
+"accessibility.updateNotes" = "Что нового";
+"accessibility.updateDialog" = "Доступна новая версия FootageFlow";

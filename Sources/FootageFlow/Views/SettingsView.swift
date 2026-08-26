@@ -189,6 +189,7 @@ struct SettingsView: View {
     return VStack(alignment: .leading, spacing: 8) {
       HStack {
         Toggle("", isOn: enabledBinding(provider)).labelsHidden()
+          .accessibilityLabel(tr("accessibility.providerEnabled", provider.displayName))
         Text(provider.displayName).font(.headline)
         Spacer()
         Text(mode.label).font(.caption.bold())
@@ -250,6 +251,7 @@ struct SettingsView: View {
   private func noKeyRow(_ provider: ProviderID, detail: String) -> some View {
     HStack(spacing: 10) {
       Toggle("", isOn: enabledBinding(provider)).labelsHidden()
+        .accessibilityLabel(tr("accessibility.providerEnabled", provider.displayName))
       VStack(alignment: .leading) {
         Text(provider.displayName).font(.headline)
         Text(detail).font(.caption).foregroundStyle(.secondary)
@@ -268,6 +270,7 @@ struct SettingsView: View {
   private func limitedRow(_ provider: ProviderID) -> some View {
     HStack(spacing: 10) {
       Toggle("", isOn: enabledBinding(provider)).labelsHidden()
+        .accessibilityLabel(tr("accessibility.providerEnabled", provider.displayName))
       VStack(alignment: .leading) {
         Text(provider.displayName).font(.headline)
         Text(tr("settings.limitedDiscoveryDetail")).font(.caption).foregroundStyle(.secondary)

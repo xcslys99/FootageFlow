@@ -171,6 +171,7 @@ public sealed class MainViewModel : ObservableObject
         DeleteResearchNoteCommand = new AsyncRelayCommand(reference => DeleteResearchNoteAsync(reference as ResearchReferenceRecord));
         CreateProjectCommand = new AsyncRelayCommand(_ => CreateProjectAsync());
         ClearProjectCommand = new RelayCommand(_ => CurrentProject = null);
+        ClearFiltersCommand = new RelayCommand(_ => ClearFilters());
         SaveProjectCommand = new AsyncRelayCommand(_ => SaveProjectAsync(), _ => CurrentProject is not null);
         DeleteProjectCommand = new AsyncRelayCommand(project => DeleteProjectAsync(project as ProjectRecord));
         RefreshRightsAuditCommand = new AsyncRelayCommand(_ => RefreshRightsAuditAsync(), _ => CurrentProject is not null && !IsProjectWorking);
@@ -306,6 +307,7 @@ public sealed class MainViewModel : ObservableObject
     public ICommand DeleteResearchNoteCommand { get; }
     public ICommand CreateProjectCommand { get; }
     public ICommand ClearProjectCommand { get; }
+    public ICommand ClearFiltersCommand { get; }
     public ICommand SaveProjectCommand { get; }
     public ICommand DeleteProjectCommand { get; }
     public ICommand RefreshRightsAuditCommand { get; }
@@ -617,7 +619,7 @@ public sealed class MainViewModel : ObservableObject
         get
         {
             var version = typeof(MainViewModel).Assembly.GetName().Version;
-            return version is null ? "0.11.0" : $"{version.Major}.{version.Minor}.{Math.Max(0, version.Build)}";
+            return version is null ? "0.12.0" : $"{version.Major}.{version.Minor}.{Math.Max(0, version.Build)}";
         }
     }
     public bool IsUpdateChecking
@@ -651,6 +653,9 @@ public sealed class MainViewModel : ObservableObject
     public string NavHistory => T("search.history");
     public string NavSettings => T("nav.settings");
     public string NavFeedback => T("nav.feedback");
+    public string AccessibilityNavigationText => T("accessibility.navigation");
+    public string AccessibilityLinkInputText => T("accessibility.linkInput");
+    public string AccessibilitySearchResultsText => T("accessibility.searchResults", ResultsView.Cast<object>().Count());
     public string SearchTagline => T("search.tagline");
     public string SearchPlaceholder => T("search.placeholder");
     public string SearchApiRecommendation => T("search.apiRecommendation");
@@ -671,6 +676,7 @@ public sealed class MainViewModel : ObservableObject
     public string LicenseTitle => T("filter.license");
     public string SortTitle => T("filter.sort");
     public string RelevanceModeTitle => T("search.relevance.mode");
+    public string ClearFiltersText => T("filter.clear");
     public string RelevancePreciseText => T("search.relevance.precise");
     public string RelevanceBalancedText => T("search.relevance.balanced");
     public string RelevanceBroadText => T("search.relevance.broad");
@@ -757,6 +763,7 @@ public sealed class MainViewModel : ObservableObject
     public string SortResolutionText => T("sort.resolution");
     public string SortDurationText => T("sort.duration");
     public string DeleteText => T("common.delete");
+    public string CloseText => T("common.close");
     public string CancelText => T("common.cancel");
     public string RetryText => T("common.retry");
     public string RetryFailedText => T("download.retryFailed");
@@ -766,6 +773,7 @@ public sealed class MainViewModel : ObservableObject
     public string SearchAgainText => T("history.research");
     public string SaveText => T("common.save");
     public string RemoveKeyText => T("settings.removeAPIKey");
+    public string ApiKeyText => T("settings.apiKey");
     public string TestConnectionText => T("settings.testConnection");
     public string DownloadFolderText => T("settings.downloadRoot");
     public string ChooseText => T("settings.choose");
@@ -1836,6 +1844,26 @@ public sealed class MainViewModel : ObservableObject
         _continuations.Clear();
         _researchContinuations.Clear();
         SearchStatus = T("search.initialStatus");
+    }
+
+    // Keep the query and current result set intact. This is intentionally a
+    // filter reset rather than a second form of “clear search”, so it is safe
+    // to use from a keyboard workflow after a result set looks unexpectedly empty.
+    private void ClearFilters()
+    {
+        MediaType = "video";
+        Orientation = "all";
+        Resolution = "all";
+        Duration = "all";
+        LicenseFilter = "all";
+        YearFrom = "";
+        YearTo = "";
+        DownloadableOnly = false;
+        RelevanceMode = "balanced";
+        Sort = "relevance";
+        foreach (var provider in Providers) provider.Enabled = _settings.Current.EnabledProviders.Contains(provider.Id);
+        foreach (var provider in ResearchProviders) provider.Enabled = true;
+        ResultsView.Refresh();
     }
 
     private async Task ScheduleWorkspaceSearchAsync()

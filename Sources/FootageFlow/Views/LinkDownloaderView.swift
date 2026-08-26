@@ -32,6 +32,7 @@ struct LinkDownloaderView: View {
           } label: {
             Image(systemName: "ellipsis.circle")
           }
+          .accessibilityLabel(tr("media.moreActions"))
         }
         .padding(10)
         .background(.blue.opacity(0.08), in: RoundedRectangle(cornerRadius: 9))
@@ -41,6 +42,7 @@ struct LinkDownloaderView: View {
           .font(.system(.body, design: .monospaced))
           .frame(minHeight: 94, maxHeight: 150)
           .overlay(RoundedRectangle(cornerRadius: 7).stroke(.quaternary))
+          .accessibilityLabel(tr("accessibility.linkInput"))
         VStack {
           Button(tr("link.paste")) { viewModel.paste() }
           Button(viewModel.detectedCount > 1 ? tr("link.analyzeAll") : tr("link.analyze")) {
@@ -80,6 +82,8 @@ struct LinkDownloaderView: View {
     let value = item.wrappedValue
     HStack(alignment: .top, spacing: 14) {
       Toggle("", isOn: item.isSelected).labelsHidden().disabled(!value.isReady)
+        .accessibilityLabel(
+          tr("accessibility.keywordEnabled", value.analysis?.title ?? value.rawURL))
       RemoteThumbnailView(
         candidates: [value.analysis?.thumbnailURL].compactMap { $0 },
         fallbackSystemImage: "link"

@@ -34,6 +34,7 @@ struct ProjectsView: View {
           } label: {
             Image(systemName: "plus")
           }.help(tr("project.new"))
+            .accessibilityLabel(tr("project.new"))
           Button {
             importProject()
           } label: {
@@ -54,6 +55,7 @@ struct ProjectsView: View {
             ).font(.caption).foregroundStyle(.secondary)
           }.tag(project.id)
         }
+        .accessibilityLabel(tr("accessibility.projectList"))
       }.frame(minWidth: 250, idealWidth: 300)
       if let project = selected {
         ProjectDetail(

@@ -39,6 +39,7 @@ struct SearchHistoryView: View {
           } label: {
             Image(systemName: "trash")
           }.buttonStyle(.plain).help(tr("common.delete"))
+            .accessibilityLabel(tr("common.delete"))
         }.padding(.vertical, 4)
       }
     }.frame(width: 760, height: 520)

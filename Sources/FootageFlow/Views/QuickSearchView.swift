@@ -222,6 +222,8 @@ struct QuickSearchView: View {
             let keyword = $viewModel.keywords[index]
             HStack(spacing: 6) {
               Toggle("", isOn: keyword.isEnabled).labelsHidden()
+                .accessibilityLabel(
+                  tr("accessibility.keywordEnabled", keyword.wrappedValue.text))
               if let language = keyword.wrappedValue.language {
                 Text(language.displayName)
                   .font(.caption2).foregroundStyle(.secondary)
@@ -234,6 +236,7 @@ struct QuickSearchView: View {
               } label: {
                 Image(systemName: "xmark.circle.fill")
               }.buttonStyle(.plain).foregroundStyle(.secondary)
+                .accessibilityLabel(tr("common.delete"))
             }
           }
           Button {
@@ -265,6 +268,8 @@ struct QuickSearchView: View {
           } label: {
             Label(tr("filter.advanced"), systemImage: "line.3.horizontal.decrease.circle")
           }.buttonStyle(.link)
+          Button(tr("filter.clear")) { viewModel.clearFilters() }
+            .buttonStyle(.link)
           Spacer()
         }
       }
@@ -331,6 +336,7 @@ struct QuickSearchView: View {
                   AppSettings.enabledProviders = viewModel.selectedProviders
                 })
             ).toggleStyle(.checkbox)
+              .accessibilityLabel(tr("accessibility.providerEnabled", provider.displayName))
           }
           Divider().frame(height: 18)
           Button(tr("settings.manageSources"), systemImage: "slider.horizontal.3") {
@@ -381,6 +387,7 @@ struct QuickSearchView: View {
                 })
             )
             .toggleStyle(.checkbox)
+            .accessibilityLabel(tr("accessibility.providerEnabled", type.label))
           }
         }
       }
@@ -401,6 +408,7 @@ struct QuickSearchView: View {
                 })
             )
             .toggleStyle(.checkbox)
+            .accessibilityLabel(tr("accessibility.providerEnabled", provider.displayName))
           }
         }
       }
@@ -523,6 +531,8 @@ struct QuickSearchView: View {
       Text(tr("common.showingCount", displayedResultCount)).foregroundStyle(.secondary)
     }
     .font(.caption).padding(.horizontal, 16).padding(.vertical, 8)
+    .accessibilityElement(children: .combine)
+    .accessibilityLabel(tr("accessibility.searchResults", displayedResultCount))
   }
 
   private var isEmptyResult: Bool {

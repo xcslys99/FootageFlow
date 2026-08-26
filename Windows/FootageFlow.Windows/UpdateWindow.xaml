@@ -4,7 +4,7 @@
         Title="FootageFlow" Width="700" Height="620" MinWidth="560" MinHeight="460"
         WindowStartupLocation="CenterOwner" ShowInTaskbar="False" ResizeMode="CanResizeWithGrip"
         Background="#FAFBFC" Icon="Assets/FootageFlow.png">
-  <Grid Margin="24">
+  <Grid Margin="24" KeyboardNavigation.TabNavigation="Cycle">
     <Grid.RowDefinitions>
       <RowDefinition Height="Auto" />
       <RowDefinition Height="Auto" />
@@ -15,7 +15,8 @@
     </Grid.RowDefinitions>
     <Grid>
       <Grid.ColumnDefinitions><ColumnDefinition Width="58" /><ColumnDefinition /></Grid.ColumnDefinitions>
-      <TextBlock Text="↓" FontSize="38" Foreground="#1677E8" VerticalAlignment="Top" />
+      <TextBlock Text="↓" FontSize="38" Foreground="#1677E8" VerticalAlignment="Top"
+                 AutomationProperties.AccessibilityView="Raw" />
       <StackPanel Grid.Column="1">
         <TextBlock x:Name="HeadingText" FontSize="25" FontWeight="Bold" TextWrapping="Wrap" />
         <TextBlock x:Name="VersionText" Foreground="#667085" Margin="0,5,0,0" />
@@ -27,11 +28,12 @@
     <TextBlock x:Name="WhatsNewText" Grid.Row="2" FontSize="17" FontWeight="SemiBold" Margin="0,0,0,8" />
     <TextBox x:Name="NotesText" Grid.Row="3" IsReadOnly="True" TextWrapping="Wrap"
              VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
-             AcceptsReturn="True" Padding="12" Background="White" BorderBrush="#D0D5DD" />
+             AcceptsReturn="True" Padding="12" Background="White" BorderBrush="#D0D5DD"
+             AutomationProperties.LiveSetting="Polite" />
     <TextBlock x:Name="SafetyText" Grid.Row="4" Foreground="#667085" FontSize="11"
                TextWrapping="Wrap" Margin="0,12,0,12" />
     <StackPanel Grid.Row="5" Orientation="Horizontal" HorizontalAlignment="Right">
-      <Button x:Name="LaterButton" MinWidth="120" Padding="14,8" Margin="0,0,8,0" Click="Later_Click" />
+      <Button x:Name="LaterButton" MinWidth="120" Padding="14,8" Margin="0,0,8,0" Click="Later_Click" IsCancel="True" />
       <Button x:Name="ViewButton" MinWidth="140" Padding="14,8" Background="#1677E8"
               Foreground="White" FontWeight="SemiBold" Click="View_Click" />
     </StackPanel>

@@ -1,9 +1,11 @@
 import SwiftUI
 
 struct UpdateAvailableView: View {
+  private enum FocusTarget: Hashable { case notNow, viewUpdate }
   let release: AppRelease
   let notNow: () -> Void
   let viewUpdate: () -> Void
+  @FocusState private var focusTarget: FocusTarget?
 
   var body: some View {
     VStack(alignment: .leading, spacing: 18) {
@@ -11,6 +13,7 @@ struct UpdateAvailableView: View {
         Image(systemName: "arrow.down.circle.fill")
           .font(.system(size: 42))
           .foregroundStyle(.tint)
+          .accessibilityHidden(true)
         VStack(alignment: .leading, spacing: 5) {
           Text(tr("update.availableTitle")).font(.title.bold())
           Text(tr("update.currentVersionValue", FootageFlowVersion.current))
@@ -33,16 +36,26 @@ struct UpdateAvailableView: View {
       }
       .frame(minHeight: 180, maxHeight: 360)
       .background(.quaternary.opacity(0.35), in: RoundedRectangle(cornerRadius: 8))
+      .accessibilityLabel(tr("accessibility.updateNotes"))
       Text(tr("update.noAutomaticInstall"))
         .font(.caption).foregroundStyle(.secondary)
       HStack {
         Spacer()
         Button(tr("update.notNow"), action: notNow)
-        Button(tr("update.viewUpdate"), action: viewUpdate).buttonStyle(.borderedProminent)
+          .focused($focusTarget, equals: .notNow)
+          .keyboardShortcut(.cancelAction)
+        Button(tr("update.viewUpdate"), action: viewUpdate)
+          .buttonStyle(.borderedProminent)
+          .focused($focusTarget, equals: .viewUpdate)
+          .keyboardShortcut(.defaultAction)
+          .accessibilityHint(tr("update.noAutomaticInstall"))
       }
     }
     .padding(24)
     .frame(minWidth: 620, idealWidth: 680, minHeight: 460)
     .interactiveDismissDisabled()
+    .accessibilityElement(children: .contain)
+    .accessibilityLabel(tr("accessibility.updateDialog"))
+    .onAppear { focusTarget = .notNow }
   }
 }

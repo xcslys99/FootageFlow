@@ -12,11 +12,22 @@
     <SolidColorBrush x:Key="SidebarBrush" Color="#F3F5F8" />
     <SolidColorBrush x:Key="CardBrush" Color="#FFFFFF" />
     <SolidColorBrush x:Key="SubtleTextBrush" Color="#667085" />
+    <Style x:Key="KeyboardFocusVisual">
+      <Setter Property="Control.Template">
+        <Setter.Value>
+          <ControlTemplate>
+            <Border BorderBrush="{StaticResource AccentBrush}" BorderThickness="2"
+                    CornerRadius="4" Margin="-2" SnapsToDevicePixels="True" />
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
     <Style TargetType="Button">
       <Setter Property="Padding" Value="12,7" />
       <Setter Property="Margin" Value="3" />
       <Setter Property="Cursor" Value="Hand" />
       <Setter Property="MinHeight" Value="32" />
+      <Setter Property="FocusVisualStyle" Value="{StaticResource KeyboardFocusVisual}" />
     </Style>
     <Style x:Key="PrimaryButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
       <Setter Property="Background" Value="{StaticResource AccentBrush}" />
@@ -27,10 +38,21 @@
     <Style TargetType="TextBox">
       <Setter Property="Padding" Value="10,7" />
       <Setter Property="VerticalContentAlignment" Value="Center" />
+      <Setter Property="FocusVisualStyle" Value="{StaticResource KeyboardFocusVisual}" />
     </Style>
     <Style TargetType="ComboBox">
       <Setter Property="Padding" Value="8,5" />
       <Setter Property="MinHeight" Value="32" />
+      <Setter Property="FocusVisualStyle" Value="{StaticResource KeyboardFocusVisual}" />
+    </Style>
+    <Style TargetType="CheckBox">
+      <Setter Property="FocusVisualStyle" Value="{StaticResource KeyboardFocusVisual}" />
+    </Style>
+    <Style TargetType="PasswordBox">
+      <Setter Property="FocusVisualStyle" Value="{StaticResource KeyboardFocusVisual}" />
+    </Style>
+    <Style TargetType="ListBox">
+      <Setter Property="FocusVisualStyle" Value="{StaticResource KeyboardFocusVisual}" />
     </Style>
     <BooleanToVisibilityConverter x:Key="BoolVisibility" />
     <infrastructure:LicenseDisplayConverter x:Key="LicenseDisplay" />
@@ -77,8 +99,8 @@
               <Button Content="{Binding DataContext.PreviewText, RelativeSource={RelativeSource AncestorType=Window}}" Command="{Binding DataContext.PreviewCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" AutomationProperties.Name="{Binding DataContext.PreviewText, RelativeSource={RelativeSource AncestorType=Window}}" />
               <Button Content="♡" ToolTip="{Binding DataContext.FavoriteText, RelativeSource={RelativeSource AncestorType=Window}}" Command="{Binding DataContext.FavoriteCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" AutomationProperties.Name="{Binding DataContext.FavoriteText, RelativeSource={RelativeSource AncestorType=Window}}" />
               <Button Content="{Binding DataContext.DownloadText, RelativeSource={RelativeSource AncestorType=Window}}" Command="{Binding DataContext.DownloadCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" IsEnabled="{Binding Downloadable}" AutomationProperties.Name="{Binding DataContext.DownloadText, RelativeSource={RelativeSource AncestorType=Window}}" />
-              <Button Content="MP4" ToolTip="{Binding DataContext.EditingCompatibleOutputText, RelativeSource={RelativeSource AncestorType=Window}}" Command="{Binding DataContext.DownloadEditingCompatibleCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" Visibility="{Binding SupportsEditingOutput, Converter={StaticResource BoolVisibility}}" />
-              <Button Content="♫" ToolTip="{Binding DataContext.AudioOnlyOutputText, RelativeSource={RelativeSource AncestorType=Window}}" Command="{Binding DataContext.DownloadAudioOnlyCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" Visibility="{Binding SupportsEditingOutput, Converter={StaticResource BoolVisibility}}" />
+              <Button Content="MP4" ToolTip="{Binding DataContext.EditingCompatibleOutputText, RelativeSource={RelativeSource AncestorType=Window}}" Command="{Binding DataContext.DownloadEditingCompatibleCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" Visibility="{Binding SupportsEditingOutput, Converter={StaticResource BoolVisibility}}" AutomationProperties.Name="{Binding DataContext.EditingCompatibleOutputText, RelativeSource={RelativeSource AncestorType=Window}}" />
+              <Button Content="♫" ToolTip="{Binding DataContext.AudioOnlyOutputText, RelativeSource={RelativeSource AncestorType=Window}}" Command="{Binding DataContext.DownloadAudioOnlyCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" Visibility="{Binding SupportsEditingOutput, Converter={StaticResource BoolVisibility}}" AutomationProperties.Name="{Binding DataContext.AudioOnlyOutputText, RelativeSource={RelativeSource AncestorType=Window}}" />
               <Button Content="{Binding DataContext.OpenSourceText, RelativeSource={RelativeSource AncestorType=Window}}" Command="{Binding DataContext.OpenSourceCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" />
               <Button Content="{Binding DataContext.CopySourceText, RelativeSource={RelativeSource AncestorType=Window}}" Command="{Binding DataContext.CopySourceCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" />
               <Button Content="{Binding DataContext.CopyAttributionText, RelativeSource={RelativeSource AncestorType=Window}}" Command="{Binding DataContext.CopyAttributionCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" />
@@ -99,14 +121,14 @@
           <TextBlock Text="FootageFlow" FontSize="20" FontWeight="SemiBold" VerticalAlignment="Center" />
         </StackPanel>
         <Button Grid.Column="1" Content="{Binding WorkspaceGlobalSearchText}" Command="{Binding ShowGlobalSearchCommand}" ToolTip="Ctrl+Shift+G" AutomationProperties.Name="{Binding WorkspaceGlobalSearchText}" />
-        <Button Grid.Column="2" x:Name="LanguageButton" Content="{Binding LanguageButton}" Click="LanguageButton_Click" FontWeight="SemiBold" MinWidth="132" />
+        <Button Grid.Column="2" x:Name="LanguageButton" Content="{Binding LanguageButton}" Click="LanguageButton_Click" FontWeight="SemiBold" MinWidth="132" AutomationProperties.Name="{Binding LanguageButton}" />
       </Grid>
     </Border>
 
     <Grid Grid.Row="1">
       <Grid.ColumnDefinitions><ColumnDefinition Width="226" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
-      <Border Background="{StaticResource SidebarBrush}" BorderBrush="#E2E6EB" BorderThickness="0,0,1,0">
-        <StackPanel Margin="0,12">
+      <Border Background="{StaticResource SidebarBrush}" BorderBrush="#E2E6EB" BorderThickness="0,0,1,0" AutomationProperties.Name="{Binding DataContext.AccessibilityNavigationText, RelativeSource={RelativeSource AncestorType=Window}}">
+        <StackPanel Margin="0,12" KeyboardNavigation.TabNavigation="Continue">
           <Button Style="{StaticResource NavButton}" Content="{Binding NavWorkspace}" Command="{Binding NavigateCommand}" CommandParameter="workspace" AutomationProperties.Name="{Binding NavWorkspace}" />
           <Button Style="{StaticResource NavButton}" Content="{Binding NavSearch}" Command="{Binding NavigateCommand}" CommandParameter="search" />
           <Button Style="{StaticResource NavButton}" Content="{Binding NavLinkDownloader}" Command="{Binding NavigateCommand}" CommandParameter="linkDownloader" />
@@ -143,7 +165,7 @@
               </ItemsControl>
               <TextBlock Text="{Binding WorkspaceSavedSearchesText}" Style="{StaticResource SectionTitle}" />
               <ItemsControl ItemsSource="{Binding SavedSearches}">
-                <ItemsControl.ItemTemplate><DataTemplate><Border Background="White" BorderBrush="#E1E5EA" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,0,8"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="220" /><ColumnDefinition /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><TextBox Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="{Binding DataContext.WorkspaceSavedSearchesText, RelativeSource={RelativeSource AncestorType=Window}}" /><TextBlock Grid.Column="1" Text="{Binding Query}" VerticalAlignment="Center" Foreground="{StaticResource SubtleTextBrush}" Margin="12,0" TextTrimming="CharacterEllipsis" /><WrapPanel Grid.Column="2"><Button Content="{Binding DataContext.WorkspaceRunText, RelativeSource={RelativeSource AncestorType=Window}}" Command="{Binding DataContext.RunSavedSearchCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" /><Button Content="{Binding DataContext.WorkspaceRenameText, RelativeSource={RelativeSource AncestorType=Window}}" Command="{Binding DataContext.RenameSavedSearchCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" /><Button Content="{Binding DataContext.WorkspaceDuplicateText, RelativeSource={RelativeSource AncestorType=Window}}" Command="{Binding DataContext.DuplicateSavedSearchCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" /><Button Content="×" Command="{Binding DataContext.DeleteSavedSearchCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" /></WrapPanel></Grid></Border></DataTemplate></ItemsControl.ItemTemplate>
+                <ItemsControl.ItemTemplate><DataTemplate><Border Background="White" BorderBrush="#E1E5EA" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,0,8"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="220" /><ColumnDefinition /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><TextBox Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="{Binding DataContext.WorkspaceSavedSearchesText, RelativeSource={RelativeSource AncestorType=Window}}" /><TextBlock Grid.Column="1" Text="{Binding Query}" VerticalAlignment="Center" Foreground="{StaticResource SubtleTextBrush}" Margin="12,0" TextTrimming="CharacterEllipsis" /><WrapPanel Grid.Column="2"><Button Content="{Binding DataContext.WorkspaceRunText, RelativeSource={RelativeSource AncestorType=Window}}" Command="{Binding DataContext.RunSavedSearchCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" /><Button Content="{Binding DataContext.WorkspaceRenameText, RelativeSource={RelativeSource AncestorType=Window}}" Command="{Binding DataContext.RenameSavedSearchCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" /><Button Content="{Binding DataContext.WorkspaceDuplicateText, RelativeSource={RelativeSource AncestorType=Window}}" Command="{Binding DataContext.DuplicateSavedSearchCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" /><Button Content="×" Command="{Binding DataContext.DeleteSavedSearchCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" AutomationProperties.Name="{Binding DataContext.DeleteText, RelativeSource={RelativeSource AncestorType=Window}}" /></WrapPanel></Grid></Border></DataTemplate></ItemsControl.ItemTemplate>
               </ItemsControl>
               <Grid Margin="0,18,0,8"><Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><TextBlock Text="{Binding WorkspaceProviderHealthText}" Style="{StaticResource SectionTitle}" /><Button Grid.Column="1" Content="{Binding WorkspaceTestAllText}" Command="{Binding TestAllWorkspaceProvidersCommand}" AutomationProperties.Name="{Binding WorkspaceTestAllText}" /></Grid>
               <ItemsControl ItemsSource="{Binding Providers}">
@@ -163,7 +185,7 @@
             <TextBlock Text="{Binding SearchTagline}" Foreground="{StaticResource SubtleTextBrush}" Margin="0,0,0,12" />
             <WrapPanel>
               <TextBlock Text="{Binding SearchScopeTitle}" VerticalAlignment="Center" Margin="0,0,8,0" />
-              <ComboBox SelectedValue="{Binding SearchScope}" SelectedValuePath="Tag" Width="220">
+              <ComboBox SelectedValue="{Binding SearchScope}" SelectedValuePath="Tag" Width="220" AutomationProperties.Name="{Binding SearchScopeTitle}">
                 <ComboBoxItem Content="{Binding DataContext.SearchScopeMediaText, RelativeSource={RelativeSource AncestorType=Window}}" Tag="media" />
                 <ComboBoxItem Content="{Binding DataContext.SearchScopeResearchText, RelativeSource={RelativeSource AncestorType=Window}}" Tag="research" />
                 <ComboBoxItem Content="{Binding DataContext.SearchScopeAllText, RelativeSource={RelativeSource AncestorType=Window}}" Tag="all" />
@@ -173,7 +195,7 @@
           <StackPanel Grid.Row="1">
             <Grid>
               <Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-              <TextBox x:Name="SearchQueryTextBox" Text="{Binding Query, UpdateSourceTrigger=PropertyChanged}" FontSize="17" MinHeight="46" ToolTip="{Binding SearchPlaceholder}" AutomationProperties.Name="{Binding SearchPlaceholder}" />
+              <TextBox x:Name="SearchQueryTextBox" Text="{Binding Query, UpdateSourceTrigger=PropertyChanged}" FontSize="17" MinHeight="46" ToolTip="{Binding SearchPlaceholder}" AutomationProperties.Name="{Binding SearchPlaceholder}" PreviewKeyDown="SearchQueryTextBox_PreviewKeyDown" />
               <Button Grid.Column="1" Style="{StaticResource PrimaryButton}" Content="{Binding SearchButtonText}" Command="{Binding SearchCommand}" MinWidth="132" />
               <Button Grid.Column="2" Content="{Binding StopText}" Command="{Binding StopSearchCommand}" />
               <CheckBox Grid.Column="3" Content="{Binding DownloadableOnlyText}" IsChecked="{Binding DownloadableOnly}" FontWeight="SemiBold" VerticalAlignment="Center" Margin="14,0,0,0" />
@@ -184,41 +206,42 @@
           <StackPanel Grid.Row="2" Margin="0,12,0,6">
             <WrapPanel>
               <TextBlock Text="{Binding TypeTitle}" VerticalAlignment="Center" Margin="0,0,6,0" />
-              <ComboBox SelectedValue="{Binding MediaType}" SelectedValuePath="Tag" Width="110">
+              <ComboBox SelectedValue="{Binding MediaType}" SelectedValuePath="Tag" Width="110" AutomationProperties.Name="{Binding TypeTitle}">
                 <ComboBoxItem Content="{Binding DataContext.VideoText, RelativeSource={RelativeSource AncestorType=Window}}" Tag="video" /><ComboBoxItem Content="{Binding DataContext.ImageText, RelativeSource={RelativeSource AncestorType=Window}}" Tag="image" /><ComboBoxItem Content="{Binding DataContext.AudioText, RelativeSource={RelativeSource AncestorType=Window}}" Tag="audio" /><ComboBoxItem Content="{Binding DataContext.AllText, RelativeSource={RelativeSource AncestorType=Window}}" Tag="all" />
               </ComboBox>
               <TextBlock Text="{Binding OrientationTitle}" VerticalAlignment="Center" Margin="15,0,6,0" />
-              <ComboBox SelectedValue="{Binding Orientation}" SelectedValuePath="Tag" Width="125">
+              <ComboBox SelectedValue="{Binding Orientation}" SelectedValuePath="Tag" Width="125" AutomationProperties.Name="{Binding OrientationTitle}">
                 <ComboBoxItem Content="{Binding DataContext.AllText, RelativeSource={RelativeSource AncestorType=Window}}" Tag="all" /><ComboBoxItem Content="{Binding DataContext.LandscapeText, RelativeSource={RelativeSource AncestorType=Window}}" Tag="landscape" /><ComboBoxItem Content="{Binding DataContext.PortraitText, RelativeSource={RelativeSource AncestorType=Window}}" Tag="portrait" /><ComboBoxItem Content="{Binding DataContext.SquareText, RelativeSource={RelativeSource AncestorType=Window}}" Tag="square" />
               </ComboBox>
               <TextBlock Text="{Binding ResolutionTitle}" VerticalAlignment="Center" Margin="15,0,6,0" />
-              <ComboBox SelectedValue="{Binding Resolution}" SelectedValuePath="Tag" Width="110">
+              <ComboBox SelectedValue="{Binding Resolution}" SelectedValuePath="Tag" Width="110" AutomationProperties.Name="{Binding ResolutionTitle}">
                 <ComboBoxItem Content="{Binding DataContext.AllText, RelativeSource={RelativeSource AncestorType=Window}}" Tag="all" /><ComboBoxItem Content="≥720p" Tag="hd720" /><ComboBoxItem Content="≥1080p" Tag="fullHD" /><ComboBoxItem Content="≥4K" Tag="uhd4K" />
               </ComboBox>
               <TextBlock Text="{Binding DurationTitle}" VerticalAlignment="Center" Margin="15,0,6,0" />
-              <ComboBox SelectedValue="{Binding Duration}" SelectedValuePath="Tag" Width="120">
+              <ComboBox SelectedValue="{Binding Duration}" SelectedValuePath="Tag" Width="120" AutomationProperties.Name="{Binding DurationTitle}">
                 <ComboBoxItem Content="{Binding DataContext.AllText, RelativeSource={RelativeSource AncestorType=Window}}" Tag="all" /><ComboBoxItem Content="{Binding DataContext.UnderMinuteText, RelativeSource={RelativeSource AncestorType=Window}}" Tag="underMinute" /><ComboBoxItem Content="{Binding DataContext.OneToFiveText, RelativeSource={RelativeSource AncestorType=Window}}" Tag="oneToFive" /><ComboBoxItem Content="{Binding DataContext.FiveToTwentyText, RelativeSource={RelativeSource AncestorType=Window}}" Tag="fiveToTwenty" /><ComboBoxItem Content="{Binding DataContext.OverTwentyText, RelativeSource={RelativeSource AncestorType=Window}}" Tag="overTwenty" />
               </ComboBox>
               <TextBlock Text="{Binding ProjectTitle}" VerticalAlignment="Center" Margin="15,0,6,0" />
-              <ComboBox ItemsSource="{Binding Projects}" SelectedItem="{Binding CurrentProject}" DisplayMemberPath="Name" Width="180" />
+              <ComboBox ItemsSource="{Binding Projects}" SelectedItem="{Binding CurrentProject}" DisplayMemberPath="Name" Width="180" AutomationProperties.Name="{Binding ProjectTitle}" />
               <Button Content="{Binding ProjectAllText}" Command="{Binding ClearProjectCommand}" />
             </WrapPanel>
             <WrapPanel Margin="0,8,0,0">
-              <TextBox Text="{Binding YearFrom, UpdateSourceTrigger=PropertyChanged}" ToolTip="{Binding YearFromText}" Width="100" />
+              <TextBox Text="{Binding YearFrom, UpdateSourceTrigger=PropertyChanged}" ToolTip="{Binding YearFromText}" Width="100" AutomationProperties.Name="{Binding YearFromText}" />
               <TextBlock Text="–" VerticalAlignment="Center" Margin="5,0" />
-              <TextBox Text="{Binding YearTo, UpdateSourceTrigger=PropertyChanged}" ToolTip="{Binding YearToText}" Width="100" />
+              <TextBox Text="{Binding YearTo, UpdateSourceTrigger=PropertyChanged}" ToolTip="{Binding YearToText}" Width="100" AutomationProperties.Name="{Binding YearToText}" />
               <TextBlock Text="{Binding LicenseTitle}" VerticalAlignment="Center" Margin="0,0,6,0" />
-              <ComboBox SelectedValue="{Binding LicenseFilter}" SelectedValuePath="Tag" Width="210">
+              <ComboBox SelectedValue="{Binding LicenseFilter}" SelectedValuePath="Tag" Width="210" AutomationProperties.Name="{Binding LicenseTitle}">
                 <ComboBoxItem Content="{Binding DataContext.AllText, RelativeSource={RelativeSource AncestorType=Window}}" Tag="all" /><ComboBoxItem Content="{Binding DataContext.LicenseKnownText, RelativeSource={RelativeSource AncestorType=Window}}" Tag="knownOnly" /><ComboBoxItem Content="{Binding DataContext.LicenseOpenText, RelativeSource={RelativeSource AncestorType=Window}}" Tag="openlyLicensed" /><ComboBoxItem Content="{Binding DataContext.LicensePublicDomainText, RelativeSource={RelativeSource AncestorType=Window}}" Tag="publicDomain" />
               </ComboBox>
               <TextBlock Text="{Binding SortTitle}" VerticalAlignment="Center" Margin="15,0,6,0" />
-              <ComboBox SelectedValue="{Binding Sort}" SelectedValuePath="Tag" Width="140">
+              <ComboBox SelectedValue="{Binding Sort}" SelectedValuePath="Tag" Width="140" AutomationProperties.Name="{Binding SortTitle}">
                 <ComboBoxItem Content="{Binding DataContext.SortRelevanceText, RelativeSource={RelativeSource AncestorType=Window}}" Tag="relevance" /><ComboBoxItem Content="{Binding DataContext.SortNewestText, RelativeSource={RelativeSource AncestorType=Window}}" Tag="newest" /><ComboBoxItem Content="{Binding DataContext.SortResolutionText, RelativeSource={RelativeSource AncestorType=Window}}" Tag="resolution" /><ComboBoxItem Content="{Binding DataContext.SortDurationText, RelativeSource={RelativeSource AncestorType=Window}}" Tag="duration" />
               </ComboBox>
               <TextBlock Text="{Binding RelevanceModeTitle}" VerticalAlignment="Center" Margin="15,0,6,0" />
-              <ComboBox SelectedValue="{Binding RelevanceMode}" SelectedValuePath="Tag" Width="130">
+              <ComboBox SelectedValue="{Binding RelevanceMode}" SelectedValuePath="Tag" Width="130" AutomationProperties.Name="{Binding RelevanceModeTitle}">
                 <ComboBoxItem Content="{Binding DataContext.RelevancePreciseText, RelativeSource={RelativeSource AncestorType=Window}}" Tag="precise" /><ComboBoxItem Content="{Binding DataContext.RelevanceBalancedText, RelativeSource={RelativeSource AncestorType=Window}}" Tag="balanced" /><ComboBoxItem Content="{Binding DataContext.RelevanceBroadText, RelativeSource={RelativeSource AncestorType=Window}}" Tag="broad" />
               </ComboBox>
+              <Button Content="{Binding ClearFiltersText}" Command="{Binding ClearFiltersCommand}" />
             </WrapPanel>
             <ItemsControl ItemsSource="{Binding Providers}" Margin="0,8,0,0">
               <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
@@ -246,7 +269,7 @@
             </WrapPanel>
             <ItemsControl ItemsSource="{Binding SearchKeywordsView}">
               <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
-              <ItemsControl.ItemTemplate><DataTemplate><Border Background="#E8F2FF" CornerRadius="10" Padding="7,4" Margin="0,5,6,0"><StackPanel Orientation="Horizontal"><CheckBox IsChecked="{Binding IsEnabled}" VerticalAlignment="Center" /><TextBlock Text="{Binding Language}" Foreground="{StaticResource SubtleTextBrush}" FontSize="10" Width="42" VerticalAlignment="Center" /><TextBox Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}" MinWidth="110" BorderThickness="0" Background="Transparent" Padding="3,0" /><Button Content="×" Command="{Binding DataContext.RemoveSearchKeywordCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" Padding="4,0" /></StackPanel></Border></DataTemplate></ItemsControl.ItemTemplate>
+              <ItemsControl.ItemTemplate><DataTemplate><Border Background="#E8F2FF" CornerRadius="10" Padding="7,4" Margin="0,5,6,0"><StackPanel Orientation="Horizontal"><CheckBox IsChecked="{Binding IsEnabled}" VerticalAlignment="Center" AutomationProperties.Name="{Binding Text}" /><TextBlock Text="{Binding Language}" Foreground="{StaticResource SubtleTextBrush}" FontSize="10" Width="42" VerticalAlignment="Center" /><TextBox Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}" MinWidth="110" BorderThickness="0" Background="Transparent" Padding="3,0" /><Button Content="×" Command="{Binding DataContext.RemoveSearchKeywordCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" Padding="4,0" AutomationProperties.Name="{Binding DataContext.DeleteText, RelativeSource={RelativeSource AncestorType=Window}}" /></StackPanel></Border></DataTemplate></ItemsControl.ItemTemplate>
             </ItemsControl>
             <TextBlock Text="{Binding SearchStatus}" Margin="0,7,0,0" Foreground="{StaticResource SubtleTextBrush}" />
             <WrapPanel Margin="0,8,0,0">
@@ -266,6 +289,7 @@
               <TextBlock Text="{Binding SearchScopeMediaText}" FontWeight="SemiBold" Margin="0,0,0,8"
                          Visibility="{Binding IsAllSearchScope, Converter={StaticResource BoolVisibility}}" />
               <ItemsControl ItemsSource="{Binding ResultsView}" ItemTemplate="{StaticResource AssetCard}"
+                            AutomationProperties.Name="{Binding AccessibilitySearchResultsText}"
                             Visibility="{Binding HasMediaSearchScope, Converter={StaticResource BoolVisibility}}">
                 <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
               </ItemsControl>
@@ -323,7 +347,7 @@
           </Border>
           <Grid Grid.Row="2" Margin="0,12,0,8">
             <Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-            <TextBox Text="{Binding LinkInput, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" TextWrapping="NoWrap" VerticalScrollBarVisibility="Auto" FontFamily="Consolas" />
+            <TextBox Text="{Binding LinkInput, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" TextWrapping="NoWrap" VerticalScrollBarVisibility="Auto" FontFamily="Consolas" AutomationProperties.Name="{Binding AccessibilityLinkInputText}" />
             <StackPanel Grid.Column="1" Margin="8,0,0,0">
               <Button Content="{Binding LinkPasteText}" Command="{Binding PasteLinkCommand}" />
               <Button Content="{Binding LinkAnalyzeText}" Command="{Binding AnalyzeLinksCommand}" Style="{StaticResource PrimaryButton}" />
@@ -517,7 +541,7 @@
             <TextBlock Text="{Binding SourcesTitle}" FontSize="18" FontWeight="SemiBold" />
             <TextBlock Text="{Binding ApiExplanation}" TextWrapping="Wrap" Foreground="{StaticResource SubtleTextBrush}" Margin="0,7,0,14" MaxWidth="850" HorizontalAlignment="Left" />
             <ItemsControl ItemsSource="{Binding Providers}">
-              <ItemsControl.ItemTemplate><DataTemplate><Border Background="White" BorderBrush="#E1E5EA" BorderThickness="1" CornerRadius="8" Padding="14" Margin="0,0,0,10"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="220" /><ColumnDefinition Width="180" /><ColumnDefinition /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><StackPanel><TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" FontSize="15" /><TextBlock Text="{Binding Mode}" Foreground="{StaticResource SubtleTextBrush}" /><TextBlock Text="{Binding Capabilities}" Foreground="{StaticResource SubtleTextBrush}" FontSize="11" TextWrapping="Wrap" /></StackPanel><TextBlock Grid.Column="1" Text="{Binding Status}" VerticalAlignment="Center" TextWrapping="Wrap" /><PasswordBox Grid.Column="2" x:Name="ApiKeyBox" Margin="8,0" Padding="9" IsEnabled="{Binding SupportsApiKey}" ToolTip="API Key" /><WrapPanel Grid.Column="3"><Button Content="{Binding DataContext.SaveText, RelativeSource={RelativeSource AncestorType=Window}}" Tag="{Binding Id}" Click="SaveApiKey_Click" IsEnabled="{Binding SupportsApiKey}" /><Button Content="{Binding DataContext.RemoveKeyText, RelativeSource={RelativeSource AncestorType=Window}}" Tag="{Binding Id}" Click="RemoveApiKey_Click" IsEnabled="{Binding SupportsApiKey}" /><Button Content="{Binding DataContext.TestConnectionText, RelativeSource={RelativeSource AncestorType=Window}}" Tag="{Binding Id}" Click="TestProvider_Click" /><Button Content="{Binding DataContext.OpenOfficialSearchText, RelativeSource={RelativeSource AncestorType=Window}}" Tag="{Binding Id}" Click="OpenProviderSearch_Click" Visibility="{Binding CanOpenOfficialSearch, Converter={StaticResource BoolVisibility}}" /></WrapPanel></Grid></Border></DataTemplate></ItemsControl.ItemTemplate>
+              <ItemsControl.ItemTemplate><DataTemplate><Border Background="White" BorderBrush="#E1E5EA" BorderThickness="1" CornerRadius="8" Padding="14" Margin="0,0,0,10"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="220" /><ColumnDefinition Width="180" /><ColumnDefinition /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><StackPanel><TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" FontSize="15" /><TextBlock Text="{Binding Mode}" Foreground="{StaticResource SubtleTextBrush}" /><TextBlock Text="{Binding Capabilities}" Foreground="{StaticResource SubtleTextBrush}" FontSize="11" TextWrapping="Wrap" /></StackPanel><TextBlock Grid.Column="1" Text="{Binding Status}" VerticalAlignment="Center" TextWrapping="Wrap" /><PasswordBox Grid.Column="2" x:Name="ApiKeyBox" Margin="8,0" Padding="9" IsEnabled="{Binding SupportsApiKey}" ToolTip="{Binding DataContext.ApiKeyText, RelativeSource={RelativeSource AncestorType=Window}}" AutomationProperties.Name="{Binding DataContext.ApiKeyText, RelativeSource={RelativeSource AncestorType=Window}}" AutomationProperties.HelpText="{Binding DisplayName}" /><WrapPanel Grid.Column="3"><Button Content="{Binding DataContext.SaveText, RelativeSource={RelativeSource AncestorType=Window}}" Tag="{Binding Id}" Click="SaveApiKey_Click" IsEnabled="{Binding SupportsApiKey}" /><Button Content="{Binding DataContext.RemoveKeyText, RelativeSource={RelativeSource AncestorType=Window}}" Tag="{Binding Id}" Click="RemoveApiKey_Click" IsEnabled="{Binding SupportsApiKey}" /><Button Content="{Binding DataContext.TestConnectionText, RelativeSource={RelativeSource AncestorType=Window}}" Tag="{Binding Id}" Click="TestProvider_Click" /><Button Content="{Binding DataContext.OpenOfficialSearchText, RelativeSource={RelativeSource AncestorType=Window}}" Tag="{Binding Id}" Click="OpenProviderSearch_Click" Visibility="{Binding CanOpenOfficialSearch, Converter={StaticResource BoolVisibility}}" /></WrapPanel></Grid></Border></DataTemplate></ItemsControl.ItemTemplate>
             </ItemsControl>
             <TextBlock Text="This product uses the National Archives Catalog API but is not endorsed or certified by the National Archives and Records Administration." TextWrapping="Wrap" Foreground="{StaticResource SubtleTextBrush}" FontSize="11" Margin="0,0,0,10" />
             <TextBlock Text="{Binding DownloadFolderText}" FontWeight="SemiBold" FontSize="16" Margin="0,14,0,6" />
@@ -538,18 +562,18 @@
         </ScrollViewer>
       </Grid>
     </Grid>
-    <Popup IsOpen="{Binding IsCommandPaletteOpen}" Placement="Center" StaysOpen="True" AllowsTransparency="True" Opened="CommandPalette_Opened">
+    <Popup IsOpen="{Binding IsCommandPaletteOpen}" Placement="Center" StaysOpen="True" AllowsTransparency="True" Opened="CommandPalette_Opened" Closed="CommandPalette_Closed">
       <Border Background="White" BorderBrush="#AAB4C1" BorderThickness="1" CornerRadius="12" Width="650" Height="470" Padding="16" Effect="{x:Null}">
         <Grid><Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions>
-          <Grid><Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><TextBox x:Name="CommandPaletteTextBox" Text="{Binding CommandPaletteQuery, UpdateSourceTrigger=PropertyChanged}" ToolTip="{Binding WorkspaceCommandPaletteText}" FontSize="17" AutomationProperties.Name="{Binding WorkspaceCommandPaletteText}" PreviewKeyDown="CommandPaletteTextBox_PreviewKeyDown" /><Button Grid.Column="1" Content="×" Command="{Binding CloseCommandPaletteCommand}" /></Grid>
+          <Grid><Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><TextBox x:Name="CommandPaletteTextBox" Text="{Binding CommandPaletteQuery, UpdateSourceTrigger=PropertyChanged}" ToolTip="{Binding WorkspaceCommandPaletteText}" FontSize="17" AutomationProperties.Name="{Binding WorkspaceCommandPaletteText}" PreviewKeyDown="CommandPaletteTextBox_PreviewKeyDown" /><Button Grid.Column="1" Content="×" Command="{Binding CloseCommandPaletteCommand}" AutomationProperties.Name="{Binding CloseText}" /></Grid>
           <ListBox x:Name="CommandPaletteListBox" Grid.Row="1" ItemsSource="{Binding WorkspaceCommands}" Margin="0,12,0,0" PreviewKeyDown="CommandPaletteListBox_PreviewKeyDown" AutomationProperties.Name="{Binding WorkspaceCommandPaletteText}"><ListBox.ItemTemplate><DataTemplate><Button Command="{Binding DataContext.ExecuteWorkspaceCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding Id}" HorizontalContentAlignment="Stretch"><Grid><Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><StackPanel><TextBlock Text="{Binding Title}" FontWeight="SemiBold" /><TextBlock Text="{Binding Detail}" Foreground="{StaticResource SubtleTextBrush}" FontSize="11" /></StackPanel><TextBlock Grid.Column="1" Text="{Binding Shortcut}" Foreground="{StaticResource SubtleTextBrush}" VerticalAlignment="Center" /></Grid></Button></DataTemplate></ListBox.ItemTemplate></ListBox>
         </Grid>
       </Border>
     </Popup>
-    <Popup IsOpen="{Binding IsGlobalSearchOpen}" Placement="Center" StaysOpen="True" AllowsTransparency="True" Opened="GlobalSearch_Opened">
+    <Popup IsOpen="{Binding IsGlobalSearchOpen}" Placement="Center" StaysOpen="True" AllowsTransparency="True" Opened="GlobalSearch_Opened" Closed="GlobalSearch_Closed">
       <Border Background="White" BorderBrush="#AAB4C1" BorderThickness="1" CornerRadius="12" Width="760" Height="560" Padding="16">
         <Grid><Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions>
-          <Grid><Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><TextBox x:Name="GlobalSearchTextBox" Text="{Binding WorkspaceQuery, UpdateSourceTrigger=PropertyChanged}" ToolTip="{Binding WorkspaceSearchPlaceholder}" FontSize="17" AutomationProperties.Name="{Binding WorkspaceGlobalSearchText}" PreviewKeyDown="GlobalSearchTextBox_PreviewKeyDown" /><Button Grid.Column="1" Content="×" Command="{Binding CloseGlobalSearchCommand}" /></Grid>
+          <Grid><Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><TextBox x:Name="GlobalSearchTextBox" Text="{Binding WorkspaceQuery, UpdateSourceTrigger=PropertyChanged}" ToolTip="{Binding WorkspaceSearchPlaceholder}" FontSize="17" AutomationProperties.Name="{Binding WorkspaceGlobalSearchText}" PreviewKeyDown="GlobalSearchTextBox_PreviewKeyDown" /><Button Grid.Column="1" Content="×" Command="{Binding CloseGlobalSearchCommand}" AutomationProperties.Name="{Binding CloseText}" /></Grid>
           <TextBlock Grid.Row="1" Text="{Binding WorkspaceStatus}" Foreground="{StaticResource SubtleTextBrush}" Margin="2,8" />
           <ListBox x:Name="GlobalSearchListBox" Grid.Row="2" ItemsSource="{Binding WorkspaceSearchResultsView}" PreviewKeyDown="GlobalSearchListBox_PreviewKeyDown" AutomationProperties.Name="{Binding WorkspaceGlobalSearchText}">
             <ListBox.GroupStyle>

@@ -2,6 +2,23 @@
 
 All notable FootageFlow changes are documented here.
 
+## [0.12.0] - 2026-08-26
+
+### Improved
+
+- Completed keyboard-first paths across Quick Search, filters, result-card actions, Projects, Download Manager, Settings, Command Palette, Global Search, Link Downloader, and update dialogs on macOS and Windows
+- Added **Clear Filters**, which restores normal search filters without removing the current query, keyword plan, project selection, or already loaded results
+- Added explicit VoiceOver and Windows Narrator/UI Automation labels for navigation, source toggles, link input, project lists, result counts, download state/progress, thumbnail retry, and icon-only actions
+- Added a visible accent focus outline for Windows keyboard controls and restoration to the invoking control when Command Palette or Global Search closes
+- Made the update dialog keyboard-complete: initial focus is **Not Now**, Escape cancels, the Release Notes area is labelled and reachable, and **View Update** is clearly described as opening the official Release page
+- Added all new accessibility strings in English, 简体中文, 繁體中文, Español, Português (Brasil), 日本語, 한국어, Deutsch, Français, and Русский
+
+### Correctness and validation
+
+- Kept the updater notification-only: it does not display in-app download progress, silently download, install, skip a version permanently, or force an update
+- Added regression tests for localized accessibility copy and safe filter reset behavior; expanded the Windows platform test coverage for the same ten-language labels
+- Added a release-candidate manual checklist for real VoiceOver and Narrator verification; automated tests validate declarations and behavior but do not claim to replace a human screen-reader check
+
 ## [0.11.0] - 2026-08-25
 
 ### Added

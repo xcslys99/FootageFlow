@@ -89,6 +89,8 @@ struct DownloadsView: View {
         .font(.caption).foregroundStyle(.secondary)
         if item.status == .downloading || item.status == .waiting {
           ProgressView(value: item.progress).frame(maxWidth: 360)
+            .accessibilityLabel(tr("accessibility.downloadStatus", item.asset.title, item.message))
+            .accessibilityValue("\(Int((item.progress * 100).rounded()))%")
         }
         HStack(spacing: 8) {
           Text(item.message)
@@ -117,6 +119,8 @@ struct DownloadsView: View {
       }
       Button(tr("media.openSource")) { DesktopPlatform.shared.open(item.asset.sourcePageURL) }
     }.padding(.vertical, 5)
+      .accessibilityElement(children: .contain)
+      .accessibilityLabel(tr("accessibility.downloadStatus", item.asset.title, item.message))
   }
 
   private func completedRow(_ record: DownloadRecord) -> some View {
@@ -155,6 +159,7 @@ struct DownloadsView: View {
       } label: {
         Image(systemName: "ellipsis.circle")
       }
+      .accessibilityLabel(tr("media.moreActions"))
     }.padding(.vertical, 5)
   }
 

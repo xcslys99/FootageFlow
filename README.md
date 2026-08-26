@@ -45,12 +45,14 @@ Availability depends on the source, individual media, permissions, regional rest
 
 ## Workspace and accessibility
 
-v0.10.0 brings the existing creator tools into a faster local workspace:
+v0.12.0 completes the keyboard and screen-reader path through the existing creator workspace:
 
-- **Command Palette** (`⌘K` / `Ctrl+K`) and keyboard-first navigation
+- **Command Palette** (`⌘K` / `Ctrl+K`), Global Search, and keyboard-first navigation
 - **Local Global Search** across projects, saved media, downloads, history, saved searches, and research notes
 - **Saved Searches**, dynamic **Smart Collections**, project dashboard counts, and manual **Provider Status** checks
-- VoiceOver improvements on macOS and Windows Narrator/UI Automation improvements
+- Keyboard access to filters, result-card actions, Projects, Download Manager, Settings, and update dialogs
+- Clear visible focus on Windows, VoiceOver semantics on macOS, Narrator/UI Automation semantics on Windows, and ten-language accessibility text
+- The update dialog starts at **Not Now**; **View Update** opens the official GitHub Release page and never downloads or installs an update inside the app
 
 Workspace search stays on this device and does not scan arbitrary folders or upload project content. See [Workspace](docs/WORKSPACE.md), [Keyboard shortcuts](docs/KEYBOARD_SHORTCUTS.md), and [Accessibility](docs/ACCESSIBILITY.md).
 

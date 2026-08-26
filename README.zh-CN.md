@@ -45,12 +45,14 @@
 
 ## 工作区与无障碍
 
-v0.10.0 将已有的创作者工具整理为更高效的本机工作区：
+v0.12.0 完成了已有创作者工作区的键盘与读屏操作链路：
 
-- **命令面板**（macOS `⌘K` / Windows `Ctrl+K`）和键盘优先导航
+- **命令面板**（macOS `⌘K` / Windows `Ctrl+K`）、全局搜索和键盘优先导航
 - 可搜索项目、已保存素材、下载记录、历史、保存搜索和研究笔记的**本地全局搜索**
 - **保存搜索**、动态**智能集合**、项目概览统计，以及手动**素材来源状态**检测
-- 改进 macOS VoiceOver 与 Windows Narrator/UI Automation 支持
+- 可仅用键盘操作筛选、结果卡片、项目、下载管理、设置和更新弹窗
+- Windows 清晰焦点提示、macOS VoiceOver 语义、Windows Narrator/UI Automation 语义，以及十种语言的无障碍文本
+- 更新弹窗默认焦点在“暂不更新”；“查看更新”只打开官方 GitHub Release 页面，绝不会在应用内下载或安装更新
 
 工作区搜索只在本机运行，不扫描任意文件夹，也不会上传项目内容。详见 [工作区说明](docs/WORKSPACE.md)、[键盘快捷键](docs/KEYBOARD_SHORTCUTS.md) 和 [无障碍说明](docs/ACCESSIBILITY.md)（详细技术文档目前以英文维护）。
 

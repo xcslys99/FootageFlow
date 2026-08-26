@@ -37,15 +37,24 @@ Roadmap items are intentions, not promises. Provider policies, platform rules, a
 
 ### Accessibility & Keyboard Navigation ([#19](https://github.com/xcslys99/FootageFlow/issues/19))
 
-v0.10.0 provides the first cross-platform accessibility and keyboard-navigation foundation:
+v0.10.0 provided the first cross-platform accessibility and keyboard-navigation foundation. v0.12.0 completes the planned keyboard paths and semantic coverage:
 
-- VoiceOver and Windows screen-reader labels for the primary workspace and media actions
-- Predictable keyboard navigation, native visible focus, Command Palette, Global Search, and a discoverable shortcut reference
-- Local Workspace dashboards, Saved Searches, Smart Collections, and manual Provider Health checks
+- VoiceOver and Windows Narrator labels for filters, result cards, Projects, Download Manager, Settings, Link Downloader, and update dialogs
+- Predictable keyboard navigation, visible focus, Command Palette, Global Search, a safe **Clear Filters** action, and Windows focus restoration after transient panels
+- Ten-language accessibility strings and a real-device manual VoiceOver/Narrator acceptance checklist
 
-Issue #19 remains open for continued manual VoiceOver/Narrator verification across the broader creator workflow.
+Future accessibility reports remain welcome; automated checks do not replace actual VoiceOver/Narrator testing on supported systems.
 
 ## Planned Feature Releases
+
+### v0.12.0 — Accessibility & Keyboard Navigation Update ([#19](https://github.com/xcslys99/FootageFlow/issues/19))
+
+Delivered in v0.12.0:
+
+- Keyboard-only flows for filtering, result actions, project work, downloads, settings, and modal workflows
+- Clear focus feedback on Windows and restored focus after transient Workspace panels
+- Expanded VoiceOver/Narrator semantics and state announcements, including the notification-only updater
+- New accessibility copy localized into all ten supported interface languages
 
 ### v0.11.0 — No-key Provider Update
 

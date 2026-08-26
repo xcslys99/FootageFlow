@@ -647,3 +647,13 @@
 "workspace.shortcutsDetail" = "Use these shortcuts without changing existing creator workflows.";
 "workspace.smartCollectionDynamic" = "Updates automatically";
 "workspace.smartCollectionsDetail" = "These collections update automatically from your existing FootageFlow metadata.";
+"filter.clear" = "フィルターをクリア";
+"accessibility.navigation" = "FootageFlow ナビゲーション";
+"accessibility.keywordEnabled" = "検索キーワードを使用：%@";
+"accessibility.providerEnabled" = "素材ソースを使用：%@";
+"accessibility.searchResults" = "%d 件の検索結果を表示";
+"accessibility.downloadStatus" = "%@：%@";
+"accessibility.linkInput" = "メディアリンク";
+"accessibility.projectList" = "プロジェクト";
+"accessibility.updateNotes" = "更新内容";
+"accessibility.updateDialog" = "FootageFlow の新しいバージョンがあります";

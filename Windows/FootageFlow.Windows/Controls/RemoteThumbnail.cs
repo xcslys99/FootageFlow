@@ -1,4 +1,5 @@
 using System.Windows;
+using System.Windows.Automation;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
@@ -52,6 +53,11 @@ public sealed class RemoteThumbnail : Grid
             MinHeight = 22, Margin = new Thickness(0, 3, 0, 0),
             HorizontalAlignment = HorizontalAlignment.Center
         };
+        AutomationProperties.SetName(_image, "");
+        AutomationProperties.SetAccessibilityView(_image, AccessibilityView.Raw);
+        AutomationProperties.SetAccessibilityView(_progress, AccessibilityView.Raw);
+        AutomationProperties.SetAccessibilityView(_failureLabel, AccessibilityView.Raw);
+        AutomationProperties.SetName(_retry, RetryText);
         _retry.Click += (_, _) => { _generation++; _ = ReloadAsync(forceRetry: true); };
         _failure = new StackPanel
         {
@@ -94,7 +100,13 @@ public sealed class RemoteThumbnail : Grid
     private static void OnFailureTextChanged(DependencyObject value, DependencyPropertyChangedEventArgs args) =>
         ((RemoteThumbnail)value)._failureLabel.Text = args.NewValue?.ToString() ?? "";
     private static void OnRetryTextChanged(DependencyObject value, DependencyPropertyChangedEventArgs args) =>
-        ((RemoteThumbnail)value)._retry.ToolTip = args.NewValue?.ToString() ?? "";
+        ((RemoteThumbnail)value).UpdateRetryText(args.NewValue?.ToString() ?? "");
+
+    private void UpdateRetryText(string value)
+    {
+        _retry.ToolTip = value;
+        AutomationProperties.SetName(_retry, value);
+    }
 
     private async Task ReloadAsync(bool forceRetry)
     {

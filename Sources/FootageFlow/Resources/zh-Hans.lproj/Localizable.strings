@@ -665,3 +665,13 @@
 "workspace.command.openSettings.subtitle" = "管理语言、素材来源、下载文件夹和更新。";
 "workspace.command.openSmartCollections.title" = "打开智能集合";
 "workspace.command.openSmartCollections.subtitle" = "查看自动更新的本机集合。";
+"filter.clear" = "清除筛选条件";
+"accessibility.navigation" = "FootageFlow 导航";
+"accessibility.keywordEnabled" = "使用搜索关键词：%@";
+"accessibility.providerEnabled" = "使用素材来源：%@";
+"accessibility.searchResults" = "当前显示 %d 条搜索结果";
+"accessibility.downloadStatus" = "%@：%@";
+"accessibility.linkInput" = "媒体链接";
+"accessibility.projectList" = "项目列表";
+"accessibility.updateNotes" = "本次更新";
+"accessibility.updateDialog" = "FootageFlow 有新版本可用";

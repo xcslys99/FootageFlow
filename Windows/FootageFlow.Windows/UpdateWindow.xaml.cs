@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Windows;
+using System.Windows.Automation;
 using FootageFlow.Windows.Models;
 
 namespace FootageFlow.Windows;
@@ -23,6 +24,15 @@ public partial class UpdateWindow : Window
         SafetyText.Text = text("update.noAutomaticInstall");
         LaterButton.Content = text("update.notNow");
         ViewButton.Content = text("update.viewUpdate");
+        AutomationProperties.SetName(HeadingText, text("accessibility.updateDialog"));
+        AutomationProperties.SetName(VersionText, text("update.availableTitle"));
+        AutomationProperties.SetItemStatus(VersionText, VersionText.Text);
+        AutomationProperties.SetLiveSetting(VersionText, AutomationLiveSetting.Polite);
+        AutomationProperties.SetName(NotesText, text("accessibility.updateNotes"));
+        AutomationProperties.SetName(LaterButton, text("update.notNow"));
+        AutomationProperties.SetName(ViewButton, text("update.viewUpdate"));
+        AutomationProperties.SetHelpText(ViewButton, text("update.noAutomaticInstall"));
+        Loaded += (_, _) => LaterButton.Focus();
     }
 
     private void View_Click(object sender, RoutedEventArgs e) => DialogResult = true;

@@ -86,6 +86,54 @@ struct WorkspaceTests {
     #expect(!WorkspaceCommand.fuzzyMatches("Open Downloads", query: "rights"))
   }
 
+  @Test("accessibility labels remain localized in every supported interface language")
+  func accessibilityLocalization() {
+    let catalog = LocalizationCatalog()
+    let keys = [
+      "filter.clear", "accessibility.navigation", "accessibility.keywordEnabled",
+      "accessibility.providerEnabled", "accessibility.searchResults",
+      "accessibility.downloadStatus", "accessibility.linkInput", "accessibility.projectList",
+      "accessibility.updateNotes", "accessibility.updateDialog",
+    ]
+    for language in AppLanguage.allCases {
+      for key in keys {
+        let value = catalog.text(key, language: language, arguments: ["Fixture", "Status", 3])
+        #expect(!value.isEmpty)
+        #expect(value != key)
+      }
+    }
+  }
+
+  @Test("clearing filters preserves a query and restores the balanced creator defaults")
+  @MainActor
+  func clearFilters() {
+    let model = SearchViewModel()
+    model.query = "Taiwan cuisine"
+    model.mediaType = .image
+    model.orientation = .portrait
+    model.resolution = .uhd4K
+    model.duration = .underMinute
+    model.licenseFilter = .publicDomain
+    model.yearFrom = 1990
+    model.yearTo = 2000
+    model.downloadableOnly = true
+    model.relevanceMode = .precise
+    model.sort = .newest
+
+    model.clearFilters()
+
+    #expect(model.query == "Taiwan cuisine")
+    #expect(model.mediaType == .video)
+    #expect(model.orientation == .all)
+    #expect(model.resolution == .all)
+    #expect(model.duration == .all)
+    #expect(model.licenseFilter == .all)
+    #expect(model.yearFrom == nil && model.yearTo == nil)
+    #expect(!model.downloadableOnly)
+    #expect(model.relevanceMode == .balanced)
+    #expect(model.sort == .relevance)
+  }
+
   @Test("local index stays responsive with large persisted metadata")
   func largeLocalIndex() async {
     let history = (0..<10_000).map { index in

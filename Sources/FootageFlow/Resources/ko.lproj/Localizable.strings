@@ -647,3 +647,13 @@
 "workspace.shortcutsDetail" = "Use these shortcuts without changing existing creator workflows.";
 "workspace.smartCollectionDynamic" = "Updates automatically";
 "workspace.smartCollectionsDetail" = "These collections update automatically from your existing FootageFlow metadata.";
+"filter.clear" = "필터 지우기";
+"accessibility.navigation" = "FootageFlow 탐색";
+"accessibility.keywordEnabled" = "검색 키워드 사용: %@";
+"accessibility.providerEnabled" = "소스 사용: %@";
+"accessibility.searchResults" = "검색 결과 %d개 표시";
+"accessibility.downloadStatus" = "%@: %@";
+"accessibility.linkInput" = "미디어 링크";
+"accessibility.projectList" = "프로젝트";
+"accessibility.updateNotes" = "새로운 기능";
+"accessibility.updateDialog" = "FootageFlow 새 버전을 사용할 수 있습니다";

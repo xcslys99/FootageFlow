@@ -1,5 +1,9 @@
 import SwiftUI
 
+#if os(macOS)
+  import AppKit
+#endif
+
 enum AppSection: String, CaseIterable, Identifiable {
   case workspace, quickSearch, linkDownloader, scriptSearch, projects, favorites, downloads,
     feedback, settings
@@ -34,6 +38,11 @@ enum AppSection: String, CaseIterable, Identifiable {
 
 struct RootView: View {
   @State private var selection: AppSection? = .quickSearch
+  #if os(macOS)
+    @State private var commandPaletteResponder: NSResponder?
+    @State private var globalSearchResponder: NSResponder?
+    @State private var updateResponder: NSResponder?
+  #endif
   @EnvironmentObject private var localization: LocalizationManager
   @EnvironmentObject private var store: DataStore
   @EnvironmentObject private var updates: AppUpdateController
@@ -47,6 +56,7 @@ struct RootView: View {
       }
       .navigationTitle("FootageFlow")
       .navigationSplitViewColumnWidth(min: 180, ideal: 210)
+      .accessibilityLabel(tr("accessibility.navigation"))
     } detail: {
       switch selection ?? .quickSearch {
       case .workspace:
@@ -89,6 +99,7 @@ struct RootView: View {
             .fontWeight(.semibold)
         }
         .help(tr("language.menu"))
+        .accessibilityLabel(tr("language.menu"))
       }
     }
     .task { await updates.checkAtLaunch() }
@@ -138,9 +149,51 @@ struct RootView: View {
     }
     .sheet(item: $updates.availableRelease) { release in
       UpdateAvailableView(
-        release: release, notNow: updates.notNow, viewUpdate: updates.viewUpdate)
+        release: release,
+        notNow: {
+          updates.notNow()
+          restoreUpdateFocus()
+        },
+        viewUpdate: {
+          updates.viewUpdate()
+          restoreUpdateFocus()
+        })
     }
+    #if os(macOS)
+      .onChange(of: workspace.isCommandPalettePresented) { _, presented in
+        if presented {
+          commandPaletteResponder = NSApp.keyWindow?.firstResponder
+        } else {
+          restoreFocus(&commandPaletteResponder)
+        }
+      }
+      .onChange(of: workspace.isGlobalSearchPresented) { _, presented in
+        if presented {
+          globalSearchResponder = NSApp.keyWindow?.firstResponder
+        } else {
+          restoreFocus(&globalSearchResponder)
+        }
+      }
+      .onChange(of: updates.availableRelease?.id) { _, identifier in
+        if identifier != nil { updateResponder = NSApp.keyWindow?.firstResponder }
+      }
+    #endif
   }
+
+  private func restoreUpdateFocus() {
+    #if os(macOS)
+      restoreFocus(&updateResponder)
+    #endif
+  }
+
+  #if os(macOS)
+    private func restoreFocus(_ responder: inout NSResponder?) {
+      let saved = responder
+      responder = nil
+      guard let saved else { return }
+      DispatchQueue.main.async { NSApp.keyWindow?.makeFirstResponder(saved) }
+    }
+  #endif
 
   private func openWorkspaceEntry(_ entry: WorkspaceSearchEntry) {
     switch entry.kind {

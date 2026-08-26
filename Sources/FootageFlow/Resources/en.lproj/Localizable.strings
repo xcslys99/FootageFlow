@@ -665,3 +665,13 @@
 "workspace.command.retryFailedDownloads.title" = "Retry Failed Downloads";
 "workspace.command.retryFailedDownloads.subtitle" = "Open Downloads and retry failed tasks.";
 "media.moreActions" = "More media actions";
+"filter.clear" = "Clear Filters";
+"accessibility.navigation" = "FootageFlow navigation";
+"accessibility.keywordEnabled" = "Use search keyword: %@";
+"accessibility.providerEnabled" = "Use source: %@";
+"accessibility.searchResults" = "%d search results shown";
+"accessibility.downloadStatus" = "%@: %@";
+"accessibility.linkInput" = "Media links";
+"accessibility.projectList" = "Projects";
+"accessibility.updateNotes" = "What's new";
+"accessibility.updateDialog" = "FootageFlow update available";

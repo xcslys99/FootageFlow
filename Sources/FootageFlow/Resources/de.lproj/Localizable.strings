@@ -647,3 +647,13 @@
 "workspace.shortcutsDetail" = "Use these shortcuts without changing existing creator workflows.";
 "workspace.smartCollectionDynamic" = "Updates automatically";
 "workspace.smartCollectionsDetail" = "These collections update automatically from your existing FootageFlow metadata.";
+"filter.clear" = "Filter zurücksetzen";
+"accessibility.navigation" = "FootageFlow-Navigation";
+"accessibility.keywordEnabled" = "Suchbegriff verwenden: %@";
+"accessibility.providerEnabled" = "Quelle verwenden: %@";
+"accessibility.searchResults" = "%d Suchergebnisse werden angezeigt";
+"accessibility.downloadStatus" = "%@: %@";
+"accessibility.linkInput" = "Medienlinks";
+"accessibility.projectList" = "Projekte";
+"accessibility.updateNotes" = "Neuerungen";
+"accessibility.updateDialog" = "Ein neues FootageFlow-Update ist verfügbar";

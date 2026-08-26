@@ -14,6 +14,8 @@ public partial class MainWindow : Window
 {
     private readonly MainViewModel _viewModel = new();
     private readonly DispatcherTimer _clipboardTimer = new() { Interval = TimeSpan.FromSeconds(2) };
+    private IInputElement? _focusBeforeCommandPalette;
+    private IInputElement? _focusBeforeGlobalSearch;
 
     public MainWindow()
     {
@@ -103,13 +105,19 @@ public partial class MainWindow : Window
 
     private void CommandPalette_Opened(object? sender, EventArgs e)
     {
+        _focusBeforeCommandPalette ??= Keyboard.FocusedElement;
         Dispatcher.BeginInvoke(new Action(() => CommandPaletteTextBox.Focus()), DispatcherPriority.Input);
     }
 
+    private void CommandPalette_Closed(object? sender, EventArgs e) => RestoreFocus(ref _focusBeforeCommandPalette);
+
     private void GlobalSearch_Opened(object? sender, EventArgs e)
     {
+        _focusBeforeGlobalSearch ??= Keyboard.FocusedElement;
         Dispatcher.BeginInvoke(new Action(() => GlobalSearchTextBox.Focus()), DispatcherPriority.Input);
     }
+
+    private void GlobalSearch_Closed(object? sender, EventArgs e) => RestoreFocus(ref _focusBeforeGlobalSearch);
 
     private void CommandPaletteTextBox_PreviewKeyDown(object sender, KeyEventArgs e)
     {
@@ -119,6 +127,13 @@ public partial class MainWindow : Window
             CommandPaletteListBox.SelectedIndex = 0;
             CommandPaletteListBox.Focus();
         }
+        e.Handled = true;
+    }
+
+    private void SearchQueryTextBox_PreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Enter || !_viewModel.SearchCommand.CanExecute(null)) return;
+        _viewModel.SearchCommand.Execute(null);
         e.Handled = true;
     }
 
@@ -149,12 +164,21 @@ public partial class MainWindow : Window
 
     private void ShowUpdateDialog(AppReleaseInfo release)
     {
+        var focusBeforeDialog = Keyboard.FocusedElement;
         var dialog = new UpdateWindow(release, _viewModel.CurrentVersion, _viewModel.T)
         {
             Owner = this
         };
         if (dialog.ShowDialog() == true) _viewModel.ViewUpdate(release);
         else _viewModel.NotNow();
+        if (focusBeforeDialog is not null) Keyboard.Focus(focusBeforeDialog);
+    }
+
+    private static void RestoreFocus(ref IInputElement? target)
+    {
+        var value = target;
+        target = null;
+        if (value is not null) Keyboard.Focus(value);
     }
 
     private void LanguageButton_Click(object sender, RoutedEventArgs e)

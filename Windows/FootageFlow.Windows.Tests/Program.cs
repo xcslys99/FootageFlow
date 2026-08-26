@@ -49,6 +49,16 @@ try
               localization.Text("workspace.commandPalette") != "workspace.commandPalette" &&
               localization.Text("workspace.providerHealth") != "workspace.providerHealth",
               $"Windows {language.Code} workspace localization fallback");
+        var accessibilityKeys = new[]
+        {
+            "filter.clear", "accessibility.navigation", "accessibility.keywordEnabled",
+            "accessibility.providerEnabled", "accessibility.searchResults",
+            "accessibility.downloadStatus", "accessibility.linkInput", "accessibility.projectList",
+            "accessibility.updateNotes", "accessibility.updateDialog"
+        };
+        Check(accessibilityKeys.All(key =>
+                  !string.IsNullOrWhiteSpace(localization.Text(key)) && localization.Text(key) != key),
+              $"Windows {language.Code} accessibility localization");
     }
     localization.SetLanguage("ru");
     settings.Save();
