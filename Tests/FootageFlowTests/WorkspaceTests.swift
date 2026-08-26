@@ -123,15 +123,15 @@ struct WorkspaceTests {
     model.clearFilters()
 
     #expect(model.query == "Taiwan cuisine")
-    #expect(model.mediaType == .video)
-    #expect(model.orientation == .all)
-    #expect(model.resolution == .all)
-    #expect(model.duration == .all)
-    #expect(model.licenseFilter == .all)
+    #expect(model.mediaType == MediaType.video)
+    #expect(model.orientation == AssetOrientation.all)
+    #expect(model.resolution == ResolutionFilter.all)
+    #expect(model.duration == DurationFilter.all)
+    #expect(model.licenseFilter == LicenseFilter.all)
     #expect(model.yearFrom == nil && model.yearTo == nil)
     #expect(!model.downloadableOnly)
-    #expect(model.relevanceMode == .balanced)
-    #expect(model.sort == .relevance)
+    #expect(model.relevanceMode == SearchRelevanceMode.balanced)
+    #expect(model.sort == SearchSort.relevance)
   }
 
   @Test("local index stays responsive with large persisted metadata")
