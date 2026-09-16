@@ -138,9 +138,12 @@
 "provider.mode.ytDLP" = "yt-dlp Best-effort";
 "provider.tryDirectSearch" = "Try Direct Search";
 "provider.limitedSearchMessage" = "%@ is in limited mode. Add an API key for full in-app search or open the official search page.";
+"provider.limitedDiscoveryMessage" = "%@ can be searched on its official website; in-app search is not available for this source.";
+"provider.limitedSourcesSummary" = "%d sources use official-page discovery";
 "provider.openOfficialSearch" = "Open Official Search";
 
 "error.invalidAPIKey" = "The API key is invalid";
+"error.accessRestricted" = "This source denied the request. Try again later or use its official website.";
 "error.noNetwork" = "Network connection failed. Please check your internet connection and try again.";
 "error.rateLimited" = "Too many requests. Please try again later.";
 "error.notFound" = "This media item is no longer available.";

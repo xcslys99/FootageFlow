@@ -29,6 +29,9 @@ public sealed class MainViewModel : ObservableObject
     private readonly Dictionary<string, ProviderContinuation> _researchContinuations = new(StringComparer.OrdinalIgnoreCase);
     private string _lastResearchQuery = "";
     private string _mediaType = "video";
+    private string? _lastRequestedMediaType;
+    private bool _refreshMediaTypeAfterSearch;
+    private bool _suppressMediaTypeSearch;
     private string _orientation = "all";
     private string _resolution = "all";
     private string _duration = "all";
@@ -450,7 +453,23 @@ public sealed class MainViewModel : ObservableObject
         }
     }
     public bool CanLoadMore => _continuations.Count > 0 || _researchContinuations.Count > 0;
-    public string MediaType { get => _mediaType; set { if (Set(ref _mediaType, value)) ResultsView.Refresh(); } }
+    public string MediaType
+    {
+        get => _mediaType;
+        set
+        {
+            if (!Set(ref _mediaType, value)) return;
+            ResultsView.Refresh();
+            if (_suppressMediaTypeSearch || _lastRequestedMediaType is null ||
+                SearchScope == "research" || string.IsNullOrWhiteSpace(Query)) return;
+            if (IsSearching)
+            {
+                _refreshMediaTypeAfterSearch = true;
+                _searchCancellation?.Cancel();
+            }
+            else _ = SearchAsync();
+        }
+    }
     public string Orientation { get => _orientation; set { if (Set(ref _orientation, value)) ResultsView.Refresh(); } }
     public string Resolution { get => _resolution; set { if (Set(ref _resolution, value)) ResultsView.Refresh(); } }
     public string Duration { get => _duration; set { if (Set(ref _duration, value)) ResultsView.Refresh(); } }
@@ -683,6 +702,7 @@ public sealed class MainViewModel : ObservableObject
     public string RelevanceBroadText => T("search.relevance.broad");
     public string ProjectTitle => T("common.project");
     public string ProjectAllText => T("project.all");
+    public string UncategorizedText => T("common.uncategorized");
     public string ScriptTitle => T("script.title");
     public string ScriptHelp => T("script.help");
     public string ScriptAnalyze => T("script.analyze");
@@ -1021,6 +1041,7 @@ public sealed class MainViewModel : ObservableObject
     {
         var clean = Query.Trim();
         if (clean.Length == 0) { SearchStatus = T("search.enterQuery"); return; }
+        if (SearchScope != "research") _lastRequestedMediaType = MediaType;
         _searchCancellation?.Cancel();
         _searchCancellation = new CancellationTokenSource();
         var cancellationToken = _searchCancellation.Token;
@@ -1099,7 +1120,15 @@ public sealed class MainViewModel : ObservableObject
         }
         catch (OperationCanceledException) { SearchStatus = T("search.stopped"); }
         catch (Exception error) { SearchStatus = error.Message; }
-        finally { IsSearching = false; }
+        finally
+        {
+            IsSearching = false;
+            if (_refreshMediaTypeAfterSearch)
+            {
+                _refreshMediaTypeAfterSearch = false;
+                _ = SearchAsync();
+            }
+        }
     }
 
     private async Task SearchResearchAsync(string query, CancellationToken cancellationToken, bool recordHistory)
@@ -1170,7 +1199,9 @@ public sealed class MainViewModel : ObservableObject
     {
         var limited = option.Id is ("nationalArchives" or "europeana" or "videvo" or "videezy"
             or "mixkit" or "coverr" or "vimeo" or "mazwai" or "dvids" or "britishPathe") && string.IsNullOrWhiteSpace(ReadCredential(option.Id));
-        var selectedQueries = queries.Take(limited ? 1 : 14).ToArray();
+        var selectedQueries = queries.Take(limited ? 1 : 14)
+            .DistinctBy(keyword => keyword.Text.Trim(), StringComparer.OrdinalIgnoreCase)
+            .ToArray();
         var assets = new List<MediaAsset>();
         ProviderBatch? primary = null;
         ProviderBatch? successful = null;
@@ -1844,6 +1875,8 @@ public sealed class MainViewModel : ObservableObject
         _candidateResults.Clear();
         _continuations.Clear();
         _researchContinuations.Clear();
+        _lastRequestedMediaType = null;
+        _refreshMediaTypeAfterSearch = false;
         SearchStatus = T("search.initialStatus");
     }
 
@@ -1852,6 +1885,9 @@ public sealed class MainViewModel : ObservableObject
     // to use from a keyboard workflow after a result set looks unexpectedly empty.
     private void ClearFilters()
     {
+        var refreshMedia = _lastRequestedMediaType is not null &&
+            _lastRequestedMediaType != "video" && SearchScope != "research";
+        _suppressMediaTypeSearch = true;
         MediaType = "video";
         Orientation = "all";
         Resolution = "all";
@@ -1864,7 +1900,17 @@ public sealed class MainViewModel : ObservableObject
         Sort = "relevance";
         foreach (var provider in Providers) provider.Enabled = _settings.Current.EnabledProviders.Contains(provider.Id);
         foreach (var provider in ResearchProviders) provider.Enabled = true;
+        _suppressMediaTypeSearch = false;
         ResultsView.Refresh();
+        if (refreshMedia && !string.IsNullOrWhiteSpace(Query))
+        {
+            if (IsSearching)
+            {
+                _refreshMediaTypeAfterSearch = true;
+                _searchCancellation?.Cancel();
+            }
+            else _ = SearchAsync();
+        }
     }
 
     private async Task ScheduleWorkspaceSearchAsync()
@@ -1948,6 +1994,7 @@ public sealed class MainViewModel : ObservableObject
     private async Task RunSavedSearchAsync(SavedSearchRecord? saved)
     {
         if (saved is null) return;
+        _suppressMediaTypeSearch = true;
         Query = saved.Query;
         SearchScope = saved.SearchScope;
         MediaType = saved.MediaType; Orientation = saved.Orientation; Resolution = saved.Resolution;
@@ -1958,6 +2005,7 @@ public sealed class MainViewModel : ObservableObject
         SearchKeywords.Clear();
         foreach (var keyword in saved.Keywords) SearchKeywords.Add(keyword);
         _keywordSourceQuery = Query;
+        _suppressMediaTypeSearch = false;
         CurrentPage = "search";
         await SearchAsync();
     }

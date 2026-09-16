@@ -130,8 +130,11 @@
 "provider.mode.ytDLP" = "yt-dlp Mejor esfuerzo";
 "provider.tryDirectSearch" = "Pruebe la búsqueda directa";
 "provider.limitedSearchMessage" = "%@ está en modo limitado. Agregue una clave API para una búsqueda completa en la aplicación o abra la página de búsqueda oficial.";
+"provider.limitedDiscoveryMessage" = "%@ se puede buscar en su sitio oficial; la búsqueda dentro de la aplicación no está disponible para esta fuente.";
+"provider.limitedSourcesSummary" = "%d fuentes requieren búsqueda en su página oficial";
 "provider.openOfficialSearch" = "Abrir búsqueda oficial";
 "error.invalidAPIKey" = "La clave API no es válida";
+"error.accessRestricted" = "Esta fuente rechazó la solicitud. Inténtelo más tarde o use su sitio oficial.";
 "error.noNetwork" = "La conexión de red falló. Por favor verifique su conexión a Internet e inténtelo nuevamente.";
 "error.rateLimited" = "Demasiadas solicitudes. Inténtelo de nuevo más tarde.";
 "error.notFound" = "Este elemento multimedia ya no está disponible.";

@@ -13,6 +13,8 @@ struct QuickSearchView: View {
   @State private var showHistory = false
   @State private var selection = AssetSelection()
   @State private var showAdvancedFilters = false
+  @State private var showSourceFilters = false
+  @State private var showLimitedSourceNotices = false
   @State private var showAllSearchLanguages = false
   @State private var showNewProject = false
   @State private var newProjectName = ""
@@ -275,7 +277,6 @@ struct QuickSearchView: View {
       }
       if viewModel.searchScope != .research {
         filters
-        providerStatusRow
       } else {
         researchFilters
         researchProviderStatusRow
@@ -288,7 +289,12 @@ struct QuickSearchView: View {
   private var filters: some View {
     VStack(alignment: .leading, spacing: 8) {
       HStack {
-        Picker(tr("filter.type"), selection: $viewModel.mediaType) {
+        Picker(
+          tr("filter.type"),
+          selection: Binding(
+            get: { viewModel.mediaType },
+            set: { viewModel.selectMediaType($0) })
+        ) {
           ForEach(MediaType.allCases) { Text($0.label).tag($0) }
         }.id(localization.language).frame(width: 150)
         Picker(tr("filter.orientation"), selection: $viewModel.orientation) {
@@ -319,30 +325,49 @@ struct QuickSearchView: View {
           Spacer()
         }
       }
-      ScrollView(.horizontal, showsIndicators: false) {
-        HStack(spacing: 12) {
-          Text(tr("filter.source")).foregroundStyle(.secondary)
+      Button {
+        withAnimation { showSourceFilters.toggle() }
+      } label: {
+        Label(
+          "\(tr("filter.source")) (\(viewModel.selectedProviders.count)/\(ProviderID.searchCases.count))",
+          systemImage: "square.stack.3d.up")
+        Image(systemName: showSourceFilters ? "chevron.up" : "chevron.down")
+      }
+      .buttonStyle(.bordered)
+      if showSourceFilters {
+        LazyVGrid(
+          columns: [GridItem(.adaptive(minimum: 180), alignment: .leading)],
+          alignment: .leading, spacing: 8
+        ) {
           ForEach(ProviderID.searchCases) { provider in
-            Toggle(
-              provider.displayName,
-              isOn: Binding(
-                get: { viewModel.selectedProviders.contains(provider) },
-                set: { enabled in
-                  if enabled {
-                    viewModel.selectedProviders.insert(provider)
-                  } else {
-                    viewModel.selectedProviders.remove(provider)
-                  }
-                  AppSettings.enabledProviders = viewModel.selectedProviders
-                })
-            ).toggleStyle(.checkbox)
+            HStack(spacing: 5) {
+              Toggle(
+                provider.displayName,
+                isOn: Binding(
+                  get: { viewModel.selectedProviders.contains(provider) },
+                  set: { enabled in
+                    if enabled {
+                      viewModel.selectedProviders.insert(provider)
+                    } else {
+                      viewModel.selectedProviders.remove(provider)
+                    }
+                    AppSettings.enabledProviders = viewModel.selectedProviders
+                  })
+              )
+              .toggleStyle(.checkbox)
               .accessibilityLabel(tr("accessibility.providerEnabled", provider.displayName))
+              if let count = viewModel.providerCounts[provider] {
+                Text("\(count)").font(.caption2).foregroundStyle(.secondary)
+              }
+            }
+            .help(
+              "\(viewModel.providerModes[provider]?.label ?? "") · "
+                + "\(viewModel.providerStates[provider]?.availability.label ?? "")")
           }
-          Divider().frame(height: 18)
-          Button(tr("settings.manageSources"), systemImage: "slider.horizontal.3") {
-            onManageSources()
-          }.buttonStyle(.link)
         }
+        Button(tr("settings.manageSources"), systemImage: "slider.horizontal.3") {
+          onManageSources()
+        }.buttonStyle(.link)
       }
     }
   }
@@ -415,33 +440,6 @@ struct QuickSearchView: View {
     }
   }
 
-  private var providerStatusRow: some View {
-    ScrollView(.horizontal, showsIndicators: false) {
-      HStack(spacing: 8) {
-        ForEach(ProviderID.searchCases.filter { viewModel.selectedProviders.contains($0) }) {
-          provider in
-          let state = viewModel.providerStates[provider]?.availability ?? .available
-          HStack(spacing: 5) {
-            Circle().fill(providerColor(state)).frame(width: 7, height: 7)
-            Text(provider.displayName)
-            if let count = viewModel.providerCounts[provider] {
-              Text("\(count)").foregroundStyle(.secondary)
-            }
-            if viewModel.providersWithMoreResults.contains(provider) {
-              Image(systemName: "arrow.down.circle").foregroundStyle(.secondary)
-            }
-          }
-          .font(.caption)
-          .padding(.horizontal, 8).padding(.vertical, 4)
-          .background(.quaternary.opacity(0.55), in: Capsule())
-          .help(
-            "\(viewModel.providerModes[provider]?.label ?? "") · \(state.label)"
-              .trimmingCharacters(in: CharacterSet(charactersIn: " ·")))
-        }
-      }
-    }
-  }
-
   private var researchProviderStatusRow: some View {
     ScrollView(.horizontal, showsIndicators: false) {
       HStack(spacing: 8) {
@@ -466,28 +464,24 @@ struct QuickSearchView: View {
     }
   }
 
-  private func providerColor(_ state: ProviderAvailability) -> Color {
-    switch state {
-    case .available, .apiConnected, .publicAPI, .noKeyRequired: .green
-    case .bestEffort: .blue
-    case .authenticationRequired, .limitedMode: .orange
-    case .rateLimited, .temporarilyBlocked: .yellow
-    case .unavailable: .red
-    case .disabled: .secondary
-    }
-  }
-
   @ViewBuilder private var statusArea: some View {
-    if !viewModel.providerErrors.isEmpty || !viewModel.researchProviderErrors.isEmpty {
+    let limitedProviders = viewModel.providerErrors.keys.filter { provider in
+      if case .limitedMode = viewModel.providerErrors[provider] { return true }
+      return false
+    }.sorted { $0.rawValue < $1.rawValue }
+    let actionableProviders = viewModel.providerErrors.keys.filter {
+      !limitedProviders.contains($0)
+    }.sorted { $0.rawValue < $1.rawValue }
+    if !actionableProviders.isEmpty || !viewModel.researchProviderErrors.isEmpty {
       ScrollView(.horizontal, showsIndicators: false) {
         HStack(spacing: 8) {
-          ForEach(
-            viewModel.providerErrors.keys.sorted(by: { $0.rawValue < $1.rawValue }), id: \.self
-          ) { provider in
+          ForEach(actionableProviders, id: \.self) { provider in
             HStack(spacing: 6) {
               Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)
-              Text(viewModel.providerErrors[provider]?.errorDescription ?? tr("search.failed"))
-                .lineLimit(1)
+              Text(
+                "\(provider.displayName): \(viewModel.providerErrors[provider]?.errorDescription ?? tr("search.failed"))"
+              )
+              .lineLimit(1)
               Button(tr("common.retry")) {
                 if viewModel.loadMoreFailedProviders.contains(provider) {
                   viewModel.loadMore(only: provider)
@@ -502,7 +496,7 @@ struct QuickSearchView: View {
               if shouldOfferAPIKey(provider) {
                 Button(tr("settings.addAPIKey")) { onManageSources() }.buttonStyle(.link)
               }
-              if let url = limitedSearchURL(provider) {
+              if let url = accessRestrictedSearchURL(provider) {
                 Button(tr("provider.openOfficialSearch")) { DesktopPlatform.shared.open(url) }
                   .buttonStyle(.link)
               }
@@ -524,6 +518,33 @@ struct QuickSearchView: View {
           }
         }.padding(.horizontal, 16).padding(.top, 8)
       }
+    }
+    if !limitedProviders.isEmpty {
+      DisclosureGroup(isExpanded: $showLimitedSourceNotices) {
+        ScrollView(.horizontal, showsIndicators: false) {
+          HStack(spacing: 8) {
+            ForEach(limitedProviders, id: \.self) { provider in
+              HStack(spacing: 6) {
+                Text(viewModel.providerErrors[provider]?.errorDescription ?? provider.displayName)
+                  .lineLimit(1)
+                if let url = limitedSearchURL(provider) {
+                  Button(tr("provider.openOfficialSearch")) { DesktopPlatform.shared.open(url) }
+                    .buttonStyle(.link)
+                }
+              }
+              .font(.caption)
+              .padding(.horizontal, 9).padding(.vertical, 5)
+              .background(.quaternary.opacity(0.55), in: Capsule())
+            }
+          }
+        }
+      } label: {
+        Label(
+          tr("provider.limitedSourcesSummary", limitedProviders.count), systemImage: "info.circle"
+        )
+        .font(.caption).foregroundStyle(.secondary)
+      }
+      .padding(.horizontal, 16).padding(.top, 5)
     }
     HStack {
       Text(viewModel.statusText).foregroundStyle(.secondary)
@@ -609,6 +630,13 @@ struct QuickSearchView: View {
       case .limitedMode(_, let url) = error
     else { return nil }
     return url
+  }
+
+  private func accessRestrictedSearchURL(_ provider: ProviderID) -> URL? {
+    guard let error = viewModel.providerErrors[provider],
+      case .accessRestricted = error
+    else { return nil }
+    return ProviderPolicy.officialSearchURL(for: provider, query: viewModel.query)
   }
 
   private var selectedAssets: [MediaAsset] {

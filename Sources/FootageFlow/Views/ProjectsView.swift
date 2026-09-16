@@ -24,7 +24,7 @@ struct ProjectsView: View {
 
   var body: some View {
     let _ = localization.language
-    HSplitView {
+    HStack(spacing: 0) {
       VStack(spacing: 0) {
         HStack {
           Text(tr("project.title")).font(.title2.bold())
@@ -56,15 +56,23 @@ struct ProjectsView: View {
           }.tag(project.id)
         }
         .accessibilityLabel(tr("accessibility.projectList"))
-      }.frame(minWidth: 250, idealWidth: 300)
+      }.frame(width: 290)
+      Divider()
       if let project = selected {
-        ProjectDetail(
-          project: project, onDelete: { confirmDelete = true },
-          onFindRelatedMedia: onFindRelatedMedia)
+        ScrollView {
+          ProjectDetail(
+            project: project, onDelete: { confirmDelete = true },
+            onFindRelatedMedia: onFindRelatedMedia
+          )
+          .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
       } else {
         ContentUnavailableView(
           tr("project.selectOrCreate"), systemImage: "folder",
-          description: Text(tr("project.selectDescription")))
+          description: Text(tr("project.selectDescription"))
+        )
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
       }
     }
     .sheet(isPresented: $showNewProject) {
@@ -148,7 +156,7 @@ private struct ProjectDetail: View {
   var body: some View {
     let _ = localization.language
     VStack(alignment: .leading, spacing: 14) {
-      HStack {
+      VStack(alignment: .leading, spacing: 8) {
         TextField(
           tr("project.name"),
           text: Binding(
@@ -160,13 +168,16 @@ private struct ProjectDetail: View {
             })
         )
         .textFieldStyle(.plain).font(.largeTitle.bold())
-        Button {
-          openProjectFolder()
-        } label: {
-          Label(tr("project.openFolder"), systemImage: "folder")
-        }
-        Button(role: .destructive, action: onDelete) {
-          Label(tr("project.delete"), systemImage: "trash")
+        HStack {
+          Spacer()
+          Button {
+            openProjectFolder()
+          } label: {
+            Label(tr("project.openFolder"), systemImage: "folder")
+          }
+          Button(role: .destructive, action: onDelete) {
+            Label(tr("project.delete"), systemImage: "trash")
+          }
         }
       }
       projectActions
@@ -201,7 +212,7 @@ private struct ProjectDetail: View {
             store.updateProject(updated)
           })
       )
-      .font(.body).padding(8).background(
+      .font(.body).frame(height: 150).padding(8).background(
         .quaternary.opacity(0.35), in: RoundedRectangle(cornerRadius: 8))
       ProjectResearchNotesView(projectID: project.id, onFindRelatedMedia: onFindRelatedMedia)
       rightsAuditView

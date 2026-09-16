@@ -59,6 +59,9 @@ try
         Check(accessibilityKeys.All(key =>
                   !string.IsNullOrWhiteSpace(localization.Text(key)) && localization.Text(key) != key),
               $"Windows {language.Code} accessibility localization");
+        Check(new[] { "provider.limitedDiscoveryMessage", "provider.limitedSourcesSummary",
+                      "error.accessRestricted" }.All(key => localization.Text(key) != key),
+              $"Windows {language.Code} creator UX messages");
     }
     localization.SetLanguage("ru");
     settings.Save();
@@ -211,6 +214,10 @@ var updateRelease = JsonSerializer.Deserialize<AppReleaseInfo>(JsonSerializer.Se
 Check(updateRelease?.Version == "0.8.0" && updateRelease.Notes == "Visible changes" &&
       updateRelease.PageURL.StartsWith("https://github.com/xcslys99/FootageFlow/releases/", StringComparison.Ordinal),
       "Windows update release model round trip");
+var pendingLinkItem = new LinkDownloadItem("https://vimeo.com/123");
+Check(pendingLinkItem.IsAnalysisPending, "Windows shows loading instead of a missing thumbnail during analysis");
+pendingLinkItem.ErrorMessage = "Unavailable";
+Check(!pendingLinkItem.IsAnalysisPending, "Windows stops showing loading after an analysis failure");
 var linkItem = new LinkDownloadItem("https://vimeo.com/123")
 {
     Analysis = new LinkAnalysisResult
@@ -224,6 +231,7 @@ linkItem.ConfigureQualityLabels(value => value);
 Check(linkItem.AvailableQualities.SequenceEqual(["best", "p1080", "p720", "p480", "audioOnly"]),
     "Windows link format availability");
 Check(linkItem.HasSubtitles && linkItem.IsReady, "Windows link subtitle and ready state");
+Check(!linkItem.IsAnalysisPending, "Windows analysis completion clears the pending thumbnail state");
 linkItem.SelectedQuality = "audioOnly";
 linkItem.DownloadSubtitles = true;
 linkItem.SubtitleLanguage = "en";

@@ -137,9 +137,12 @@
 "provider.mode.ytDLP" = "yt-dlp 尽力下载";
 "provider.tryDirectSearch" = "尝试直接搜索";
 "provider.limitedSearchMessage" = "%@ 当前为受限模式。配置 API Key 可在应用内完整搜索，也可以打开官方搜索页面。";
+"provider.limitedDiscoveryMessage" = "%@ 可在官方网站查找素材；目前不支持在应用内搜索此来源。";
+"provider.limitedSourcesSummary" = "%d 个来源需在官方页面查找";
 "provider.openOfficialSearch" = "打开官方搜索";
 
 "error.invalidAPIKey" = "API Key 无效";
+"error.accessRestricted" = "该来源拒绝了本次请求，请稍后再试或前往官方网站查找。";
 "error.noNetwork" = "网络连接失败，请检查网络连接后重试。";
 "error.rateLimited" = "请求次数过多，请稍后再试。";
 "error.notFound" = "该素材已失效。";

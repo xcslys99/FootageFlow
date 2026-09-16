@@ -2,6 +2,8 @@ import SwiftUI
 
 struct LinkDownloaderView: View {
   @EnvironmentObject private var downloads: DownloadManager
+  @EnvironmentObject private var store: DataStore
+  @EnvironmentObject private var search: SearchViewModel
   @StateObject private var viewModel = LinkDownloaderViewModel()
   let openDownloads: () -> Void
   private let clipboardTimer = Timer.publish(every: 2, on: .main, in: .common).autoconnect()
@@ -57,12 +59,21 @@ struct LinkDownloaderView: View {
         Text(tr("link.detectedCount", viewModel.detectedCount)).font(.callout.bold())
         Text(tr(viewModel.statusKey)).foregroundStyle(.secondary)
         Spacer()
-        Text(viewModel.downloadRoot.path).lineLimit(1).foregroundStyle(.secondary)
-        Button(tr("settings.choose")) { viewModel.chooseFolder() }
         Button(tr("link.downloadSelected")) {
-          viewModel.downloadSelected(downloads: downloads)
+          let project = store.projects.first { $0.id == search.currentProjectID }
+          viewModel.downloadSelected(downloads: downloads, project: project)
           openDownloads()
         }.buttonStyle(.borderedProminent).disabled(!viewModel.canDownloadSelected)
+      }
+      HStack {
+        Picker(tr("common.project"), selection: $search.currentProjectID) {
+          Text(tr("common.uncategorized")).tag(Optional<UUID>.none)
+          ForEach(store.projects) { Text($0.name).tag(Optional($0.id)) }
+        }
+        .frame(width: 300)
+        Spacer()
+        Text(viewModel.downloadRoot.path).lineLimit(1).foregroundStyle(.secondary)
+        Button(tr("settings.choose")) { viewModel.chooseFolder() }
       }
       Divider()
       ScrollView {
@@ -84,10 +95,23 @@ struct LinkDownloaderView: View {
       Toggle("", isOn: item.isSelected).labelsHidden().disabled(!value.isReady)
         .accessibilityLabel(
           tr("accessibility.keywordEnabled", value.analysis?.title ?? value.rawURL))
-      RemoteThumbnailView(
-        candidates: [value.analysis?.thumbnailURL].compactMap { $0 },
-        fallbackSystemImage: "link"
-      )
+      Group {
+        if value.analysis == nil {
+          ZStack {
+            Color.secondary.opacity(0.1)
+            if value.errorKey == nil {
+              ProgressView().controlSize(.small)
+            } else {
+              Image(systemName: "link").foregroundStyle(.secondary)
+            }
+          }
+        } else {
+          RemoteThumbnailView(
+            candidates: [value.analysis?.thumbnailURL].compactMap { $0 },
+            fallbackSystemImage: "link"
+          )
+        }
+      }
       .frame(width: 180, height: 102).clipShape(RoundedRectangle(cornerRadius: 7))
       VStack(alignment: .leading, spacing: 6) {
         Text(value.analysis?.title ?? value.rawURL).font(.headline).lineLimit(2)

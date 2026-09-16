@@ -96,7 +96,15 @@ enum KeywordEngine {
     guard !enabled.isEmpty else { return [] }
     if mode == .limited { return [enabled[0]] }
 
-    return enabled.prefix(14).map { $0 }
+    // Keep the editable language slots, but never send identical text to the
+    // same Provider twice. Proper nouns and short Latin queries can be spelled
+    // identically in all ten interface languages.
+    var seen = Set<String>()
+    return enabled.prefix(14).filter { keyword in
+      let normalized = keyword.text.cleanQuery.folding(
+        options: [.caseInsensitive, .diacriticInsensitive], locale: nil)
+      return seen.insert(normalized).inserted
+    }
   }
 
   static func providerQueries(

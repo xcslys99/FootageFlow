@@ -155,7 +155,7 @@ final class LinkDownloaderViewModel: ObservableObject {
     }
   }
 
-  func downloadSelected(downloads: DownloadManager) {
+  func downloadSelected(downloads: DownloadManager, project: ProjectRecord?) {
     for item in items where item.isSelected && item.isDownloadReady {
       guard let analysis = item.analysis else { continue }
       let asset = analysis.mediaAsset(
@@ -163,7 +163,8 @@ final class LinkDownloaderViewModel: ObservableObject {
         subtitleLanguage: item.subtitleLanguage.nilIfEmpty, outputPreset: item.outputPreset,
         clipRange: item.scope == .clip ? item.clipRange : nil)
       downloads.start(
-        asset: asset, projectID: nil, projectName: tr("common.uncategorized"),
+        asset: asset, projectID: project?.id,
+        projectName: project?.name ?? tr("common.uncategorized"),
         destinationRoot: downloadRoot)
     }
   }

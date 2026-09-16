@@ -130,8 +130,11 @@
 "provider.mode.ytDLP" = "yt-dlp Melhor esforço";
 "provider.tryDirectSearch" = "Experimente a pesquisa direta";
 "provider.limitedSearchMessage" = "%@ está em modo limitado. Adicione uma chave de API para pesquisa completa no aplicativo ou abra a página de pesquisa oficial.";
+"provider.limitedDiscoveryMessage" = "%@ pode ser pesquisado no site oficial; a pesquisa no aplicativo não está disponível para esta fonte.";
+"provider.limitedSourcesSummary" = "%d fontes exigem pesquisa na página oficial";
 "provider.openOfficialSearch" = "Abrir pesquisa oficial";
 "error.invalidAPIKey" = "A chave de API é inválida";
+"error.accessRestricted" = "Esta fonte recusou a solicitação. Tente mais tarde ou use o site oficial.";
 "error.noNetwork" = "A conexão de rede falhou. Verifique sua conexão com a Internet e tente novamente.";
 "error.rateLimited" = "Muitos pedidos. Por favor, tente novamente mais tarde.";
 "error.notFound" = "Este item de mídia não está mais disponível.";

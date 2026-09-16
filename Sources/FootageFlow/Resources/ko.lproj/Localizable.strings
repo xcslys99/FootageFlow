@@ -130,8 +130,11 @@
 "provider.mode.ytDLP" = "yt-dlp 최선의 노력";
 "provider.tryDirectSearch" = "직접 검색을 시도해보세요";
 "provider.limitedSearchMessage" = "%@이(가) 제한 모드에 있습니다. 전체 인앱 검색을 위해 API 키를 추가하거나 공식 검색 페이지를 엽니다.";
+"provider.limitedDiscoveryMessage" = "%@은(는) 공식 웹사이트에서 검색할 수 있습니다. 이 소스의 앱 내 검색은 지원되지 않습니다.";
+"provider.limitedSourcesSummary" = "%d개 소스는 공식 페이지에서 검색";
 "provider.openOfficialSearch" = "공식 검색 열기";
 "error.invalidAPIKey" = "API 키가 잘못되었습니다.";
+"error.accessRestricted" = "이 소스에서 요청을 거부했습니다. 나중에 다시 시도하거나 공식 웹사이트를 이용하세요.";
 "error.noNetwork" = "네트워크 연결에 실패했습니다. 인터넷 연결을 확인하고 다시 시도해 주세요.";
 "error.rateLimited" = "요청이 너무 많습니다. 나중에 다시 시도해 주세요.";
 "error.notFound" = "이 미디어 항목은 더 이상 사용할 수 없습니다.";
