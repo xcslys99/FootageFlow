@@ -48,11 +48,16 @@ public sealed class LinkDownloadItem(string rawUrl) : ObservableObject
             if (!Set(ref _analysis, value)) return;
             OnPropertyChanged(nameof(IsReady)); OnPropertyChanged(nameof(Title));
             OnPropertyChanged(nameof(SourceSummary)); OnPropertyChanged(nameof(ThumbnailURL));
+            OnPropertyChanged(nameof(IsAnalysisPending));
             OnPropertyChanged(nameof(AvailableQualities)); OnPropertyChanged(nameof(SubtitleLanguages));
             OnPropertyChanged(nameof(HasSubtitles)); OnPropertyChanged(nameof(FormatCount));
         }
     }
-    public string? ErrorMessage { get => _errorMessage; set => Set(ref _errorMessage, value); }
+    public string? ErrorMessage
+    {
+        get => _errorMessage;
+        set { if (Set(ref _errorMessage, value)) OnPropertyChanged(nameof(IsAnalysisPending)); }
+    }
     public string SelectedScope { get => _selectedScope; set { if (Set(ref _selectedScope, value)) NotifyClip(); } }
     public string OutputPreset { get => _outputPreset; set { if (Set(ref _outputPreset, value)) OnPropertyChanged(nameof(DownloadIdentity)); } }
     public string ClipStart { get => _clipStart; set { if (Set(ref _clipStart, value)) NotifyClip(); } }
@@ -81,6 +86,7 @@ public sealed class LinkDownloadItem(string rawUrl) : ObservableObject
         (DownloadSubtitles ? $":subs:{(string.IsNullOrWhiteSpace(SubtitleLanguage) ? "all" : SubtitleLanguage)}" : "");
     public string Title => Analysis?.Title ?? RawURL;
     public string? ThumbnailURL => Analysis?.ThumbnailURL;
+    public bool IsAnalysisPending => Analysis is null && ErrorMessage is null;
     public string SourceSummary => string.Join(" · ", new[]
         { Analysis?.SourceName, Analysis?.Creator, DurationText(Analysis?.Duration) }.Where(value => !string.IsNullOrWhiteSpace(value)));
     public int FormatCount => Analysis?.FormatCount ?? 0;

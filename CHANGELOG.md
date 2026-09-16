@@ -2,6 +2,18 @@
 
 All notable FootageFlow changes are documented here.
 
+## Unreleased
+
+### Creator workflow usability
+
+- Switching a completed media search between Video, Image, Audio, and All now requests the newly selected media type instead of displaying a false empty result set
+- Coalesced identical query text before each Provider request while keeping all ten editable language slots
+- Replaced the overflowing 22-source checkbox strip with an expandable source selector, and grouped discovery-only notices instead of presenting them as repeated failures
+- Public sources that reject a request no longer incorrectly report an invalid API key; keyless discovery-only sources no longer suggest configuring an unavailable key
+- Made macOS project details scrollable and kept the project list a useful width
+- Added an explicit project picker to the Link Downloader on both desktop platforms; macOS now shows a loading indicator while a link is being analyzed
+- Refreshed the checksummed Windows FFmpeg archive after the previous upstream autobuild asset disappeared, restoring self-contained packaging
+
 ## [0.12.1] - 2026-08-26
 
 ### Fixed

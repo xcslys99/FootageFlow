@@ -340,7 +340,7 @@ final class DownloadManager: NSObject, ObservableObject, URLSessionDownloadDeleg
     case .rateLimited: "download.rateLimited"
     case .videoUnavailable: "download.videoUnavailable"
     case .regionalRestriction: "download.regionalRestriction"
-    case .temporarilyBlocked: "download.accessRestricted"
+    case .temporarilyBlocked, .accessRestricted: "download.accessRestricted"
     case .externalToolUnavailable: "download.ytDLPUnavailable"
     case .unsupported: "download.notAvailable"
     default: "download.failed"

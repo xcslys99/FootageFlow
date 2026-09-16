@@ -46,7 +46,7 @@ actor HTTPClient {
           attempt += 1
           continue
         }
-        throw mapStatus(http.statusCode, retryAfter: retryAfter)
+        throw Self.mapStatus(http.statusCode, request: request, retryAfter: retryAfter)
       } catch is CancellationError {
         throw ProviderError.cancelled
       } catch let error as ProviderError {
@@ -75,9 +75,18 @@ actor HTTPClient {
     }
   }
 
-  private func mapStatus(_ status: Int, retryAfter: TimeInterval?) -> ProviderError {
-    switch status {
-    case 401, 403: .invalidAPIKey
+  nonisolated static func mapStatus(
+    _ status: Int, request: URLRequest, retryAfter: TimeInterval? = nil
+  ) -> ProviderError {
+    let headerNames = Set((request.allHTTPHeaderFields ?? [:]).keys.map { $0.lowercased() })
+    let queryNames = Set(
+      (request.url.flatMap { URLComponents(url: $0, resolvingAgainstBaseURL: false) }?
+        .queryItems ?? []).map { $0.name.lowercased() })
+    let hasCredential =
+      headerNames.contains("authorization") || headerNames.contains("x-api-key")
+      || !queryNames.isDisjoint(with: ["key", "api_key", "apikey", "access_token", "token"])
+    return switch status {
+    case 401, 403: hasCredential ? .invalidAPIKey : .accessRestricted
     case 404: .notFound
     case 429: .rateLimited(retryAfter: retryAfter)
     case 500...599: .serverUnavailable

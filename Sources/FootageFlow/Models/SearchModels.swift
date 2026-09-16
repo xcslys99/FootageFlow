@@ -8,6 +8,16 @@ enum SearchQueryOrigin: String, Codable, Hashable, Sendable {
   case userAdded
 }
 
+enum MediaSearchRefreshPolicy {
+  static func requiresNewSearch(
+    previousRequest: MediaType?, selected: MediaType,
+    scope: SearchScope, query: String
+  ) -> Bool {
+    previousRequest != nil && previousRequest != selected && scope != .research
+      && !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+  }
+}
+
 struct SearchKeyword: Identifiable, Codable, Hashable, Sendable {
   var id: UUID = UUID()
   var text: String
@@ -252,6 +262,7 @@ enum SearchStatus: Sendable {
 enum ProviderError: LocalizedError, Sendable {
   case missingAPIKey(ProviderID)
   case invalidAPIKey
+  case accessRestricted
   case noNetwork
   case rateLimited(retryAfter: TimeInterval?)
   case notFound
@@ -270,6 +281,7 @@ enum ProviderError: LocalizedError, Sendable {
     switch self {
     case .missingAPIKey(let provider): tr("provider.missingKey", provider.displayName)
     case .invalidAPIKey: tr("error.invalidAPIKey")
+    case .accessRestricted: tr("error.accessRestricted")
     case .noNetwork: tr("error.noNetwork")
     case .rateLimited: tr("error.rateLimited")
     case .notFound: tr("error.notFound")
@@ -281,7 +293,10 @@ enum ProviderError: LocalizedError, Sendable {
     case .videoUnavailable: tr("error.videoUnavailable")
     case .regionalRestriction: tr("error.regionalRestriction")
     case .unsupported: tr("error.unsupported")
-    case .limitedMode(let provider, _): tr("provider.limitedSearchMessage", provider.displayName)
+    case .limitedMode(let provider, _):
+      provider.supportsAPIKey
+        ? tr("provider.limitedSearchMessage", provider.displayName)
+        : tr("provider.limitedDiscoveryMessage", provider.displayName)
     case .cancelled: tr("error.cancelled")
     case .message(let text): text
     }

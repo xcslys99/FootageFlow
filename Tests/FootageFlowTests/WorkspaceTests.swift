@@ -3,6 +3,10 @@ import Testing
 
 @testable import FootageFlow
 
+#if canImport(FoundationNetworking)
+  import FoundationNetworking
+#endif
+
 @Suite("Workspace and accessibility core")
 struct WorkspaceTests {
   @Test("saved searches persist without changing existing project data")
@@ -101,6 +105,59 @@ struct WorkspaceTests {
         #expect(!value.isEmpty)
         #expect(value != key)
       }
+    }
+  }
+
+  @Test("media type changes refresh only after a media search has been submitted")
+  func mediaTypeRefreshDecision() {
+    #expect(
+      !MediaSearchRefreshPolicy.requiresNewSearch(
+        previousRequest: nil, selected: .image, scope: .media, query: "Xi'an food"))
+    #expect(
+      MediaSearchRefreshPolicy.requiresNewSearch(
+        previousRequest: .video, selected: .image, scope: .media, query: "Xi'an food"))
+    #expect(
+      MediaSearchRefreshPolicy.requiresNewSearch(
+        previousRequest: .image, selected: .video, scope: .all, query: "Xi'an food"))
+    #expect(
+      !MediaSearchRefreshPolicy.requiresNewSearch(
+        previousRequest: .video, selected: .video, scope: .media, query: "Xi'an food"))
+    #expect(
+      !MediaSearchRefreshPolicy.requiresNewSearch(
+        previousRequest: .video, selected: .image, scope: .research, query: "Xi'an food"))
+    #expect(
+      !MediaSearchRefreshPolicy.requiresNewSearch(
+        previousRequest: .video, selected: .image, scope: .media, query: "  "))
+  }
+
+  @Test("discovery-only sources do not advise users to add an unavailable API key")
+  func discoveryOnlyWording() {
+    #expect(!ProviderID.videvo.supportsAPIKey)
+    #expect(ProviderID.europeana.supportsAPIKey)
+    let catalog = LocalizationCatalog()
+    for language in AppLanguage.allCases {
+      let discovery = catalog.text(
+        "provider.limitedDiscoveryMessage", language: language, arguments: ["Videvo"])
+      let summary = catalog.text(
+        "provider.limitedSourcesSummary", language: language, arguments: [8])
+      #expect(discovery.contains("Videvo"))
+      #expect(!discovery.contains("API Key"))
+      #expect(summary.contains("8"))
+    }
+  }
+
+  @Test("public-source access denial is not reported as an invalid API key")
+  func publicSourceAccessDenied() {
+    let publicRequest = URLRequest(url: URL(string: "https://www.loc.gov/photos/?fo=json")!)
+    if case .accessRestricted = HTTPClient.mapStatus(403, request: publicRequest) {
+    } else {
+      Issue.record("A keyless public API must not prompt users to replace an API key")
+    }
+    var keyedRequest = URLRequest(url: URL(string: "https://api.pexels.com/v1/search")!)
+    keyedRequest.setValue("fixture", forHTTPHeaderField: "Authorization")
+    if case .invalidAPIKey = HTTPClient.mapStatus(403, request: keyedRequest) {
+    } else {
+      Issue.record("A credentialed API request should still explain an invalid key")
     }
   }
 

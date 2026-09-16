@@ -35,7 +35,8 @@ enum ProviderHealthService {
       case .rateLimited: state = .rateLimited
       case .missingAPIKey: state = .apiKeyRequired
       case .invalidAPIKey: state = .authenticationRequired
-      case .temporarilyBlocked, .serverUnavailable, .noNetwork: state = .unavailable
+      case .temporarilyBlocked, .accessRestricted, .serverUnavailable, .noNetwork:
+        state = .unavailable
       default: state = .degraded
       }
       return ProviderHealthRecord(

@@ -15,6 +15,9 @@ public sealed class RemoteThumbnail : Grid
     public static readonly DependencyProperty SourceURLProperty = DependencyProperty.Register(
         nameof(SourceURL), typeof(string), typeof(RemoteThumbnail),
         new PropertyMetadata(null, OnSourceChanged));
+    public static readonly DependencyProperty IsPendingProperty = DependencyProperty.Register(
+        nameof(IsPending), typeof(bool), typeof(RemoteThumbnail),
+        new PropertyMetadata(false, OnSourceChanged));
     public static readonly DependencyProperty FailureTextProperty = DependencyProperty.Register(
         nameof(FailureText), typeof(string), typeof(RemoteThumbnail),
         new PropertyMetadata("Thumbnail unavailable", OnFailureTextChanged));
@@ -81,6 +84,11 @@ public sealed class RemoteThumbnail : Grid
         get => (string?)GetValue(SourceURLProperty);
         set => SetValue(SourceURLProperty, value);
     }
+    public bool IsPending
+    {
+        get => (bool)GetValue(IsPendingProperty);
+        set => SetValue(IsPendingProperty, value);
+    }
     public string FailureText
     {
         get => (string)GetValue(FailureTextProperty);
@@ -114,6 +122,7 @@ public sealed class RemoteThumbnail : Grid
         var token = _cancellation.Token;
         ShowLoading();
         var candidates = EnumerateCandidates().ToArray();
+        if (candidates.Length == 0 && IsPending) return;
         foreach (var value in candidates)
         {
             try

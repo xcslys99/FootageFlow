@@ -130,8 +130,11 @@
 "provider.mode.ytDLP" = "yt-dlp ベストエフォート";
 "provider.tryDirectSearch" = "直接検索を試してみる";
 "provider.limitedSearchMessage" = "%@ は制限モードです。完全なアプリ内検索用の API キーを追加するか、公式検索ページを開きます。";
+"provider.limitedDiscoveryMessage" = "%@ は公式サイトで検索できます。この提供元のアプリ内検索には対応していません。";
+"provider.limitedSourcesSummary" = "%d 件の提供元は公式ページで検索";
 "provider.openOfficialSearch" = "公式検索を開く";
 "error.invalidAPIKey" = "APIキーが無効です";
+"error.accessRestricted" = "この提供元がリクエストを拒否しました。後で再試行するか、公式サイトをご利用ください。";
 "error.noNetwork" = "ネットワーク接続に失敗しました。インターネット接続を確認して、もう一度試してください。";
 "error.rateLimited" = "リクエストが多すぎます。後でもう一度試してください。";
 "error.notFound" = "このメディア アイテムは利用できなくなりました。";

@@ -329,7 +329,7 @@
         </Grid>
 
         <Grid Visibility="{Binding IsLinkDownloaderPage, Converter={StaticResource BoolVisibility}}">
-          <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="130" /><RowDefinition Height="Auto" /><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+          <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="130" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
           <StackPanel>
             <TextBlock Text="{Binding NavLinkDownloader}" Style="{StaticResource SectionTitle}" />
             <TextBlock Text="{Binding LinkTagline}" Foreground="{StaticResource SubtleTextBrush}" TextWrapping="Wrap" />
@@ -357,13 +357,19 @@
             <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
             <TextBlock Text="{Binding LinkDetectedText}" FontWeight="SemiBold" VerticalAlignment="Center" />
             <TextBlock Grid.Column="1" Text="{Binding LinkStatus}" Foreground="{StaticResource SubtleTextBrush}" Margin="12,0" VerticalAlignment="Center" />
-            <StackPanel Grid.Column="2" Orientation="Horizontal">
-              <TextBlock Text="{Binding DownloadRoot}" Foreground="{StaticResource SubtleTextBrush}" MaxWidth="360" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
-              <Button Content="{Binding ChooseText}" Click="ChooseDownloadFolder_Click" />
-              <Button Content="{Binding LinkDownloadSelectedText}" Command="{Binding DownloadLinkSelectedCommand}" Style="{StaticResource PrimaryButton}" />
-            </StackPanel>
+            <Button Grid.Column="2" Content="{Binding LinkDownloadSelectedText}" Command="{Binding DownloadLinkSelectedCommand}" Style="{StaticResource PrimaryButton}" />
           </Grid>
-          <ScrollViewer Grid.Row="4" VerticalScrollBarVisibility="Auto">
+          <Grid Grid.Row="4" Margin="0,0,0,10">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+            <WrapPanel VerticalAlignment="Center">
+              <TextBlock Text="{Binding ProjectTitle}" VerticalAlignment="Center" Margin="0,0,6,0" />
+              <ComboBox ItemsSource="{Binding Projects}" SelectedItem="{Binding CurrentProject}" DisplayMemberPath="Name" Width="225" AutomationProperties.Name="{Binding ProjectTitle}" />
+              <Button Content="{Binding UncategorizedText}" Command="{Binding ClearProjectCommand}" />
+            </WrapPanel>
+            <TextBlock Grid.Column="1" Text="{Binding DownloadRoot}" Foreground="{StaticResource SubtleTextBrush}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" Margin="18,0,8,0" />
+            <Button Grid.Column="2" Content="{Binding ChooseText}" Click="ChooseDownloadFolder_Click" />
+          </Grid>
+          <ScrollViewer Grid.Row="5" VerticalScrollBarVisibility="Auto">
             <ItemsControl ItemsSource="{Binding LinkItems}">
               <ItemsControl.ItemTemplate>
                 <DataTemplate>
@@ -371,7 +377,7 @@
                     <Grid>
                       <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="180" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
                       <CheckBox IsChecked="{Binding IsSelected}" IsEnabled="{Binding IsReady}" VerticalAlignment="Top" Margin="0,4,10,0" />
-                      <Border Grid.Column="1" Height="102" Background="#E9EDF2" CornerRadius="6" ClipToBounds="True"><controls:RemoteThumbnail SourceURL="{Binding ThumbnailURL}" FailureText="{Binding DataContext.ThumbnailUnavailableText, RelativeSource={RelativeSource AncestorType=Window}}" RetryText="{Binding DataContext.RetryThumbnailText, RelativeSource={RelativeSource AncestorType=Window}}" /></Border>
+                      <Border Grid.Column="1" Height="102" Background="#E9EDF2" CornerRadius="6" ClipToBounds="True"><controls:RemoteThumbnail SourceURL="{Binding ThumbnailURL}" IsPending="{Binding IsAnalysisPending}" FailureText="{Binding DataContext.ThumbnailUnavailableText, RelativeSource={RelativeSource AncestorType=Window}}" RetryText="{Binding DataContext.RetryThumbnailText, RelativeSource={RelativeSource AncestorType=Window}}" /></Border>
                       <StackPanel Grid.Column="2" Margin="14,0">
                         <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextWrapping="Wrap" MaxHeight="42" />
                         <TextBlock Text="{Binding SourceSummary}" Foreground="{StaticResource SubtleTextBrush}" Margin="0,4" />
@@ -404,7 +410,7 @@
               </ItemsControl.ItemTemplate>
             </ItemsControl>
           </ScrollViewer>
-          <TextBlock Grid.Row="5" Text="{Binding LinkLegalNotice}" Foreground="{StaticResource SubtleTextBrush}" FontSize="11" TextWrapping="Wrap" Margin="0,8,0,0" />
+          <TextBlock Grid.Row="6" Text="{Binding LinkLegalNotice}" Foreground="{StaticResource SubtleTextBrush}" FontSize="11" TextWrapping="Wrap" Margin="0,8,0,0" />
         </Grid>
 
         <Grid Visibility="{Binding IsScriptPage, Converter={StaticResource BoolVisibility}}">

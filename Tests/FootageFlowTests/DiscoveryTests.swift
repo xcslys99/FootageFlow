@@ -237,11 +237,16 @@ import Foundation
       let duplicate = [SearchKeyword(text: "Apollo 11"), SearchKeyword(text: "apollo 11")]
       #expect(
         KeywordEngine.providerQueries(from: duplicate, provider: .wikimedia, mode: .publicAPI)
-          .count == 2)
+          .count == 1)
+      let bank = KeywordEngine.keywords(for: "bank", interfaceLanguage: .simplifiedChinese)
+      #expect(bank.count == 10)
+      #expect(
+        KeywordEngine.providerQueries(from: bank, provider: .wikimedia, mode: .publicAPI)
+          .count == 1)
       let values = KeywordEngine.keywords(for: "Apollo 11")
       #expect(
         KeywordEngine.providerQueries(from: values, provider: .youtube, mode: .publicAPI).count
-          >= 10)
+          < values.count)
       #expect(
         KeywordEngine.providerQueries(from: values, provider: .wikimedia, mode: .publicAPI).count
           <= 14)

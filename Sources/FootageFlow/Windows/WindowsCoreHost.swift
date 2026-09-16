@@ -644,6 +644,7 @@
       return switch error {
       case .missingAPIKey: "missingAPIKey"
       case .invalidAPIKey: "invalidAPIKey"
+      case .accessRestricted: "accessRestricted"
       case .noNetwork: "noNetwork"
       case .rateLimited: "rateLimited"
       case .notFound: "notFound"

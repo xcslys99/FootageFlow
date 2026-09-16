@@ -130,8 +130,11 @@
 "provider.mode.ytDLP" = "yt-dlp Best-Effort";
 "provider.tryDirectSearch" = "Versuchen Sie es mit der Direktsuche";
 "provider.limitedSearchMessage" = "%@ befindet sich im eingeschränkten Modus. Fügen Sie einen API-Schlüssel für die vollständige In-App-Suche hinzu oder öffnen Sie die offizielle Suchseite.";
+"provider.limitedDiscoveryMessage" = "%@ kann auf der offiziellen Website durchsucht werden; die Suche in der App ist für diese Quelle nicht verfügbar.";
+"provider.limitedSourcesSummary" = "%d Quellen nur über offizielle Seiten durchsuchbar";
 "provider.openOfficialSearch" = "Öffnen Sie die offizielle Suche";
 "error.invalidAPIKey" = "Der API-Schlüssel ist ungültig";
+"error.accessRestricted" = "Diese Quelle hat die Anfrage abgelehnt. Versuchen Sie es später erneut oder nutzen Sie die offizielle Website.";
 "error.noNetwork" = "Netzwerkverbindung fehlgeschlagen. Bitte überprüfen Sie Ihre Internetverbindung und versuchen Sie es erneut.";
 "error.rateLimited" = "Zu viele Anfragen. Bitte versuchen Sie es später noch einmal.";
 "error.notFound" = "Dieses Medienelement ist nicht mehr verfügbar.";

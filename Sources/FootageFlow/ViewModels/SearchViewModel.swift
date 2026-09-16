@@ -84,6 +84,7 @@ final class SearchViewModel: ObservableObject {
   private var researchRequests: [ResearchProviderID: ResearchSearchRequest] = [:]
   private var loadMoreInFlight: [ProviderID: ProviderQueryPageState] = [:]
   private var searchGeneration = UUID()
+  private var requestedMediaType: MediaType?
 
   var statusText: String { status.text }
   var isAnySearching: Bool { isSearching || isResearchSearching }
@@ -169,6 +170,9 @@ final class SearchViewModel: ObservableObject {
   /// Restores visible filters without discarding the query, its keyword plan,
   /// project selection, or loaded results.
   func clearFilters() {
+    let shouldRefreshMedia = MediaSearchRefreshPolicy.requiresNewSearch(
+      previousRequest: requestedMediaType, selected: .video,
+      scope: searchScope, query: query)
     mediaType = .video
     orientation = .all
     resolution = .all
@@ -184,6 +188,21 @@ final class SearchViewModel: ObservableObject {
     selectedResearchProviders = Set(ResearchProviderID.allCases)
     researchYearFrom = nil
     researchYearTo = nil
+    if shouldRefreshMedia { search() }
+  }
+
+  /// A media-type picker changes what providers are asked to return, not just
+  /// which already-loaded cards are visible. Refresh the provider search after
+  /// a submitted query so switching Video ↔ Image cannot show a false empty state.
+  func selectMediaType(_ value: MediaType) {
+    guard mediaType != value else { return }
+    mediaType = value
+    if MediaSearchRefreshPolicy.requiresNewSearch(
+      previousRequest: requestedMediaType, selected: value,
+      scope: searchScope, query: query)
+    {
+      search()
+    }
   }
 
   func savedSearch(named name: String) -> SavedSearchRecord {
@@ -230,6 +249,7 @@ final class SearchViewModel: ObservableObject {
     researchPagination = [:]
     researchRequests = [:]
     status = .initial
+    requestedMediaType = nil
   }
 
   func search(
@@ -269,6 +289,7 @@ final class SearchViewModel: ObservableObject {
       status = .searchingProviders(ResearchProviderID.allCases.count)
       return
     }
+    requestedMediaType = mediaType
     isSearching = true
     isLoadingMore = false
     providerErrors = [:]

@@ -40,6 +40,7 @@ Paste one or more supported public media URLs and let FootageFlow try to analyze
 - Offers original, audio-only, and editing-compatible MP4 output when available
 - Works with YouTube, X/Twitter, Vimeo, Dailymotion, and other public sites supported by the bundled yt-dlp integration
 - Sends every task into the same Download Manager with progress, cancellation, retry, history, and source sidecars
+- Lets you choose the destination project before downloading a pasted link
 
 Availability depends on the source, individual media, permissions, regional restrictions, authentication requirements, and platform changes. FootageFlow is a best-effort link downloader and does not promise 100% success. See [Link Downloader details](docs/LINK_DOWNLOADER.md).
 
