@@ -1,6 +1,15 @@
 import Foundation
 
 enum DownloadPathSafety {
+  static func matchesExistingDownload(
+    _ record: DownloadRecord, stableAssetID: String, projectID: UUID?, directory: URL
+  ) -> Bool {
+    record.stableAssetID == stableAssetID && record.projectID == projectID
+      && URL(fileURLWithPath: record.localPath).deletingLastPathComponent()
+        .standardizedFileURL.resolvingSymlinksInPath().path
+        == directory.standardizedFileURL.resolvingSymlinksInPath().path
+  }
+
   static func projectDirectory(projectName: String?, root: URL = AppSettings.downloadRootURL) -> URL
   {
     let fallback = projectName?.trimmingCharacters(in: .whitespacesAndNewlines)

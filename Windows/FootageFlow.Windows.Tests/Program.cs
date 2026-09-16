@@ -203,6 +203,28 @@ var roundTrip = JsonSerializer.Deserialize<MediaAsset>(JsonSerializer.Serialize(
 Check(roundTrip?.StableId == "wikimedia:fixture", "MediaAsset JSON round trip");
 Check(roundTrip?.IsDirectlyDownloadable == true, "Direct-download availability model");
 Check(roundTrip?.RightsKnown == true && roundTrip.OpenLicense, "RightsInfo JSON round trip");
+var duplicateRoot = Path.Combine(Path.GetTempPath(), "FootageFlowDuplicateScope", Guid.NewGuid().ToString("N"));
+Directory.CreateDirectory(duplicateRoot);
+try
+{
+    var projectId = Guid.NewGuid();
+    var firstDirectory = Path.Combine(duplicateRoot, "First");
+    Directory.CreateDirectory(firstDirectory);
+    var localFile = Path.Combine(firstDirectory, "fixture.mp4");
+    File.WriteAllBytes(localFile, [1, 2, 3]);
+    var completedTask = new DownloadTaskItem(media, projectId, "First")
+    {
+        State = "completed", LocalPath = localFile
+    };
+    Check(DownloadQueueService.ShouldReuseExistingTask(completedTask, media, projectId, firstDirectory),
+        "Windows reuses a completed download within the same project and folder");
+    Check(!DownloadQueueService.ShouldReuseExistingTask(completedTask, media, Guid.NewGuid(), firstDirectory),
+        "Windows does not reuse another project's download");
+    Check(!DownloadQueueService.ShouldReuseExistingTask(completedTask, media, projectId,
+            Path.Combine(duplicateRoot, "Second")),
+        "Windows does not reuse a download from another root folder");
+}
+finally { Directory.Delete(duplicateRoot, recursive: true); }
 var sourceRecord = new DownloadRecord { ProviderRaw = "linkDownloader", SourceName = "YouTube" };
 Check(sourceRecord.DisplaySource == "YouTube", "Windows link download source display");
 var updateRelease = JsonSerializer.Deserialize<AppReleaseInfo>(JsonSerializer.Serialize(new AppReleaseInfo
