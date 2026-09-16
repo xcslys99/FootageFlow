@@ -142,7 +142,11 @@ public sealed class MainViewModel : ObservableObject
             ShowAllSearchLanguages = !ShowAllSearchLanguages);
         RegenerateKeywordsCommand = new AsyncRelayCommand(_ => RegenerateKeywordsAsync());
         LoadMoreCommand = new AsyncRelayCommand(_ => LoadMoreAsync(), _ => CanLoadMore && !IsSearching && !IsLoadingMore);
-        StopSearchCommand = new RelayCommand(_ => _searchCancellation?.Cancel(), _ => IsSearching);
+        StopSearchCommand = new RelayCommand(_ =>
+        {
+            _refreshMediaTypeAfterSearch = false;
+            _searchCancellation?.Cancel();
+        }, _ => IsSearching);
         OpenSourceCommand = new RelayCommand(asset => ShellService.OpenUrl((asset as MediaAsset)?.SourcePageURL));
         PreviewCommand = new RelayCommand(asset => PreviewRequested?.Invoke(asset as MediaAsset));
         FavoriteCommand = new AsyncRelayCommand(asset => ToggleFavoriteAsync(asset as MediaAsset));

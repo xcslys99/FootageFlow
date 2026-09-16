@@ -3,6 +3,10 @@ import Testing
 
 @testable import FootageFlow
 
+#if canImport(FoundationNetworking)
+  import FoundationNetworking
+#endif
+
 @Suite("Workspace and accessibility core")
 struct WorkspaceTests {
   @Test("saved searches persist without changing existing project data")
