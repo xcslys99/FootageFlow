@@ -106,8 +106,12 @@ final class DownloadManager: NSObject, ObservableObject, URLSessionDownloadDeleg
     {
       return
     }
+    let directory = DownloadPathSafety.projectDirectory(
+      projectName: projectName, root: destinationRoot ?? AppSettings.downloadRootURL)
     if let record = store?.downloads.first(where: {
-      $0.stableAssetID == asset.stableID && FileManager.default.fileExists(atPath: $0.localPath)
+      DownloadPathSafety.matchesExistingDownload(
+        $0, stableAssetID: asset.stableID, projectID: projectID, directory: directory)
+        && FileManager.default.fileExists(atPath: $0.localPath)
     }) {
       let existing = URL(fileURLWithPath: record.localPath)
       states[asset.stableID] = progress(
@@ -121,8 +125,6 @@ final class DownloadManager: NSObject, ObservableObject, URLSessionDownloadDeleg
         status: .failed, detailKey: "download.notAvailable")
       return
     }
-    let directory = DownloadPathSafety.projectDirectory(
-      projectName: projectName, root: destinationRoot ?? AppSettings.downloadRootURL)
     do {
       try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
     } catch {
@@ -132,16 +134,6 @@ final class DownloadManager: NSObject, ObservableObject, URLSessionDownloadDeleg
       return
     }
     let preferred = FileNameSanitizer.fileName(asset: asset, index: segmentIndex)
-    let existing = directory.appendingPathComponent(preferred)
-    if FileManager.default.fileExists(atPath: existing.path) {
-      states[asset.stableID] = progress(
-        asset: asset, projectID: projectID, projectName: projectName, destination: existing,
-        value: 1, status: .completed, detailKey: "download.duplicate", localURL: existing)
-      if let store, !store.downloads.contains(where: { $0.localPath == existing.path }) {
-        store.addDownload(DownloadRecord(asset: asset, fileURL: existing, projectID: projectID))
-      }
-      return
-    }
     let destination = FileNameSanitizer.uniqueURL(in: directory, preferredName: preferred)
     let context = DownloadContext(
       asset: asset, projectID: projectID, projectName: projectName, segmentIndex: segmentIndex,

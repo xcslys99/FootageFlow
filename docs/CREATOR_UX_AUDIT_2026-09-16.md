@@ -9,6 +9,7 @@ This is a hands-on check of the installed macOS v0.12.1 app, followed by an isol
 3. Opened Projects at a normal desktop window size. The old split gave most space to the project list and left the rights audit difficult to reach. The updated build keeps a narrower project list and an independently scrollable detail pane.
 4. Analyzed a public 10-second MP4 in Link Downloader. The updated build showed loading during analysis, allowed selecting a project and temporary destination, and routed the download into the existing Download Manager.
 5. Verified a 969,201-byte H.264 MP4 with a 10-second duration, paired `.source.txt` and `.source.json` files, the selected project name in the sidecar, and the project/download record after relaunch. Unknown rights remained explicitly unknown.
+6. Downloaded that same media into a second isolated project. Both project folders retained their own 969,201-byte file and source sidecars, and Download Manager showed two completed records instead of a misleading global duplicate.
 
 ## Problems fixed in this change
 
@@ -20,6 +21,7 @@ This is a hands-on check of the installed macOS v0.12.1 app, followed by an isol
 | A keyless public Provider returned 403 as “Invalid API key” | Misleading advice to configure a nonexistent key | Classify credentialed and keyless 401/403 separately |
 | Project details were narrow and could not scroll as a whole | Rights review and project tools were hard to use | Fixed-width project list and scrollable details |
 | Link downloads had no visible project choice | Media silently went to Uncategorized | Add a project picker on macOS and Windows |
+| A previous copy of the same asset could block a second project's download | New project was left without its media or source record | Reuse a completed download only within the same project and destination |
 | Pending link analysis said “Thumbnail unavailable” | Loading looked like an error | Show progress until analysis resolves |
 
 ## Validation boundary and remaining issues

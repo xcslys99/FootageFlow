@@ -33,13 +33,34 @@ public sealed class DownloadQueueService
 
     public DownloadTaskItem Enqueue(MediaAsset asset, Guid? projectId, string projectName)
     {
-        var existing = Items.FirstOrDefault(x => x.Asset.StableId == asset.StableId && x.State is not "failed" and not "cancelled");
+        var projectFolder = WindowsPathSafety.SanitizeName(string.IsNullOrWhiteSpace(projectName) ? "Uncategorized" : projectName);
+        var directory = Path.Combine(_settings.Current.DownloadRoot, projectFolder);
+        var existing = Items.FirstOrDefault(x => ShouldReuseExistingTask(x, asset, projectId, directory));
         if (existing is not null) return existing;
         var item = new DownloadTaskItem(asset, projectId, projectName);
         SetState(item, "waiting");
         Items.Insert(0, item);
         _ = RunAsync(item);
         return item;
+    }
+
+    public static bool ShouldReuseExistingTask(
+        DownloadTaskItem existing, MediaAsset asset, Guid? projectId, string directory)
+    {
+        if (!string.Equals(existing.Asset.StableId, asset.StableId, StringComparison.OrdinalIgnoreCase) ||
+            existing.ProjectId != projectId) return false;
+        if (existing.State is "waiting" or "downloading") return true;
+        if (existing.State != "completed" || string.IsNullOrWhiteSpace(existing.LocalPath) ||
+            !File.Exists(existing.LocalPath)) return false;
+        try
+        {
+            var existingDirectory = Path.GetDirectoryName(Path.GetFullPath(existing.LocalPath));
+            return existingDirectory is not null &&
+                string.Equals(existingDirectory.TrimEnd(Path.DirectorySeparatorChar),
+                    Path.GetFullPath(directory).TrimEnd(Path.DirectorySeparatorChar),
+                    StringComparison.OrdinalIgnoreCase);
+        }
+        catch { return false; }
     }
 
     public void Cancel(DownloadTaskItem item)

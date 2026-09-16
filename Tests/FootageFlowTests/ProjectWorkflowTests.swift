@@ -63,6 +63,31 @@ import Foundation
       #expect(!RightsAuditFilter.publicDomain.includes(report.entries[0]))
     }
 
+    @Test("a previous download is reusable only within the same project and destination")
+    func projectScopedDownloadDuplicate() {
+      let firstProject = UUID()
+      let otherProject = UUID()
+      let root = FileManager.default.temporaryDirectory.appendingPathComponent("FootageFlowScope")
+      let firstDirectory = DownloadPathSafety.projectDirectory(projectName: "First", root: root)
+      let otherDirectory = DownloadPathSafety.projectDirectory(projectName: "Second", root: root)
+      let media = asset()
+      let record = DownloadRecord(
+        asset: media, fileURL: firstDirectory.appendingPathComponent("clip.mp4"),
+        projectID: firstProject)
+      #expect(
+        DownloadPathSafety.matchesExistingDownload(
+          record, stableAssetID: media.stableID, projectID: firstProject,
+          directory: firstDirectory))
+      #expect(
+        !DownloadPathSafety.matchesExistingDownload(
+          record, stableAssetID: media.stableID, projectID: otherProject,
+          directory: firstDirectory))
+      #expect(
+        !DownloadPathSafety.matchesExistingDownload(
+          record, stableAssetID: media.stableID, projectID: firstProject,
+          directory: otherDirectory))
+    }
+
     @Test("portable backup redacts metadata and imports as a separate project without local paths")
     func portableRoundTrip() throws {
       let privatePath = ["", "Users", "alice", "Private", "script.md"].joined(separator: "/")
