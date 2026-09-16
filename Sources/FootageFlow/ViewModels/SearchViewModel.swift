@@ -170,7 +170,7 @@ final class SearchViewModel: ObservableObject {
   /// Restores visible filters without discarding the query, its keyword plan,
   /// project selection, or loaded results.
   func clearFilters() {
-    let shouldRefreshMedia = Self.shouldRefreshMediaTypeSearch(
+    let shouldRefreshMedia = MediaSearchRefreshPolicy.requiresNewSearch(
       previousRequest: requestedMediaType, selected: .video,
       scope: searchScope, query: query)
     mediaType = .video
@@ -197,20 +197,12 @@ final class SearchViewModel: ObservableObject {
   func selectMediaType(_ value: MediaType) {
     guard mediaType != value else { return }
     mediaType = value
-    if Self.shouldRefreshMediaTypeSearch(
+    if MediaSearchRefreshPolicy.requiresNewSearch(
       previousRequest: requestedMediaType, selected: value,
       scope: searchScope, query: query)
     {
       search()
     }
-  }
-
-  nonisolated static func shouldRefreshMediaTypeSearch(
-    previousRequest: MediaType?, selected: MediaType,
-    scope: SearchScope, query: String
-  ) -> Bool {
-    previousRequest != nil && previousRequest != selected && scope != .research
-      && !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
   }
 
   func savedSearch(named name: String) -> SavedSearchRecord {

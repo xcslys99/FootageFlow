@@ -8,6 +8,16 @@ enum SearchQueryOrigin: String, Codable, Hashable, Sendable {
   case userAdded
 }
 
+enum MediaSearchRefreshPolicy {
+  static func requiresNewSearch(
+    previousRequest: MediaType?, selected: MediaType,
+    scope: SearchScope, query: String
+  ) -> Bool {
+    previousRequest != nil && previousRequest != selected && scope != .research
+      && !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+  }
+}
+
 struct SearchKeyword: Identifiable, Codable, Hashable, Sendable {
   var id: UUID = UUID()
   var text: String

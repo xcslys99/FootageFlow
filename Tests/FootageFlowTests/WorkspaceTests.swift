@@ -111,22 +111,22 @@ struct WorkspaceTests {
   @Test("media type changes refresh only after a media search has been submitted")
   func mediaTypeRefreshDecision() {
     #expect(
-      !SearchViewModel.shouldRefreshMediaTypeSearch(
+      !MediaSearchRefreshPolicy.requiresNewSearch(
         previousRequest: nil, selected: .image, scope: .media, query: "Xi'an food"))
     #expect(
-      SearchViewModel.shouldRefreshMediaTypeSearch(
+      MediaSearchRefreshPolicy.requiresNewSearch(
         previousRequest: .video, selected: .image, scope: .media, query: "Xi'an food"))
     #expect(
-      SearchViewModel.shouldRefreshMediaTypeSearch(
+      MediaSearchRefreshPolicy.requiresNewSearch(
         previousRequest: .image, selected: .video, scope: .all, query: "Xi'an food"))
     #expect(
-      !SearchViewModel.shouldRefreshMediaTypeSearch(
+      !MediaSearchRefreshPolicy.requiresNewSearch(
         previousRequest: .video, selected: .video, scope: .media, query: "Xi'an food"))
     #expect(
-      !SearchViewModel.shouldRefreshMediaTypeSearch(
+      !MediaSearchRefreshPolicy.requiresNewSearch(
         previousRequest: .video, selected: .image, scope: .research, query: "Xi'an food"))
     #expect(
-      !SearchViewModel.shouldRefreshMediaTypeSearch(
+      !MediaSearchRefreshPolicy.requiresNewSearch(
         previousRequest: .video, selected: .image, scope: .media, query: "  "))
   }
 
