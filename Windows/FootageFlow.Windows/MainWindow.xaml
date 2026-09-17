@@ -89,7 +89,7 @@
           <StackPanel Grid.Row="1" Margin="12">
             <TextBlock Text="{Binding Title}" FontWeight="SemiBold" FontSize="14" TextWrapping="Wrap" MaxHeight="42" />
             <TextBlock Margin="0,7,0,0" Foreground="{StaticResource SubtleTextBrush}">
-              <Run Text="{Binding SourceDisplayName}" /><Run Text="  ·  " /><Run Text="{Binding Resolution}" /><Run Text="  ·  " /><Run Text="{Binding DurationText}" />
+              <Run Text="{Binding SourceDisplayName, Mode=OneWay}" /><Run Text="  ·  " /><Run Text="{Binding Resolution, Mode=OneWay}" /><Run Text="  ·  " /><Run Text="{Binding DurationText, Mode=OneWay}" />
             </TextBlock>
             <TextBlock Text="{Binding Creator}" Foreground="{StaticResource SubtleTextBrush}" TextTrimming="CharacterEllipsis" Margin="0,3,0,0" />
             <TextBlock Foreground="{StaticResource SubtleTextBrush}" TextTrimming="CharacterEllipsis" Margin="0,3,0,8">
@@ -350,7 +350,7 @@
                       <Border Width="340" Background="White" BorderBrush="#E1E5EA" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,12,12">
                         <StackPanel>
                           <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextWrapping="Wrap" MaxHeight="45" />
-                          <TextBlock Foreground="{StaticResource SubtleTextBrush}" Margin="0,5,0,0"><Run Text="{Binding Source}" /><Run Text=" · " /><Run Text="{Binding Type}" /><Run Text="  " /><Run Text="{Binding Year}" /></TextBlock>
+                          <TextBlock Foreground="{StaticResource SubtleTextBrush}" Margin="0,5,0,0"><Run Text="{Binding Source, Mode=OneWay}" /><Run Text=" · " /><Run Text="{Binding Type, Mode=OneWay}" /><Run Text="  " /><Run Text="{Binding Year, Mode=OneWay}" /></TextBlock>
                           <TextBlock Text="{Binding Summary}" Foreground="{StaticResource SubtleTextBrush}" TextWrapping="Wrap" MaxHeight="60" Margin="0,6,0,0" />
                           <TextBlock Text="{Binding Citation}" Foreground="{StaticResource SubtleTextBrush}" TextWrapping="Wrap" MaxHeight="42" FontSize="11" Margin="0,6,0,0" />
                           <WrapPanel Margin="0,9,0,0">
@@ -517,7 +517,7 @@
                       <Border Background="#F7F9FC" BorderBrush="#E1E5EA" BorderThickness="1" CornerRadius="7" Padding="9" Margin="0,0,0,7">
                         <StackPanel>
                           <TextBlock Text="{Binding Record.Title}" FontWeight="SemiBold" TextWrapping="Wrap" />
-                          <TextBlock Foreground="{StaticResource SubtleTextBrush}"><Run Text="{Binding Record.Source}" /><Run Text=" · " /><Run Text="{Binding Record.Type}" /></TextBlock>
+                          <TextBlock Foreground="{StaticResource SubtleTextBrush}"><Run Text="{Binding Record.Source, Mode=OneWay}" /><Run Text=" · " /><Run Text="{Binding Record.Type, Mode=OneWay}" /></TextBlock>
                           <TextBlock Text="{Binding Record.Citation}" Foreground="{StaticResource SubtleTextBrush}" TextWrapping="Wrap" FontSize="11" Margin="0,4,0,0" />
                           <TextBox Text="{Binding MyNote, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="52" Margin="0,6,0,0" />
                           <TextBox Text="{Binding TagsText, UpdateSourceTrigger=PropertyChanged}" ToolTip="{Binding DataContext.ResearchTagsText, RelativeSource={RelativeSource AncestorType=Window}}" Margin="0,5,0,0" />
