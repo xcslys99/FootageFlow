@@ -16,6 +16,13 @@ void Check(bool condition, string name)
 
 Check(new AppSettingsModel().Language == "en", "English is the first-launch default");
 Check(new AppSettingsModel().SearchRelevanceMode == "balanced", "Balanced relevance is the default");
+Check(new AppSettingsModel().DetectSearchDuplicates && new AppSettingsModel().CollapseDuplicateGroups,
+      "Duplicate review and collapsed groups default on");
+Check(DuplicateThumbnailHashService.DifferenceHash(Enumerable.Repeat((byte)128, 72).ToArray()) is null,
+      "Blank thumbnail is not visual duplicate evidence");
+Check(DuplicateThumbnailHashService.DifferenceHash(
+          Enumerable.Range(0, 72).Select(index => (byte)(240 - (index % 9) * 20)).ToArray()) == ulong.MaxValue,
+      "Windows thumbnail dHash samples the 9 by 8 grid");
 Check(new AppSettingsModel().EnabledProviders.Count == 22, "Twenty-two providers enabled by default");
 Check(new AppSettingsModel().EnabledProviders.Contains("dareful") &&
       new AppSettingsModel().EnabledProviders.Contains("esa") &&
@@ -62,6 +69,11 @@ try
         Check(new[] { "provider.limitedDiscoveryMessage", "provider.limitedSourcesSummary",
                       "error.accessRestricted" }.All(key => localization.Text(key) != key),
               $"Windows {language.Code} creator UX messages");
+        Check(new[] { "duplicate.exact", "duplicate.likely", "duplicate.possible",
+                      "duplicate.summary", "duplicate.groupTitle", "duplicate.allResults",
+                      "duplicate.recommendedVersion", "duplicate.detectSetting" }
+              .All(key => localization.Text(key) != key),
+              $"Windows {language.Code} duplicate review localization");
     }
     localization.SetLanguage("ru");
     settings.Save();
@@ -390,6 +402,25 @@ if (OperatingSystem.IsWindows())
         });
         Check(ranked.Assets?.Count == 1 && ranked.Assets[0].Id == "food",
             "Windows uses the shared concept relevance ranker");
+        var duplicateAssets = new[]
+        {
+            new MediaAsset { Id = "one", Provider = "wikimedia", Title = "Berlin historic skyline night",
+                SourcePageURL = "https://example.org/berlin?utm_source=feed", Creator = "Museum",
+                LicenseStatus = "UNKNOWN", Duration = 42, MediaType = "video" },
+            new MediaAsset { Id = "two", Provider = "internetArchive", Title = "Berlin historic skyline night",
+                SourcePageURL = "https://example.org/berlin", Creator = "Museum",
+                LicenseStatus = "PUBLIC_DOMAIN", Duration = 42, MediaType = "video" }
+        };
+        var duplicateReview = await core.SendAsync(new CoreRequest
+        {
+            Action = "analyzeSearchDuplicates", Assets = duplicateAssets, Language = "en"
+        });
+        Check(duplicateReview.SearchDuplicateReview is { UniqueCount: 1, ResultCount: 2 } &&
+              duplicateReview.SearchDuplicateReview.Groups.Single().Confidence == "exact",
+              "Windows receives shared cross-provider exact duplicate groups");
+        Check(duplicateAssets[0].LicenseStatus == "UNKNOWN" &&
+              duplicateAssets[1].LicenseStatus == "PUBLIC_DOMAIN",
+              "Windows search duplicate review preserves per-source rights");
         var attribution = await core.SendAsync(new CoreRequest { Action = "formatAttribution", Asset = media });
         Check(attribution.Text?.Contains("CC BY", StringComparison.Ordinal) == true,
             "Shared attribution formatter");

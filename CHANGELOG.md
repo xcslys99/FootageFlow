@@ -4,6 +4,17 @@ All notable FootageFlow changes are documented here.
 
 ## Unreleased
 
+### Smart Duplicate Review (v0.13.0 candidate)
+
+- Added cross-provider search-result duplicate groups while preserving every original result and its individual rights, source, and actions
+- Reused the existing project URL canonicalization and duplicate evidence normalization, and retained cross-provider search hits previously dropped before review
+- Added exact, likely, and possible evidence levels; a recommended version is selected for workflow convenience only, never as legal advice
+- Added bounded, local thumbnail dHash analysis after the initial results appear, with metadata-only fallback on decoding or network failure
+- Added Grouped / All Results controls, default-on detection and collapse settings, and ten-language labels for macOS and Windows
+- Added fixed duplicate fixtures, false-positive checks, rights-isolation tests, and 100/500/1000-result performance coverage
+
+This candidate is not a published GitHub Release. The latest stable download remains v0.12.1 until a separately approved release.
+
 ### Creator workflow usability
 
 - Switching a completed media search between Video, Image, Audio, and All now requests the newly selected media type instead of displaying a false empty result set

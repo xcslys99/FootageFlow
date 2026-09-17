@@ -17,4 +17,6 @@ public sealed class AppSettingsModel
     public bool SmartSearchExpansionEnabled { get; set; } = true;
     public string SearchRelevanceMode { get; set; } = "balanced";
     public bool ClipboardMediaLinkDetectionEnabled { get; set; }
+    public bool DetectSearchDuplicates { get; set; } = true;
+    public bool CollapseDuplicateGroups { get; set; } = true;
 }

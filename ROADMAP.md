@@ -35,6 +35,15 @@ Roadmap items are intentions, not promises. Provider policies, platform rules, a
 
 ## Current Priorities
 
+### v0.13.0 — Smart Duplicate Review (in development)
+
+- Cross-provider search-result grouping after the existing relevance and filter gates, with all original cards retained
+- Shared deterministic and corroborated-metadata evidence, plus bounded local thumbnail dHash as a background enhancement
+- Grouped/All Results controls, default-on detection, a recommended version for workflow convenience, and ten-language accessibility labels
+- macOS and Windows regression, packaging, and manual screen-reader verification before a release
+
+This is not a published release. A suggested version never conveys rights from one Provider to another.
+
 ### Accessibility & Keyboard Navigation ([#19](https://github.com/xcslys99/FootageFlow/issues/19))
 
 v0.10.0 provided the first cross-platform accessibility and keyboard-navigation foundation. v0.12.0 completes the planned keyboard paths and semantic coverage:

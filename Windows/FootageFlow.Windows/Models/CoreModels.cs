@@ -23,6 +23,7 @@ public sealed class CoreRequest
     public string? Language { get; init; }
     public MediaAsset? Asset { get; init; }
     public IReadOnlyList<MediaAsset>? Assets { get; init; }
+    public IReadOnlyDictionary<string, ulong>? ThumbnailHashes { get; init; }
     public string? RelevanceMode { get; init; }
     public string? MediaPath { get; init; }
     public string? ProjectName { get; init; }
@@ -68,6 +69,7 @@ public sealed class CoreResponse
     public IReadOnlyList<ProviderDescriptor>? Providers { get; init; }
     public IReadOnlyList<ProviderBatch>? ProviderBatches { get; init; }
     public IReadOnlyList<MediaAsset>? Assets { get; init; }
+    public SearchDuplicateReview? SearchDuplicateReview { get; init; }
     public IReadOnlyList<SearchKeyword>? Keywords { get; init; }
     public IReadOnlyList<string>? Segments { get; init; }
     public PersistentDatabase? Database { get; init; }
