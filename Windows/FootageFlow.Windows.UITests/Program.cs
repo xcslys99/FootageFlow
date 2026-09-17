@@ -106,9 +106,11 @@ try
         "Expanded group reveals its other original media card");
     Check(known.LicenseStatus == "ATTRIBUTION_REQUIRED" && unknown.LicenseStatus == "UNKNOWN",
         "Known rights never overwrite the alternative source unknown rights");
-    Check(Descendants<ContentControl>(window).Any(value => ReferenceEquals(value.Content, known)) &&
-          Descendants<ContentControl>(window).Any(value => ReferenceEquals(value.Content, unknown)),
-        "Both versions render the original asset card template");
+    bool RendersAsset(MediaAsset asset) =>
+        Descendants<ContentPresenter>(window).Any(value => ReferenceEquals(value.Content, asset)) ||
+        Descendants<ContentControl>(window).Any(value => ReferenceEquals(value.Content, asset));
+    Check(RendersAsset(known) && RendersAsset(unknown),
+        "Both versions render as original media cards");
 
     var allResults = Descendants<CheckBox>(window).FirstOrDefault(value =>
         value.Content?.ToString() == "All Results");
