@@ -23,6 +23,7 @@ public sealed class CoreRequest
     public string? Language { get; init; }
     public MediaAsset? Asset { get; init; }
     public IReadOnlyList<MediaAsset>? Assets { get; init; }
+    public IReadOnlyDictionary<string, ulong>? ThumbnailHashes { get; init; }
     public string? RelevanceMode { get; init; }
     public string? MediaPath { get; init; }
     public string? ProjectName { get; init; }
@@ -68,6 +69,7 @@ public sealed class CoreResponse
     public IReadOnlyList<ProviderDescriptor>? Providers { get; init; }
     public IReadOnlyList<ProviderBatch>? ProviderBatches { get; init; }
     public IReadOnlyList<MediaAsset>? Assets { get; init; }
+    public SearchDuplicateReview? SearchDuplicateReview { get; init; }
     public IReadOnlyList<SearchKeyword>? Keywords { get; init; }
     public IReadOnlyList<string>? Segments { get; init; }
     public PersistentDatabase? Database { get; init; }
@@ -411,7 +413,8 @@ public sealed class MediaAsset : ObservableObject
     public string? DownloadAvailability { get; init; }
     [JsonIgnore] public bool IsSelected { get => _isSelected; set => Set(ref _isSelected, value); }
 
-    [JsonIgnore] public string StableId => $"{Provider}:{Id}";
+    [JsonIgnore] public string StableId => OriginalMetadata.TryGetValue("workflowVariantID", out var variant)
+        ? $"{Provider}:{Id}:{variant}" : $"{Provider}:{Id}";
     [JsonIgnore] public IReadOnlyList<string> EffectiveThumbnailURLs => ThumbnailUrlNormalizer.Normalize(
         Provider,
         new[] { ThumbnailURL }

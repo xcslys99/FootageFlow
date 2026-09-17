@@ -46,15 +46,10 @@ struct QuickSearchView: View {
                 Text(tr("search.scope.media")).font(.headline).frame(
                   maxWidth: .infinity, alignment: .leading)
               }
-              LazyVGrid(columns: columns, alignment: .leading, spacing: 14) {
-                ForEach(viewModel.filteredAssets) { asset in
-                  MediaAssetCard(
-                    asset: asset, projectID: viewModel.currentProjectID, segmentIndex: nil,
-                    isSelected: selection.contains(asset),
-                    onToggleSelection: { selection.toggle($0) }
-                  ) { PreviewWindowManager.shared.show($0) }
-                }
-              }
+              SearchDuplicateResultsView(
+                assets: viewModel.filteredAssets, projectID: viewModel.currentProjectID,
+                selectedIDs: selection.stableIDs,
+                onToggleSelection: { selection.toggle($0) })
             }
             if viewModel.searchScope != .media {
               if viewModel.searchScope == .all {

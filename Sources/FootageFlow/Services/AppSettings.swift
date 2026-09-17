@@ -6,6 +6,8 @@ enum AppSettings {
   static let smartExpansionKey = "smartSearchExpansionEnabled"
   static let searchRelevanceModeKey = "searchRelevanceMode"
   static let clipboardDetectionKey = "clipboardMediaLinkDetectionEnabled"
+  static let detectSearchDuplicatesKey = "detectSearchDuplicates"
+  static let collapseDuplicateGroupsKey = "collapseDuplicateGroups"
   private static let obsoleteDeferredUpdateVersionKey = "deferredUpdateVersion"
   private static let obsoleteDeferredUpdateUntilKey = "deferredUpdateUntil"
   private static let migrationKey = "didMigrateFootageFinderSettings"

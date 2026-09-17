@@ -1114,7 +1114,9 @@ struct DuplicateGroup: Identifiable, Codable, Hashable {
 }
 
 enum URLCanonicalizer {
-  private static let trackingPrefixes = ["utm_", "ref", "source", "fbclid", "gclid"]
+  // `ref` and `source` can be content selectors on archive sites. Only strip
+  // unambiguous tracking parameters; a false exact match is worse than a miss.
+  private static let trackingPrefixes = ["utm_", "fbclid", "gclid"]
 
   static func canonical(_ url: URL?) -> String? {
     guard var components = url.flatMap({ URLComponents(url: $0, resolvingAgainstBaseURL: false) }),
@@ -1132,6 +1134,9 @@ enum URLCanonicalizer {
       let name = item.name.lowercased()
       return !trackingPrefixes.contains { prefix in name == prefix || name.hasPrefix(prefix) }
     }.sorted { $0.name < $1.name }
+    if components.percentEncodedQueryItems?.isEmpty == true {
+      components.percentEncodedQueryItems = nil
+    }
     return components.string
   }
 }
@@ -1190,11 +1195,8 @@ enum DuplicateDetectionEngine {
           displayReason: displayReason(.sameSHA256)))
     }
     let metadataKeys = Dictionary(grouping: items) { item in
-      let title = item.title.folding(
-        options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
-      let creator =
-        item.creator?.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
-        ?? ""
+      let title = DuplicateEvidenceNormalizer.folded(item.title)
+      let creator = DuplicateEvidenceNormalizer.folded(item.creator ?? "")
       let duration = item.duration.map { String(Int($0.rounded())) } ?? ""
       let dimensions = "\(item.width ?? 0)x\(item.height ?? 0)"
       return "\(title)|\(creator)|\(duration)|\(dimensions)"

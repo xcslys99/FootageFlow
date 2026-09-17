@@ -28,6 +28,7 @@ Roadmap items are intentions, not promises. Provider policies, platform rules, a
 - Credits generation and provider-reported rights audit
 - Portable `.footageflowproject` backup and cross-platform import
 - Local-first duplicate detection with user decisions and lazy SHA-256
+- Search-result Smart Duplicate Review with grouped/all-result views and bounded local thumbnail matching
 - PNG contact-sheet generation
 - Research & Culture workspace: Media / Research / All, references, notes, citations, and related-media discovery
 - Workspace dashboard, local-only Global Search, Saved Searches, Smart Collections, Provider Health, Command Palette, and keyboard/accessibility improvements
@@ -54,6 +55,14 @@ v0.12.1 fixes a compound-query regression without changing Provider, download, p
 - Default **Balanced** relevance requires metadata evidence for every required concept; **Broad** remains the explicit weak-related-results mode
 
 ## Planned Feature Releases
+
+### v0.13.0 — Smart Duplicate Review
+
+Delivered in v0.13.0:
+
+- Cross-provider search-result grouping after relevance and filters, preserving every original result and its own rights
+- Shared exact/likely/possible evidence and bounded local thumbnail dHash, with metadata-only fallback
+- Grouped / All Results controls, a workflow-only recommended version, and ten-language macOS/Windows UI
 
 ### v0.12.1 — Compound Search Relevance Fix
 

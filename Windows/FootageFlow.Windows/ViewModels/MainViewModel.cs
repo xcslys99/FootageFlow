@@ -67,6 +67,9 @@ public sealed class MainViewModel : ObservableObject
     private string _workspaceStatus = "";
     private CancellationTokenSource? _workspaceSearchCancellation;
     private static readonly SemaphoreSlim SearchNetworkLimit = new(12, 12);
+    private CancellationTokenSource? _duplicateCancellation;
+    private bool _showAllDuplicateResults;
+    private string _searchDuplicateSummary = "";
 
     public MainViewModel()
     {
@@ -79,6 +82,7 @@ public sealed class MainViewModel : ObservableObject
         Downloads.DownloadCompleted += (_, _) => _ = LoadDatabaseAsync();
         ResultsView = CollectionViewSource.GetDefaultView(Results);
         ResultsView.Filter = value => value is MediaAsset asset && MatchesFilters(asset);
+        _showAllDuplicateResults = !_settings.Current.CollapseDuplicateGroups;
         ApplySort();
         SearchKeywordsView = CollectionViewSource.GetDefaultView(SearchKeywords);
         SearchKeywordsView.Filter = value => value is SearchKeyword keyword &&
@@ -112,6 +116,8 @@ public sealed class MainViewModel : ObservableObject
                 else _settings.Current.EnabledProviders.Remove(provider.Id);
                 _settings.Save();
                 ResultsView.Refresh();
+                ScheduleDuplicateReview();
+                OnPropertyChanged(nameof(SourceFilterTitle));
             };
         ResearchProviders = new ObservableCollection<ProviderOption>(new[]
         {
@@ -274,6 +280,52 @@ public sealed class MainViewModel : ObservableObject
     public ObservableCollection<string> ScriptSegments { get; } = [];
     public ObservableCollection<LinkDownloadItem> LinkItems { get; } = [];
     public ObservableCollection<DuplicateGroup> DuplicateGroups { get; } = [];
+    public ObservableCollection<SearchDuplicateDisplayItem> SearchDuplicateItems { get; } = [];
+    public string SearchDuplicateSummary
+    {
+        get => _searchDuplicateSummary;
+        private set => Set(ref _searchDuplicateSummary, value);
+    }
+    public bool HasDuplicateGroups => HasMediaSearchScope && SearchDuplicateItems.Any(item => item.IsGroup);
+    public bool HasGroupedDuplicateView => DetectSearchDuplicates && HasDuplicateGroups && !ShowAllDuplicateResults;
+    public bool ShowAllDuplicateResults
+    {
+        get => _showAllDuplicateResults;
+        set
+        {
+            if (!Set(ref _showAllDuplicateResults, value)) return;
+            OnPropertyChanged(nameof(HasGroupedDuplicateView));
+        }
+    }
+    public bool DetectSearchDuplicates
+    {
+        get => _settings.Current.DetectSearchDuplicates;
+        set
+        {
+            if (_settings.Current.DetectSearchDuplicates == value) return;
+            _settings.Current.DetectSearchDuplicates = value;
+            _settings.Save();
+            OnPropertyChanged();
+            ScheduleDuplicateReview();
+        }
+    }
+    public bool CollapseDuplicateGroups
+    {
+        get => _settings.Current.CollapseDuplicateGroups;
+        set
+        {
+            if (_settings.Current.CollapseDuplicateGroups == value) return;
+            _settings.Current.CollapseDuplicateGroups = value;
+            _settings.Save();
+            OnPropertyChanged();
+            ShowAllDuplicateResults = !value;
+        }
+    }
+    public string DuplicateSettingsTitle => T("duplicate.settingsTitle");
+    public string DuplicateDetectSettingText => T("duplicate.detectSetting");
+    public string DuplicateCollapseSettingText => T("duplicate.collapseSetting");
+    public string DuplicateSettingsDetail => T("duplicate.settingsDetail");
+    public string DuplicateAllResultsText => T("duplicate.allResults");
     public ObservableCollection<SavedSearchRecord> SavedSearches { get; } = [];
     public ObservableCollection<ProviderHealthRecord> ProviderHealth { get; } = [];
     public ObservableCollection<WorkspaceSearchEntry> WorkspaceSearchResults { get; } = [];
@@ -417,6 +469,8 @@ public sealed class MainViewModel : ObservableObject
             OnPropertyChanged(nameof(IsAllSearchScope));
             OnPropertyChanged(nameof(HasMediaSearchScope));
             OnPropertyChanged(nameof(HasResearchSearchScope));
+            OnPropertyChanged(nameof(HasDuplicateGroups));
+            OnPropertyChanged(nameof(HasGroupedDuplicateView));
         }
     }
     public bool IsMediaSearchScope => SearchScope == "media";
@@ -464,6 +518,7 @@ public sealed class MainViewModel : ObservableObject
         {
             if (!Set(ref _mediaType, value)) return;
             ResultsView.Refresh();
+            ScheduleDuplicateReview();
             if (_suppressMediaTypeSearch || _lastRequestedMediaType is null ||
                 SearchScope == "research" || string.IsNullOrWhiteSpace(Query)) return;
             if (IsSearching)
@@ -474,13 +529,13 @@ public sealed class MainViewModel : ObservableObject
             else _ = SearchAsync();
         }
     }
-    public string Orientation { get => _orientation; set { if (Set(ref _orientation, value)) ResultsView.Refresh(); } }
-    public string Resolution { get => _resolution; set { if (Set(ref _resolution, value)) ResultsView.Refresh(); } }
-    public string Duration { get => _duration; set { if (Set(ref _duration, value)) ResultsView.Refresh(); } }
-    public string LicenseFilter { get => _licenseFilter; set { if (Set(ref _licenseFilter, value)) ResultsView.Refresh(); } }
-    public string YearFrom { get => _yearFrom; set { if (Set(ref _yearFrom, Digits(value))) ResultsView.Refresh(); } }
-    public string YearTo { get => _yearTo; set { if (Set(ref _yearTo, Digits(value))) ResultsView.Refresh(); } }
-    public bool DownloadableOnly { get => _downloadableOnly; set { if (Set(ref _downloadableOnly, value)) ResultsView.Refresh(); } }
+    public string Orientation { get => _orientation; set { if (Set(ref _orientation, value)) { ResultsView.Refresh(); ScheduleDuplicateReview(); } } }
+    public string Resolution { get => _resolution; set { if (Set(ref _resolution, value)) { ResultsView.Refresh(); ScheduleDuplicateReview(); } } }
+    public string Duration { get => _duration; set { if (Set(ref _duration, value)) { ResultsView.Refresh(); ScheduleDuplicateReview(); } } }
+    public string LicenseFilter { get => _licenseFilter; set { if (Set(ref _licenseFilter, value)) { ResultsView.Refresh(); ScheduleDuplicateReview(); } } }
+    public string YearFrom { get => _yearFrom; set { if (Set(ref _yearFrom, Digits(value))) { ResultsView.Refresh(); ScheduleDuplicateReview(); } } }
+    public string YearTo { get => _yearTo; set { if (Set(ref _yearTo, Digits(value))) { ResultsView.Refresh(); ScheduleDuplicateReview(); } } }
+    public bool DownloadableOnly { get => _downloadableOnly; set { if (Set(ref _downloadableOnly, value)) { ResultsView.Refresh(); ScheduleDuplicateReview(); } } }
     public bool SmartExpansionEnabled
     {
         get => _settings.Current.SmartSearchExpansionEnabled;
@@ -541,6 +596,7 @@ public sealed class MainViewModel : ObservableObject
         {
             if (!Set(ref _sort, value)) return;
             ApplySort();
+            ScheduleDuplicateReview();
         }
     }
     public ProjectRecord? CurrentProject
@@ -642,7 +698,7 @@ public sealed class MainViewModel : ObservableObject
         get
         {
             var version = typeof(MainViewModel).Assembly.GetName().Version;
-            return version is null ? "0.12.1" : $"{version.Major}.{version.Minor}.{Math.Max(0, version.Build)}";
+            return version is null ? "0.13.0" : $"{version.Major}.{version.Minor}.{Math.Max(0, version.Build)}";
         }
     }
     public bool IsUpdateChecking
@@ -753,6 +809,7 @@ public sealed class MainViewModel : ObservableObject
     public string WorkspaceRenameText => T("workspace.rename");
     public string WorkspaceDuplicateText => T("workspace.duplicate");
     public string SourcesTitle => T("settings.sourcesProviders");
+    public string SourceFilterTitle => $"{T("filter.source")} ({Providers.Count(value => value.Enabled)}/{Providers.Count})";
     public string ResearchSourcesTitle => $"{SearchScopeResearchText} {T("filter.source")}";
     public string ApiExplanation => T("settings.optionalAPIExplanation");
     public string PrivacyTitle => T("settings.privacy");
@@ -1442,6 +1499,114 @@ public sealed class MainViewModel : ObservableObject
         }
         SelectedCount = Results.Count(asset => asset.IsSelected);
         ResultsView.Refresh();
+        ScheduleDuplicateReview();
+    }
+
+    private void ScheduleDuplicateReview()
+    {
+        _duplicateCancellation?.Cancel();
+        _duplicateCancellation = null;
+        SearchDuplicateItems.Clear();
+        SearchDuplicateSummary = "";
+        OnPropertyChanged(nameof(HasDuplicateGroups));
+        OnPropertyChanged(nameof(HasGroupedDuplicateView));
+        if (!DetectSearchDuplicates) return;
+        var snapshot = ResultsView.Cast<MediaAsset>().ToArray();
+        if (snapshot.Length < 2) return;
+        var cancellation = new CancellationTokenSource();
+        _duplicateCancellation = cancellation;
+        _ = AnalyzeSearchDuplicatesAsync(snapshot, cancellation);
+    }
+
+    private async Task AnalyzeSearchDuplicatesAsync(
+        MediaAsset[] snapshot, CancellationTokenSource cancellation)
+    {
+        var metadataApplied = false;
+        try
+        {
+            // Render the ungrouped results first; never hold up search or filtering.
+            await Task.Delay(120, cancellation.Token);
+            var response = await _core.SendAsync(new CoreRequest
+            {
+                Action = "analyzeSearchDuplicates", Assets = snapshot,
+                Language = _settings.Current.Language
+            }, cancellationToken: cancellation.Token);
+            if (cancellation.IsCancellationRequested || response.SearchDuplicateReview is not { } review)
+                return;
+            ApplySearchDuplicateReview(snapshot, review);
+            metadataApplied = true;
+            if (review.ThumbnailCandidateIDs.Count == 0) return;
+            var hashes = await DuplicateThumbnailHashService.Shared.HashesAsync(
+                snapshot, review.ThumbnailCandidateIDs, cancellation.Token);
+            if (cancellation.IsCancellationRequested || hashes.Count == 0) return;
+            var visualResponse = await _core.SendAsync(new CoreRequest
+            {
+                Action = "analyzeSearchDuplicates", Assets = snapshot,
+                ThumbnailHashes = hashes, Language = _settings.Current.Language
+            }, cancellationToken: cancellation.Token);
+            if (!cancellation.IsCancellationRequested && visualResponse.SearchDuplicateReview is { } visualReview)
+                ApplySearchDuplicateReview(snapshot, visualReview);
+        }
+        catch (OperationCanceledException) { }
+        catch
+        {
+            // Review is optional. The original ResultsView stays available on any failure.
+            if (!cancellation.IsCancellationRequested && !metadataApplied)
+            {
+                SearchDuplicateItems.Clear();
+                SearchDuplicateSummary = "";
+                OnPropertyChanged(nameof(HasDuplicateGroups));
+                OnPropertyChanged(nameof(HasGroupedDuplicateView));
+            }
+        }
+        finally
+        {
+            if (ReferenceEquals(_duplicateCancellation, cancellation)) _duplicateCancellation = null;
+            cancellation.Dispose();
+        }
+    }
+
+    private void ApplySearchDuplicateReview(MediaAsset[] snapshot, SearchDuplicateReview review)
+    {
+        if (review.Groups.Count == 0)
+        {
+            SearchDuplicateItems.Clear();
+            SearchDuplicateSummary = "";
+            OnPropertyChanged(nameof(HasDuplicateGroups));
+            OnPropertyChanged(nameof(HasGroupedDuplicateView));
+            return;
+        }
+        var expanded = SearchDuplicateItems.Where(item => item.IsGroup && item.Expanded)
+            .Select(item => item.Id).ToHashSet(StringComparer.Ordinal);
+        var byId = snapshot.ToDictionary(asset => asset.StableId, StringComparer.Ordinal);
+        SearchDuplicateItems.Clear();
+        foreach (var entry in review.Entries)
+        {
+            if (!byId.TryGetValue(entry.RecommendedID, out var recommended)) continue;
+            var item = new SearchDuplicateDisplayItem { Id = entry.Id, Recommended = recommended,
+                RecommendedLabel = T("duplicate.recommendedVersion"),
+                Expanded = expanded.Contains(entry.Id) || !_settings.Current.CollapseDuplicateGroups };
+            foreach (var id in entry.MemberIDs)
+                if (id != entry.RecommendedID && byId.TryGetValue(id, out var other))
+                    item.OtherVersions.Add(other);
+            if (item.IsGroup)
+            {
+                var confidence = entry.Confidence switch
+                {
+                    "exact" => T("duplicate.exact"),
+                    "likely" => T("duplicate.likely"),
+                    _ => T("duplicate.possible")
+                };
+                item.Header = _localization.Text("duplicate.groupTitle", confidence, entry.MemberIDs.Count);
+            }
+            SearchDuplicateItems.Add(item);
+        }
+        SearchDuplicateSummary = HasDuplicateGroups
+            ? _localization.Text("duplicate.summary", review.ResultCount,
+                review.UniqueCount, review.Groups.Count)
+            : "";
+        OnPropertyChanged(nameof(HasDuplicateGroups));
+        OnPropertyChanged(nameof(HasGroupedDuplicateView));
     }
 
     private async Task ToggleFavoriteAsync(MediaAsset? asset)
@@ -2565,6 +2730,7 @@ public sealed class MainViewModel : ObservableObject
         SearchStatus = T("search.initialStatus");
         if (CurrentProject is not null && !IsProjectWorking)
             _ = RefreshLocalizedProjectDetailsAsync();
+        ScheduleDuplicateReview();
     }
 
     private async Task RefreshLocalizedProjectDetailsAsync()

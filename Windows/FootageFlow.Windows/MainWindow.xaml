@@ -89,7 +89,7 @@
           <StackPanel Grid.Row="1" Margin="12">
             <TextBlock Text="{Binding Title}" FontWeight="SemiBold" FontSize="14" TextWrapping="Wrap" MaxHeight="42" />
             <TextBlock Margin="0,7,0,0" Foreground="{StaticResource SubtleTextBrush}">
-              <Run Text="{Binding SourceDisplayName}" /><Run Text="  ·  " /><Run Text="{Binding Resolution}" /><Run Text="  ·  " /><Run Text="{Binding DurationText}" />
+              <Run Text="{Binding SourceDisplayName, Mode=OneWay}" /><Run Text="  ·  " /><Run Text="{Binding Resolution, Mode=OneWay}" /><Run Text="  ·  " /><Run Text="{Binding DurationText, Mode=OneWay}" />
             </TextBlock>
             <TextBlock Text="{Binding Creator}" Foreground="{StaticResource SubtleTextBrush}" TextTrimming="CharacterEllipsis" Margin="0,3,0,0" />
             <TextBlock Foreground="{StaticResource SubtleTextBrush}" TextTrimming="CharacterEllipsis" Margin="0,3,0,8">
@@ -243,12 +243,16 @@
               </ComboBox>
               <Button Content="{Binding ClearFiltersText}" Command="{Binding ClearFiltersCommand}" />
             </WrapPanel>
-            <ItemsControl ItemsSource="{Binding Providers}" Margin="0,8,0,0">
-              <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
-              <ItemsControl.ItemTemplate>
-                <DataTemplate><StackPanel Orientation="Horizontal" Margin="0,0,16,0"><CheckBox Content="{Binding DisplayName}" IsChecked="{Binding Enabled}" ToolTip="{Binding Mode}" /><TextBlock Text="{Binding Status}" Foreground="{StaticResource SubtleTextBrush}" FontSize="11" VerticalAlignment="Center" Margin="5,0,0,0" /></StackPanel></DataTemplate>
-              </ItemsControl.ItemTemplate>
-            </ItemsControl>
+            <Expander Header="{Binding SourceFilterTitle}" Margin="0,8,0,0"
+                      AutomationProperties.Name="{Binding SourceFilterTitle}"
+                      FocusVisualStyle="{StaticResource KeyboardFocusVisual}">
+              <ItemsControl ItemsSource="{Binding Providers}" Margin="0,5,0,0">
+                <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate><StackPanel Orientation="Horizontal" Margin="0,0,16,0"><CheckBox Content="{Binding DisplayName}" IsChecked="{Binding Enabled}" ToolTip="{Binding Mode}" /><TextBlock Text="{Binding Status}" Foreground="{StaticResource SubtleTextBrush}" FontSize="11" VerticalAlignment="Center" Margin="5,0,0,0" /></StackPanel></DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </Expander>
             <WrapPanel Margin="0,8,0,0" Visibility="{Binding HasResearchSearchScope, Converter={StaticResource BoolVisibility}}">
               <TextBlock Text="{Binding ResearchSourcesTitle}" VerticalAlignment="Center" Margin="0,0,10,0" />
               <ItemsControl ItemsSource="{Binding ResearchProviders}">
@@ -288,10 +292,58 @@
             <StackPanel>
               <TextBlock Text="{Binding SearchScopeMediaText}" FontWeight="SemiBold" Margin="0,0,0,8"
                          Visibility="{Binding IsAllSearchScope, Converter={StaticResource BoolVisibility}}" />
+              <StackPanel Orientation="Horizontal" Margin="6,0,0,8"
+                          Visibility="{Binding HasDuplicateGroups, Converter={StaticResource BoolVisibility}}">
+                <TextBlock Text="{Binding SearchDuplicateSummary}" VerticalAlignment="Center"
+                           AutomationProperties.Name="{Binding SearchDuplicateSummary}" />
+                <CheckBox Content="{Binding DuplicateAllResultsText}" IsChecked="{Binding ShowAllDuplicateResults}"
+                          Margin="16,0,0,0" AutomationProperties.Name="{Binding DuplicateAllResultsText}" />
+              </StackPanel>
               <ItemsControl ItemsSource="{Binding ResultsView}" ItemTemplate="{StaticResource AssetCard}"
-                            AutomationProperties.Name="{Binding AccessibilitySearchResultsText}"
-                            Visibility="{Binding HasMediaSearchScope, Converter={StaticResource BoolVisibility}}">
+                            AutomationProperties.Name="{Binding AccessibilitySearchResultsText}">
+                <ItemsControl.Style><Style TargetType="ItemsControl">
+                  <Setter Property="Visibility" Value="Visible" />
+                  <Style.Triggers><DataTrigger Binding="{Binding HasGroupedDuplicateView}" Value="True">
+                    <Setter Property="Visibility" Value="Collapsed" />
+                  </DataTrigger><DataTrigger Binding="{Binding HasMediaSearchScope}" Value="False">
+                    <Setter Property="Visibility" Value="Collapsed" />
+                  </DataTrigger></Style.Triggers>
+                </Style></ItemsControl.Style>
                 <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+              </ItemsControl>
+              <ItemsControl ItemsSource="{Binding SearchDuplicateItems}"
+                            Visibility="{Binding HasGroupedDuplicateView, Converter={StaticResource BoolVisibility}}"
+                            AutomationProperties.Name="{Binding SearchDuplicateSummary}">
+                <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate><DataTemplate>
+                  <StackPanel>
+                    <ContentControl Content="{Binding Recommended}" ContentTemplate="{StaticResource AssetCard}">
+                      <ContentControl.Style><Style TargetType="ContentControl">
+                        <Setter Property="Visibility" Value="Visible" />
+                        <Style.Triggers><DataTrigger Binding="{Binding IsGroup}" Value="True">
+                          <Setter Property="Visibility" Value="Collapsed" />
+                        </DataTrigger></Style.Triggers>
+                      </Style></ContentControl.Style>
+                    </ContentControl>
+                    <Border Width="315" Margin="7,0,7,12" Background="#F4F6F9" CornerRadius="8">
+                      <Border.Style><Style TargetType="Border">
+                        <Setter Property="Visibility" Value="Collapsed" />
+                        <Style.Triggers><DataTrigger Binding="{Binding IsGroup}" Value="True">
+                          <Setter Property="Visibility" Value="Visible" />
+                        </DataTrigger></Style.Triggers>
+                      </Style></Border.Style>
+                      <StackPanel>
+                        <ToggleButton Content="{Binding Header}" IsChecked="{Binding Expanded}"
+                                      AutomationProperties.Name="{Binding Header}" Margin="7,7,7,0"
+                                      FocusVisualStyle="{StaticResource KeyboardFocusVisual}" />
+                        <TextBlock Text="{Binding RecommendedLabel}" FontWeight="SemiBold" Margin="8,6" />
+                        <ContentControl Content="{Binding Recommended}" ContentTemplate="{StaticResource AssetCard}" />
+                        <ItemsControl ItemsSource="{Binding OtherVersions}" ItemTemplate="{StaticResource AssetCard}"
+                                      Visibility="{Binding Expanded, Converter={StaticResource BoolVisibility}}" />
+                      </StackPanel>
+                    </Border>
+                  </StackPanel>
+                </DataTemplate></ItemsControl.ItemTemplate>
               </ItemsControl>
               <StackPanel Visibility="{Binding HasResearchSearchScope, Converter={StaticResource BoolVisibility}}" Margin="0,16,0,0">
                 <TextBlock Text="{Binding SearchScopeResearchText}" FontWeight="SemiBold" Margin="0,0,0,8" />
@@ -302,7 +354,7 @@
                       <Border Width="340" Background="White" BorderBrush="#E1E5EA" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,12,12">
                         <StackPanel>
                           <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextWrapping="Wrap" MaxHeight="45" />
-                          <TextBlock Foreground="{StaticResource SubtleTextBrush}" Margin="0,5,0,0"><Run Text="{Binding Source}" /><Run Text=" · " /><Run Text="{Binding Type}" /><Run Text="  " /><Run Text="{Binding Year}" /></TextBlock>
+                          <TextBlock Foreground="{StaticResource SubtleTextBrush}" Margin="0,5,0,0"><Run Text="{Binding Source, Mode=OneWay}" /><Run Text=" · " /><Run Text="{Binding Type, Mode=OneWay}" /><Run Text="  " /><Run Text="{Binding Year, Mode=OneWay}" /></TextBlock>
                           <TextBlock Text="{Binding Summary}" Foreground="{StaticResource SubtleTextBrush}" TextWrapping="Wrap" MaxHeight="60" Margin="0,6,0,0" />
                           <TextBlock Text="{Binding Citation}" Foreground="{StaticResource SubtleTextBrush}" TextWrapping="Wrap" MaxHeight="42" FontSize="11" Margin="0,6,0,0" />
                           <WrapPanel Margin="0,9,0,0">
@@ -469,7 +521,7 @@
                       <Border Background="#F7F9FC" BorderBrush="#E1E5EA" BorderThickness="1" CornerRadius="7" Padding="9" Margin="0,0,0,7">
                         <StackPanel>
                           <TextBlock Text="{Binding Record.Title}" FontWeight="SemiBold" TextWrapping="Wrap" />
-                          <TextBlock Foreground="{StaticResource SubtleTextBrush}"><Run Text="{Binding Record.Source}" /><Run Text=" · " /><Run Text="{Binding Record.Type}" /></TextBlock>
+                          <TextBlock Foreground="{StaticResource SubtleTextBrush}"><Run Text="{Binding Record.Source, Mode=OneWay}" /><Run Text=" · " /><Run Text="{Binding Record.Type, Mode=OneWay}" /></TextBlock>
                           <TextBlock Text="{Binding Record.Citation}" Foreground="{StaticResource SubtleTextBrush}" TextWrapping="Wrap" FontSize="11" Margin="0,4,0,0" />
                           <TextBox Text="{Binding MyNote, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="52" Margin="0,6,0,0" />
                           <TextBox Text="{Binding TagsText, UpdateSourceTrigger=PropertyChanged}" ToolTip="{Binding DataContext.ResearchTagsText, RelativeSource={RelativeSource AncestorType=Window}}" Margin="0,5,0,0" />
@@ -551,6 +603,10 @@
             </ItemsControl>
             <TextBlock Text="This product uses the National Archives Catalog API but is not endorsed or certified by the National Archives and Records Administration." TextWrapping="Wrap" Foreground="{StaticResource SubtleTextBrush}" FontSize="11" Margin="0,0,0,10" />
             <TextBlock Text="{Binding DownloadFolderText}" FontWeight="SemiBold" FontSize="16" Margin="0,14,0,6" />
+            <TextBlock Text="{Binding DuplicateSettingsTitle}" FontWeight="SemiBold" FontSize="16" Margin="0,14,0,6" />
+            <CheckBox Content="{Binding DuplicateDetectSettingText}" IsChecked="{Binding DetectSearchDuplicates}" />
+            <CheckBox Content="{Binding DuplicateCollapseSettingText}" IsChecked="{Binding CollapseDuplicateGroups}" />
+            <TextBlock Text="{Binding DuplicateSettingsDetail}" TextWrapping="Wrap" Foreground="{StaticResource SubtleTextBrush}" MaxWidth="850" HorizontalAlignment="Left" />
             <DockPanel><Button DockPanel.Dock="Right" Content="{Binding ChooseText}" Click="ChooseDownloadFolder_Click" /><TextBox Text="{Binding DownloadRoot, Mode=OneWay}" IsReadOnly="True" /></DockPanel>
             <TextBlock Text="{Binding UpdateSettingsTitle}" FontWeight="SemiBold" FontSize="16" Margin="0,20,0,6" />
             <TextBlock Text="{Binding UpdateSettingsDetail}" TextWrapping="Wrap" Foreground="{StaticResource SubtleTextBrush}" MaxWidth="850" HorizontalAlignment="Left" />

@@ -19,6 +19,8 @@ struct SettingsView: View {
   @State private var confirmClearHistory = false
   @State private var editingKeys: Set<ProviderID> = []
   @State private var clipboardDetection = AppSettings.clipboardDetectionEnabled
+  @AppStorage(AppSettings.detectSearchDuplicatesKey) private var detectSearchDuplicates = true
+  @AppStorage(AppSettings.collapseDuplicateGroupsKey) private var collapseDuplicateGroups = true
 
   var body: some View {
     ScrollView {
@@ -118,6 +120,7 @@ struct SettingsView: View {
                 Task {
                   do {
                     try await SearchCache.shared.clear()
+                    await DuplicateThumbnailHashService.shared.clear()
                     await MainActor.run { cacheMessage = tr("settings.cacheCleared") }
                   } catch { await MainActor.run { cacheMessage = tr("settings.cacheFailed") } }
                 }
@@ -130,6 +133,15 @@ struct SettingsView: View {
               DesktopPlatform.shared.open(AppLogger.shared.logURL)
             }
             Text(tr("settings.logHelp")).font(.caption).foregroundStyle(.secondary)
+          }.padding(8)
+        }
+        GroupBox(tr("duplicate.settingsTitle")) {
+          VStack(alignment: .leading, spacing: 8) {
+            Toggle(tr("duplicate.detectSetting"), isOn: $detectSearchDuplicates)
+            Toggle(tr("duplicate.collapseSetting"), isOn: $collapseDuplicateGroups)
+              .disabled(!detectSearchDuplicates)
+            Text(tr("duplicate.settingsDetail"))
+              .font(.caption).foregroundStyle(.secondary)
           }.padding(8)
         }
         GroupBox(tr("update.settingsTitle")) {

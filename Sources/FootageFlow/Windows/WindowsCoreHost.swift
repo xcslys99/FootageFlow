@@ -19,6 +19,7 @@
     var language: String? = nil
     var asset: MediaAsset? = nil
     var assets: [MediaAsset]? = nil
+    var thumbnailHashes: [String: UInt64]? = nil
     var relevanceMode: String? = nil
     var mediaPath: String? = nil
     var projectName: String? = nil
@@ -63,6 +64,7 @@
     var providers: [WindowsProviderDescriptor]? = nil
     var providerBatches: [WindowsProviderBatch]? = nil
     var assets: [MediaAsset]? = nil
+    var searchDuplicateReview: SearchDuplicateReview? = nil
     var keywords: [SearchKeyword]? = nil
     var segments: [String]? = nil
     var database: PersistentDatabase? = nil
@@ -220,6 +222,16 @@
             assets, query: query, mode: mode, supportingQueries: request.keywords ?? [],
             inputLanguage: request.keywordDetails?.first(where: { $0.origin == .input })?.language,
             interfaceLanguage: request.language.flatMap(AppLanguage.init(rawValue:)) ?? .english))
+      case "analyzeSearchDuplicates":
+        guard let assets = request.assets else {
+          return WindowsCoreResponse(
+            id: request.id, success: false, errorCode: "invalidRequest",
+            errorMessage: "Candidate assets are required.")
+        }
+        return WindowsCoreResponse(
+          id: request.id, success: true,
+          searchDuplicateReview: SearchDuplicateAnalyzer.analyze(
+            assets, thumbnailHashes: request.thumbnailHashes ?? [:]))
       case "providerTest":
         return await providerTest(request)
       case "keywords":

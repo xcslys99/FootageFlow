@@ -4,11 +4,23 @@ All notable FootageFlow changes are documented here.
 
 ## Unreleased
 
+## [0.13.0] - 2026-09-17
+
+### Smart Duplicate Review
+
+- Added cross-provider search-result duplicate groups while preserving every original result and its individual rights, source, and actions
+- Reused the existing project URL canonicalization and duplicate evidence normalization, and retained cross-provider search hits previously dropped before review
+- Added exact, likely, and possible evidence levels; a recommended version is selected for workflow convenience only, never as legal advice
+- Added bounded, local thumbnail dHash analysis after the initial results appear, with metadata-only fallback on decoding or network failure
+- Added Grouped / All Results controls, default-on detection and collapse settings, and ten-language labels for macOS and Windows
+- Added fixed duplicate fixtures, false-positive checks, rights-isolation tests, and 100/500/1000-result performance coverage
+
 ### Creator workflow usability
 
 - Switching a completed media search between Video, Image, Audio, and All now requests the newly selected media type instead of displaying a false empty result set
 - Coalesced identical query text before each Provider request while keeping all ten editable language slots
 - Replaced the overflowing 22-source checkbox strip with an expandable source selector, and grouped discovery-only notices instead of presenting them as repeated failures
+- Kept the Windows source selector collapsed by default so search-result cards retain useful vertical space in smaller windows
 - Public sources that reject a request no longer incorrectly report an invalid API key; keyless discovery-only sources no longer suggest configuring an unavailable key
 - Made macOS project details scrollable and kept the project list a useful width
 - Added an explicit project picker to the Link Downloader on both desktop platforms; macOS now shows a loading indicator while a link is being analyzed
