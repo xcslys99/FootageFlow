@@ -243,12 +243,16 @@
               </ComboBox>
               <Button Content="{Binding ClearFiltersText}" Command="{Binding ClearFiltersCommand}" />
             </WrapPanel>
-            <ItemsControl ItemsSource="{Binding Providers}" Margin="0,8,0,0">
-              <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
-              <ItemsControl.ItemTemplate>
-                <DataTemplate><StackPanel Orientation="Horizontal" Margin="0,0,16,0"><CheckBox Content="{Binding DisplayName}" IsChecked="{Binding Enabled}" ToolTip="{Binding Mode}" /><TextBlock Text="{Binding Status}" Foreground="{StaticResource SubtleTextBrush}" FontSize="11" VerticalAlignment="Center" Margin="5,0,0,0" /></StackPanel></DataTemplate>
-              </ItemsControl.ItemTemplate>
-            </ItemsControl>
+            <Expander Header="{Binding SourceFilterTitle}" Margin="0,8,0,0"
+                      AutomationProperties.Name="{Binding SourceFilterTitle}"
+                      FocusVisualStyle="{StaticResource KeyboardFocusVisual}">
+              <ItemsControl ItemsSource="{Binding Providers}" Margin="0,5,0,0">
+                <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate><StackPanel Orientation="Horizontal" Margin="0,0,16,0"><CheckBox Content="{Binding DisplayName}" IsChecked="{Binding Enabled}" ToolTip="{Binding Mode}" /><TextBlock Text="{Binding Status}" Foreground="{StaticResource SubtleTextBrush}" FontSize="11" VerticalAlignment="Center" Margin="5,0,0,0" /></StackPanel></DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </Expander>
             <WrapPanel Margin="0,8,0,0" Visibility="{Binding HasResearchSearchScope, Converter={StaticResource BoolVisibility}}">
               <TextBlock Text="{Binding ResearchSourcesTitle}" VerticalAlignment="Center" Margin="0,0,10,0" />
               <ItemsControl ItemsSource="{Binding ResearchProviders}">

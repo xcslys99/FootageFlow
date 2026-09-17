@@ -117,6 +117,7 @@ public sealed class MainViewModel : ObservableObject
                 _settings.Save();
                 ResultsView.Refresh();
                 ScheduleDuplicateReview();
+                OnPropertyChanged(nameof(SourceFilterTitle));
             };
         ResearchProviders = new ObservableCollection<ProviderOption>(new[]
         {
@@ -808,6 +809,7 @@ public sealed class MainViewModel : ObservableObject
     public string WorkspaceRenameText => T("workspace.rename");
     public string WorkspaceDuplicateText => T("workspace.duplicate");
     public string SourcesTitle => T("settings.sourcesProviders");
+    public string SourceFilterTitle => $"{T("filter.source")} ({Providers.Count(value => value.Enabled)}/{Providers.Count})";
     public string ResearchSourcesTitle => $"{SearchScopeResearchText} {T("filter.source")}";
     public string ApiExplanation => T("settings.optionalAPIExplanation");
     public string PrivacyTitle => T("settings.privacy");
