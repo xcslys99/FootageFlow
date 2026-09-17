@@ -172,7 +172,10 @@ enum SearchDuplicateAnalyzer {
       for token in anchors {
         for band in bands {
           let key = "\(band):\(token)"
-          if let bucket = tokenIndex[key], bucket.count <= 64 { possible.formUnion(bucket) }
+          if let bucket = tokenIndex[key] {
+            possible.formUnion(bucket.prefix(32))
+            possible.formUnion(bucket.suffix(32))
+          }
         }
       }
       for other in possible.sorted() where root(other) != root(index) {
@@ -193,7 +196,10 @@ enum SearchDuplicateAnalyzer {
       var possible = Set<Int>()
       for band in 0..<8 {
         let key = "\(band):\((hash >> (band * 8)) & 0xff)"
-        if let bucket = hashIndex[key], bucket.count <= 64 { possible.formUnion(bucket) }
+        if let bucket = hashIndex[key] {
+          possible.formUnion(bucket.prefix(32))
+          possible.formUnion(bucket.suffix(32))
+        }
       }
       for other in possible.sorted() where root(other) != root(index) {
         guard let otherHash = thumbnailHashes[candidates[other].asset.stableID],
@@ -262,10 +268,20 @@ enum SearchDuplicateAnalyzer {
     var buckets: [String: [String]] = [:]
     for asset in assets where !asset.effectiveThumbnailCandidates.isEmpty {
       let creator = DuplicateEvidenceNormalizer.folded(asset.creator ?? "")
-      guard !creator.isEmpty else { continue }
-      let duration = asset.duration.map { Int($0.rounded() / 2) } ?? -1
-      buckets["\(creator)|\(duration)|\(asset.mediaType.rawValue)", default: []]
-        .append(asset.stableID)
+      let titleTokens = DuplicateEvidenceNormalizer.tokens(asset.title)
+      let sortedTokens = titleTokens.sorted { left, right in
+        left.count == right.count ? left < right : left.count > right.count
+      }
+      let titleAnchors = Array(sortedTokens.prefix(2))
+      guard !creator.isEmpty || titleAnchors.count == 2 else { continue }
+      let anchor =
+        creator.isEmpty ? "title:\(titleAnchors.joined(separator: ":"))" : "creator:\(creator)"
+      let duration = asset.duration.map { Int($0 / 2) } ?? -1
+      let bands = duration < 0 ? [-1] : [duration - 1, duration, duration + 1]
+      for band in bands {
+        buckets["\(anchor)|\(band)|\(asset.mediaType.rawValue)", default: []]
+          .append(asset.stableID)
+      }
     }
     let eligible = buckets.values.filter { (2...16).contains($0.count) }
     let ids = Set(eligible.flatMap { $0 })

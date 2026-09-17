@@ -32,6 +32,18 @@ import Foundation
       #expect(SearchDuplicateAnalyzer.analyze(deduplicated).groups.count == 1)
     }
 
+    @Test("Different source pages serving one normalized media URL match exactly")
+    func sharedDownloadURL() {
+      var first = asset("a")
+      var second = asset("b", provider: .internetArchive)
+      first.downloadURL = URL(string: "https://cdn.example.org/film.mp4?utm_campaign=archive")
+      second.downloadURL = URL(string: "https://cdn.example.org/film.mp4")
+      let review = SearchDuplicateAnalyzer.analyze([first, second])
+      #expect(review.groups.count == 1)
+      #expect(review.groups[0].confidence == .exact)
+      #expect(review.groups[0].evidence.contains("downloadURL"))
+    }
+
     @Test("A source page with both image and video is not one media version")
     func differentMediaTypes() {
       let video = asset("shared")
@@ -130,6 +142,20 @@ import Foundation
       #expect(Set(review.thumbnailCandidateIDs) == [first.stableID, second.stableID])
     }
 
+    @Test("Uncredited photographs with shared title anchors can use local thumbnail evidence")
+    func uncreditedImageCandidates() {
+      var first = asset("photo-a", title: "Historic city market photograph")
+      var second = asset(
+        "photo-b", provider: .internetArchive,
+        title: "Historic city market photograph")
+      first.mediaType = .image
+      second.mediaType = .image
+      first.thumbnailURL = URL(string: "https://example.org/photo-a.jpg")
+      second.thumbnailURL = URL(string: "https://example.org/photo-b.jpg")
+      let review = SearchDuplicateAnalyzer.analyze([first, second])
+      #expect(Set(review.thumbnailCandidateIDs) == [first.stableID, second.stableID])
+    }
+
     @Test("Cancellation and partial provider failure leave original results visible")
     func fallback() {
       let values = [asset("a"), asset("b", provider: .youtube)]
@@ -170,6 +196,21 @@ import Foundation
         #expect(review.groups.isEmpty)
         #expect(Date().timeIntervalSince(start) < 5)
       }
+    }
+
+    @Test("Large plausible buckets stay bounded without dropping later versions")
+    func crowdedBucket() {
+      let values = (0..<1000).map { index in
+        asset(
+          "version-\(index)", title: "Historic Apollo mission footage",
+          creator: "Museum Archive", duration: 42)
+      }
+      let start = Date()
+      let review = SearchDuplicateAnalyzer.analyze(values)
+      #expect(review.groups.count == 1)
+      #expect(review.groups[0].memberIDs.count == 1000)
+      #expect(review.uniqueCount == 1)
+      #expect(Date().timeIntervalSince(start) < 5)
     }
 
     private func asset(
