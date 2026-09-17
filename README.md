@@ -63,9 +63,9 @@ v0.12.1 keeps every required part of a compound request through query planning a
 
 In the default **Balanced** mode, every required concept must be supported by provider metadata before a result is shown. **Broad** remains an explicit opt-in for loosely related discovery results.
 
-## Smart Duplicate Review (v0.13.0 development)
+## Smart Duplicate Review (v0.13.0)
 
-Search results can be reviewed as **Grouped** or **All Results**. Local analysis compares canonical source IDs/URLs, corroborated metadata, and bounded thumbnail fingerprints; it does not download full videos for comparison. A group keeps every original card and its own actions and rights statement. **Recommended version** is a workflow convenience, not a copyright or license judgment. You can turn detection or default collapsing off in Settings. See [Duplicate Review](docs/DUPLICATE_REVIEW.md). The [latest published release](https://github.com/xcslys99/FootageFlow/releases/latest) remains the download entry until v0.13.0 is actually released.
+Search results can be reviewed as **Grouped** or **All Results**. Local analysis compares canonical source IDs/URLs, corroborated metadata, and bounded thumbnail fingerprints; it does not download full videos for comparison. A group keeps every original card and its own actions and rights statement. **Recommended version** is a workflow convenience, not a copyright or license judgment. You can turn detection or default collapsing off in Settings. See [Duplicate Review](docs/DUPLICATE_REVIEW.md).
 
 ## Creator workflow
 

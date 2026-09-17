@@ -1,6 +1,6 @@
 # Smart Duplicate Review
 
-Status: v0.13.0 development candidate; not a published release.
+Introduced in FootageFlow v0.13.0.
 
 ## What the group means
 
