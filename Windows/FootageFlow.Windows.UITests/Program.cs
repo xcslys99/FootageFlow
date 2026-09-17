@@ -83,7 +83,7 @@ try
     Check(grouped?.Visibility == Visibility.Visible && flat?.Visibility == Visibility.Collapsed,
         "Grouped view displays while original flat results remain available");
     var sourceExpander = Descendants<Expander>(window).FirstOrDefault(value =>
-        value.Header?.ToString()?.StartsWith("Source (", StringComparison.Ordinal) == true);
+        value.Header?.ToString() == vm.SourceFilterTitle);
     Check(sourceExpander is { IsExpanded: false } && sourceExpander.FocusVisualStyle is not null,
         "Source list starts collapsed to leave room for search-result cards");
     var disclosure = Descendants<ToggleButton>(window).FirstOrDefault(value =>
