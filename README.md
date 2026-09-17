@@ -17,6 +17,8 @@ A free and open-source desktop app for macOS and Windows that helps video creato
 
 [Download the latest release for macOS or Windows](https://github.com/xcslys99/FootageFlow/releases/latest) · [All Releases](https://github.com/xcslys99/FootageFlow/releases)
 
+![FootageFlow v0.13.0: multi-source footage search, duplicate review, and link downloading on macOS and Windows](docs/images/social-preview-v0130.png)
+
 > **Using v0.6.0 or earlier?** Those builds cannot detect new releases. Install the latest version manually once from [GitHub Releases](https://github.com/xcslys99/FootageFlow/releases/latest); v0.7.0 and later can notify you about future stable releases.
 
 ## Two ways to use FootageFlow
@@ -89,15 +91,17 @@ If you already know the media URL, Link Downloader uses the same project, downlo
 
 ## Screenshots
 
-These real v0.12.1 macOS screenshots are captured in English. The Windows edition follows the same product structure with platform-native controls.
+These v0.13.0 macOS screenshots use the English interface and real public media results. Visible thumbnails were loaded before capture; source titles retain their original language. Windows has the same core workflows with native controls.
 
-![FootageFlow v0.12.1 Quick Search: a complete Xi'an food compound query, source status, filters, and fully loaded multi-source results](docs/images/quick-search-v0121.png)
+![FootageFlow v0.13.0 Quick Search with real Apollo 11 video results and multi-source filtering](docs/images/quick-search-v0130.png)
 
-![FootageFlow v0.12.1 Workspace Smart Collections](docs/images/workspace-smart-collections-v0121.png)
+![FootageFlow v0.13.0 Smart Duplicate Review with likely-same-footage groups and individual source rights](docs/images/duplicate-review-v0130.png)
 
-![FootageFlow v0.12.1 Workspace Provider Health across the current source catalog](docs/images/provider-health-v0121.png)
+![FootageFlow v0.13.0 Link Downloader after analyzing a public media URL, showing thumbnail, title, formats and quality](docs/images/link-downloader-v0130.png)
 
-![FootageFlow v0.12.1 Command Palette](docs/images/command-palette-v0121.png)
+![FootageFlow v0.13.0 project-scoped Favorites with archival video thumbnails and separate licenses](docs/images/favorites-v0130.png)
+
+![FootageFlow v0.13.0 Workspace Smart Collections with real project metadata](docs/images/workspace-smart-collections-v0130.png)
 
 ## Features
 

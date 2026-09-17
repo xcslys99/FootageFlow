@@ -17,6 +17,8 @@
 
 [下载 macOS 或 Windows 最新正式版](https://github.com/xcslys99/FootageFlow/releases/latest) · [查看全部版本](https://github.com/xcslys99/FootageFlow/releases)
 
+![FootageFlow v0.13.0 英文宣传图：多来源搜索、重复检查和链接下载](docs/images/social-preview-v0130.png)
+
 > **仍在使用 v0.6.0 或更早版本？** 这些旧版无法检测新版本。请先从 [GitHub Releases](https://github.com/xcslys99/FootageFlow/releases/latest) 手动安装一次最新版；从 v0.7.0 开始，后续稳定版本就可以在应用内提醒。
 
 ## FootageFlow 的两种核心用法
@@ -89,15 +91,17 @@ FootageFlow 面向纪录片、历史、国家、财经、人物、科普和短�
 
 ## 界面截图
 
-以下为真实 v0.12.1 macOS 英文界面截图。Windows 版采用相同产品结构，并使用符合 Windows 习惯的原生控件。
+以下是 v0.13.0 macOS 的英文界面截图，素材结果来自真实公开来源；可见封面加载完成后才拍摄。素材标题保持来源网站的原文。Windows 版拥有相同核心流程，并使用原生控件。
 
-![FootageFlow v0.12.1 快速搜索：完整保留 Xi'an food 复合查询、显示来源状态和已完整加载的多来源结果](docs/images/quick-search-v0121.png)
+![FootageFlow v0.13.0 快速搜索：Apollo 11 的真实多来源视频结果](docs/images/quick-search-v0130.png)
 
-![FootageFlow v0.12.1 Workspace 智能集合](docs/images/workspace-smart-collections-v0121.png)
+![FootageFlow v0.13.0 智能重复检查：相似素材组与各自的来源授权](docs/images/duplicate-review-v0130.png)
 
-![FootageFlow v0.12.1 Workspace 当前素材来源状态](docs/images/provider-health-v0121.png)
+![FootageFlow v0.13.0 链接下载：公开媒体的封面、标题、格式与画质](docs/images/link-downloader-v0130.png)
 
-![FootageFlow v0.12.1 命令面板](docs/images/command-palette-v0121.png)
+![FootageFlow v0.13.0 收藏：按项目整理的历史影像和独立授权信息](docs/images/favorites-v0130.png)
+
+![FootageFlow v0.13.0 工作台智能集合：真实项目元数据](docs/images/workspace-smart-collections-v0130.png)
 
 ## 功能摘要
 
