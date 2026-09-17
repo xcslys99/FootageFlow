@@ -1114,7 +1114,9 @@ struct DuplicateGroup: Identifiable, Codable, Hashable {
 }
 
 enum URLCanonicalizer {
-  private static let trackingPrefixes = ["utm_", "ref", "source", "fbclid", "gclid"]
+  // `ref` and `source` can be content selectors on archive sites. Only strip
+  // unambiguous tracking parameters; a false exact match is worse than a miss.
+  private static let trackingPrefixes = ["utm_", "fbclid", "gclid"]
 
   static func canonical(_ url: URL?) -> String? {
     guard var components = url.flatMap({ URLComponents(url: $0, resolvingAgainstBaseURL: false) }),

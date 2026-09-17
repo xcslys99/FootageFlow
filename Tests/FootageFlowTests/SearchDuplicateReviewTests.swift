@@ -40,6 +40,15 @@ import Foundation
       #expect(SearchDuplicateAnalyzer.analyze([video, image]).groups.isEmpty)
     }
 
+    @Test("Potential archive content selectors are not removed as tracking")
+    func conservativeCanonicalization() {
+      let first = asset("a", source: URL(string: "https://archive.example/item?source=alpha")!)
+      let second = asset(
+        "b", provider: .internetArchive,
+        source: URL(string: "https://archive.example/item?source=beta")!)
+      #expect(SearchDuplicateAnalyzer.analyze([first, second]).groups.isEmpty)
+    }
+
     @Test("Metadata corroboration groups transcodes but not different footage")
     func metadata() {
       let first = asset(
