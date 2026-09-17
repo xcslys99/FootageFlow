@@ -39,6 +39,8 @@
       order.removeAll()
     }
 
+    static func hashImageData(_ data: Data) -> UInt64? { decodeAndHash(data) }
+
     private static func decodeAndHash(_ data: Data) -> UInt64? {
       guard let source = CGImageSourceCreateWithData(data as CFData, nil),
         let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],

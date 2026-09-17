@@ -660,7 +660,7 @@
 "accessibility.projectList" = "Proyectos";
 "accessibility.updateNotes" = "Novedades";
 "accessibility.updateDialog" = "Hay una actualización de FootageFlow disponible";
-+"duplicate.exact" = "Coincidencia exacta";
+"duplicate.exact" = "Coincidencia exacta";
 "duplicate.likely" = "Probablemente el mismo material";
 "duplicate.possible" = "Posiblemente similar";
 "duplicate.summary" = "Resultados: %d · Únicos: %d · Grupos duplicados: %d";

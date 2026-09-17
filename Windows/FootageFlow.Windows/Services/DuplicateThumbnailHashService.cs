@@ -61,6 +61,8 @@ public sealed class DuplicateThumbnailHashService
         return hash;
     }
 
+    public static ulong? HashImageData(byte[] data) => DecodeAndHash(data);
+
     private static ulong? DecodeAndHash(byte[] data)
     {
         try

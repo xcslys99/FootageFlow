@@ -678,7 +678,7 @@
 "accessibility.projectList" = "Projects";
 "accessibility.updateNotes" = "What's new";
 "accessibility.updateDialog" = "FootageFlow update available";
-+"duplicate.exact" = "Exact match";
+"duplicate.exact" = "Exact match";
 "duplicate.likely" = "Likely same footage";
 "duplicate.possible" = "Possibly similar";
 "duplicate.summary" = "Results: %d · Unique: %d · Duplicate groups: %d";

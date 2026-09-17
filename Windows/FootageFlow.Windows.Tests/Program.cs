@@ -18,11 +18,18 @@ Check(new AppSettingsModel().Language == "en", "English is the first-launch defa
 Check(new AppSettingsModel().SearchRelevanceMode == "balanced", "Balanced relevance is the default");
 Check(new AppSettingsModel().DetectSearchDuplicates && new AppSettingsModel().CollapseDuplicateGroups,
       "Duplicate review and collapsed groups default on");
+Check(new MediaAsset { Provider = "youtube", Id = "source", OriginalMetadata =
+      new Dictionary<string, string> { ["workflowVariantID"] = "clip" } }.StableId == "youtube:source:clip",
+      "Windows asset identity matches shared workflow variant identity");
 Check(DuplicateThumbnailHashService.DifferenceHash(Enumerable.Repeat((byte)128, 72).ToArray()) is null,
       "Blank thumbnail is not visual duplicate evidence");
 Check(DuplicateThumbnailHashService.DifferenceHash(
           Enumerable.Range(0, 72).Select(index => (byte)(240 - (index % 9) * 20)).ToArray()) == ulong.MaxValue,
       "Windows thumbnail dHash samples the 9 by 8 grid");
+var thumbnailFixture = Path.Combine(Directory.GetCurrentDirectory(), "docs", "images", "quick-search-v0121.png");
+Check(File.Exists(thumbnailFixture) && await Task.Run(() =>
+          DuplicateThumbnailHashService.HashImageData(File.ReadAllBytes(thumbnailFixture))) is not null,
+      "Windows thumbnail decoder fingerprints an actual PNG off the UI thread");
 Check(new AppSettingsModel().EnabledProviders.Count == 22, "Twenty-two providers enabled by default");
 Check(new AppSettingsModel().EnabledProviders.Contains("dareful") &&
       new AppSettingsModel().EnabledProviders.Contains("esa") &&

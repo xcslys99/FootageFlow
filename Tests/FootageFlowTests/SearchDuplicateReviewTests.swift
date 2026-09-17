@@ -98,6 +98,17 @@ import Foundation
       #expect(ThumbnailDHash.compute(luminance: []) == nil)
     }
 
+    #if os(macOS)
+      @Test("macOS ImageIO fingerprints a real repository PNG")
+      func macOSImageDecode() throws {
+        let file = URL(fileURLWithPath: #filePath)
+          .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+          .appendingPathComponent("docs/images/quick-search-v0121.png")
+        let data = try Data(contentsOf: file)
+        #expect(DuplicateThumbnailHashService.hashImageData(data) != nil)
+      }
+    #endif
+
     @Test("Only plausible image candidates enter bounded background hashing")
     func thumbnailCandidates() {
       var first = asset("a", title: "Unrelated label", creator: "Museum", duration: 20)
@@ -115,6 +126,24 @@ import Foundation
       let values = [asset("a"), asset("b", provider: .youtube)]
       #expect(SearchDuplicateAnalyzer.analyze(values, isCancelled: { true }).entries.count == 2)
       #expect(SearchDuplicateAnalyzer.analyze([values[0]]).resultCount == 1)
+    }
+
+    @Test("Duplicate review has usable text in all ten interface languages")
+    func localization() {
+      let catalog = LocalizationCatalog()
+      for language in AppLanguage.allCases {
+        for key in [
+          "duplicate.exact", "duplicate.likely", "duplicate.possible",
+          "duplicate.grouped", "duplicate.allResults", "duplicate.recommendedVersion",
+          "duplicate.detectSetting", "duplicate.collapseSetting",
+        ] {
+          let value = catalog.text(key, language: language, arguments: [])
+          #expect(value != key && value != "Unavailable")
+        }
+        let summary = catalog.text(
+          "duplicate.summary", language: language, arguments: [80, 57, 9])
+        #expect(summary.contains("80") && summary.contains("57") && summary.contains("9"))
+      }
     }
 
     @Test("Indexed 100, 500 and 1000 result scans retain every candidate")

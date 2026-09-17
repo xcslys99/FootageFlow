@@ -660,7 +660,7 @@
 "accessibility.projectList" = "プロジェクト";
 "accessibility.updateNotes" = "更新内容";
 "accessibility.updateDialog" = "FootageFlow の新しいバージョンがあります";
-+"duplicate.exact" = "完全一致";
+"duplicate.exact" = "完全一致";
 "duplicate.likely" = "同じ素材の可能性が高い";
 "duplicate.possible" = "類似の可能性";
 "duplicate.summary" = "結果: %d · 個別: %d · 重複グループ: %d";

@@ -330,7 +330,8 @@
                       </Style></Border.Style>
                       <StackPanel>
                         <ToggleButton Content="{Binding Header}" IsChecked="{Binding Expanded}"
-                                      AutomationProperties.Name="{Binding Header}" Margin="7,7,7,0" />
+                                      AutomationProperties.Name="{Binding Header}" Margin="7,7,7,0"
+                                      FocusVisualStyle="{StaticResource KeyboardFocusVisual}" />
                         <TextBlock Text="{Binding RecommendedLabel}" FontWeight="SemiBold" Margin="8,6" />
                         <ContentControl Content="{Binding Recommended}" ContentTemplate="{StaticResource AssetCard}" />
                         <ItemsControl ItemsSource="{Binding OtherVersions}" ItemTemplate="{StaticResource AssetCard}"

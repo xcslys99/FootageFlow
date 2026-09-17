@@ -678,7 +678,7 @@
 "accessibility.projectList" = "專案列表";
 "accessibility.updateNotes" = "本次更新";
 "accessibility.updateDialog" = "FootageFlow 有新版本可用";
-+"duplicate.exact" = "完全相符";
+"duplicate.exact" = "完全相符";
 "duplicate.likely" = "很可能是同一素材";
 "duplicate.possible" = "可能相似";
 "duplicate.summary" = "結果：%d · 獨立素材：%d · 重複組：%d";

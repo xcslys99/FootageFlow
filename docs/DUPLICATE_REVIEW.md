@@ -29,3 +29,20 @@ An invalid thumbnail, unavailable source, cancellation, or failed fingerprint sc
 ## Implementation boundary
 
 `SearchDuplicateAnalyzer` in the Swift Shared Core owns the grouping and recommendation rules for both desktop platforms. macOS and Windows only decode local thumbnails into small luminance samples and present the returned groups. The Windows host action is `analyzeSearchDuplicates`. There is no cloud similarity service or AI API.
+
+## Release-candidate manual acceptance checklist
+
+Run on an isolated profile on macOS Apple Silicon and Windows 11 x64, using real search results rather than fixture cards. Record the query, result count, group count, build hash and OS version.
+
+1. Search a broad real topic, wait for partial and then completed results, and verify that result cards appear before background grouping.
+2. Check that the summary counts original results and that Grouped / All Results never loses a candidate.
+3. Expand a group with two sources. Preview, open original, favorite, select, download when offered, copy source, and copy attribution from each original card.
+4. Compare an Unknown-rights version with a known-rights version. Confirm that the former remains Unknown in both views and in its copied source text.
+5. Change source, media type, year, duration, resolution, rights and Downloadable Only filters; confirm groups contain only currently visible eligible cards. Switch Precise / Balanced / Broad without resurrecting filtered-out content.
+6. Toggle duplicate detection and default collapse in Settings, relaunch, and check persistence and the flat-result fallback.
+7. Use only the keyboard to reach the view switch, group disclosure, recommended card, other cards and each card action. Verify clear visible focus.
+8. With VoiceOver or Windows Narrator, verify the group label, version count, expanded/collapsed state, recommended-version label, individual Provider and rights, and all action names.
+9. Switch all ten UI languages. Verify new labels have translations, while source-provided titles and licenses remain unaltered.
+10. Disconnect the network during a thumbnail request and cancel or restart a search. Cards must remain usable, with no crash or modal duplicate-analysis error.
+
+Automated tests and CI cannot stand in for the two real screen-reader sessions in steps 7–8.

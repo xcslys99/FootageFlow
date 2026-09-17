@@ -413,7 +413,8 @@ public sealed class MediaAsset : ObservableObject
     public string? DownloadAvailability { get; init; }
     [JsonIgnore] public bool IsSelected { get => _isSelected; set => Set(ref _isSelected, value); }
 
-    [JsonIgnore] public string StableId => $"{Provider}:{Id}";
+    [JsonIgnore] public string StableId => OriginalMetadata.TryGetValue("workflowVariantID", out var variant)
+        ? $"{Provider}:{Id}:{variant}" : $"{Provider}:{Id}";
     [JsonIgnore] public IReadOnlyList<string> EffectiveThumbnailURLs => ThumbnailUrlNormalizer.Normalize(
         Provider,
         new[] { ThumbnailURL }

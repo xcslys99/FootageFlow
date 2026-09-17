@@ -660,7 +660,7 @@
 "accessibility.projectList" = "프로젝트";
 "accessibility.updateNotes" = "새로운 기능";
 "accessibility.updateDialog" = "FootageFlow 새 버전을 사용할 수 있습니다";
-+"duplicate.exact" = "정확히 일치";
+"duplicate.exact" = "정확히 일치";
 "duplicate.likely" = "같은 영상일 가능성이 높음";
 "duplicate.possible" = "유사할 수 있음";
 "duplicate.summary" = "결과: %d · 고유 항목: %d · 중복 그룹: %d";

@@ -660,7 +660,7 @@
 "accessibility.projectList" = "Проекты";
 "accessibility.updateNotes" = "Что нового";
 "accessibility.updateDialog" = "Доступна новая версия FootageFlow";
-+"duplicate.exact" = "Точное совпадение";
+"duplicate.exact" = "Точное совпадение";
 "duplicate.likely" = "Вероятно, тот же материал";
 "duplicate.possible" = "Возможно, похожий";
 "duplicate.summary" = "Результаты: %d · Уникальные: %d · Группы дублей: %d";

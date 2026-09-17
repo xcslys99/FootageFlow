@@ -1503,9 +1503,7 @@ public sealed class MainViewModel : ObservableObject
     private void ScheduleDuplicateReview()
     {
         _duplicateCancellation?.Cancel();
-        _duplicateCancellation?.Dispose();
-        var cancellation = new CancellationTokenSource();
-        _duplicateCancellation = cancellation;
+        _duplicateCancellation = null;
         SearchDuplicateItems.Clear();
         SearchDuplicateSummary = "";
         OnPropertyChanged(nameof(HasDuplicateGroups));
@@ -1513,6 +1511,8 @@ public sealed class MainViewModel : ObservableObject
         if (!DetectSearchDuplicates) return;
         var snapshot = ResultsView.Cast<MediaAsset>().ToArray();
         if (snapshot.Length < 2) return;
+        var cancellation = new CancellationTokenSource();
+        _duplicateCancellation = cancellation;
         _ = AnalyzeSearchDuplicatesAsync(snapshot, cancellation);
     }
 
@@ -1557,10 +1557,23 @@ public sealed class MainViewModel : ObservableObject
                 OnPropertyChanged(nameof(HasGroupedDuplicateView));
             }
         }
+        finally
+        {
+            if (ReferenceEquals(_duplicateCancellation, cancellation)) _duplicateCancellation = null;
+            cancellation.Dispose();
+        }
     }
 
     private void ApplySearchDuplicateReview(MediaAsset[] snapshot, SearchDuplicateReview review)
     {
+        if (review.Groups.Count == 0)
+        {
+            SearchDuplicateItems.Clear();
+            SearchDuplicateSummary = "";
+            OnPropertyChanged(nameof(HasDuplicateGroups));
+            OnPropertyChanged(nameof(HasGroupedDuplicateView));
+            return;
+        }
         var expanded = SearchDuplicateItems.Where(item => item.IsGroup && item.Expanded)
             .Select(item => item.Id).ToHashSet(StringComparer.Ordinal);
         var byId = snapshot.ToDictionary(asset => asset.StableId, StringComparer.Ordinal);

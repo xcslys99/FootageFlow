@@ -21,6 +21,8 @@ struct SearchDuplicateResultsView: View {
 
   var body: some View {
     let _ = localization.language
+    let indexedAssets = Dictionary(
+      assets.map { ($0.stableID, $0) }, uniquingKeysWith: { first, _ in first })
     VStack(alignment: .leading, spacing: 12) {
       if detectionEnabled, let review, !review.groups.isEmpty {
         HStack {
@@ -40,8 +42,8 @@ struct SearchDuplicateResultsView: View {
         if detectionEnabled, let review, !showAll, !review.groups.isEmpty {
           ForEach(review.entries) { entry in
             if entry.isGroup {
-              groupCard(entry)
-            } else if let asset = assetByID[entry.recommendedID] {
+              groupCard(entry, assetsByID: indexedAssets)
+            } else if let asset = indexedAssets[entry.recommendedID] {
               assetCard(asset)
             }
           }
@@ -74,11 +76,9 @@ struct SearchDuplicateResultsView: View {
     .onChange(of: collapseByDefault) { _, value in showAll = !value }
   }
 
-  private var assetByID: [String: MediaAsset] {
-    Dictionary(assets.map { ($0.stableID, $0) }, uniquingKeysWith: { first, _ in first })
-  }
-
-  @ViewBuilder private func groupCard(_ entry: SearchDuplicateEntry) -> some View {
+  @ViewBuilder private func groupCard(
+    _ entry: SearchDuplicateEntry, assetsByID: [String: MediaAsset]
+  ) -> some View {
     VStack(alignment: .leading, spacing: 8) {
       Button {
         if !expanded.insert(entry.id).inserted { expanded.remove(entry.id) }
@@ -96,14 +96,14 @@ struct SearchDuplicateResultsView: View {
       )
       .accessibilityValue(
         expanded.contains(entry.id) ? tr("duplicate.expanded") : tr("duplicate.collapsed"))
-      if let recommended = assetByID[entry.recommendedID] {
+      if let recommended = assetsByID[entry.recommendedID] {
         Text(tr("duplicate.recommendedVersion"))
           .font(.caption.bold()).foregroundStyle(.secondary)
         assetCard(recommended)
       }
       if expanded.contains(entry.id) {
         ForEach(entry.memberIDs.filter { $0 != entry.recommendedID }, id: \.self) { id in
-          if let asset = assetByID[id] { assetCard(asset) }
+          if let asset = assetsByID[id] { assetCard(asset) }
         }
       }
     }
