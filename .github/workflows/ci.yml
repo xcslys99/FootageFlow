@@ -122,6 +122,18 @@ jobs:
           $env:FOOTAGEFLOW_CORE_PATH = Join-Path (swift build -c release --show-bin-path) "FootageFlow.exe"
           dotnet run --project Windows/FootageFlow.Windows.Tests/FootageFlow.Windows.Tests.csproj -c Release
 
+      - name: Accept native Windows duplicate-review UI
+        shell: pwsh
+        run: dotnet run --project Windows/FootageFlow.Windows.UITests/FootageFlow.Windows.UITests.csproj -c Release -- dist/windows/duplicate-review-ui-acceptance.png
+
+      - name: Save Windows duplicate-review UI evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: FootageFlow-0.13.0-Windows-duplicate-ui
+          path: dist/windows/duplicate-review-ui-acceptance.png
+          if-no-files-found: error
+          retention-days: 14
+
       - name: Build self-contained Windows package
         shell: pwsh
         run: scripts/windows/build-package.ps1 -Version "0.13.0"
